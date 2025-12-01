@@ -1,0 +1,54 @@
+############################
+# Unreal Engine 项目忽略项
+############################
+
+# UE 生成的中间文件
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# 构建输出
+Build/
+
+# 如果你以后启用 Server/Client 可再精细化
+# *.target
+# *.modules
+
+############################
+# 编辑器 / IDE
+############################
+
+# Visual Studio
+.vs/
+*.VC.db
+*.VC.opendb
+*.sln
+*.suo
+*.user
+*.userprefs
+
+# Rider
+.idea/
+*.sln.iml
+
+# VSCode
+.vscode/
+
+############################
+# 操作系统杂项
+############################
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+############################
+# 其他临时文件
+############################
+*.log
+*.tmp
+*.temp
