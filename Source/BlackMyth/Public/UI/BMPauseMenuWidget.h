@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "UI/BMWidgetBase.h"
 #include "BMPauseMenuWidget.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class BLACKMYTH_API UBMPauseMenuWidget : public UUserWidget
+class BLACKMYTH_API UBMPauseMenuWidget : public UBMWidgetBase
 {
 	GENERATED_BODY()
 	
