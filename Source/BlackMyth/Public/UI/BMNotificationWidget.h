@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "UI/BMWidgetBase.h"
-#include "BMHUDWidget.generated.h"
+#include "BMNotificationWidget.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class BLACKMYTH_API UBMHUDWidget : public UBMWidgetBase
+class BLACKMYTH_API UBMNotificationWidget : public UBMWidgetBase
 {
 	GENERATED_BODY()
 	

@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UI/BMWidgetBase.h"
-#include "BMHUDWidget.generated.h"
+#include "Character/Enemy/BMEnemyBase.h"
+#include "BMEnemyBossBase.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class BLACKMYTH_API UBMHUDWidget : public UBMWidgetBase
+class BLACKMYTH_API ABMEnemyBossBase : public ABMEnemyBase
 {
 	GENERATED_BODY()
 	

@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UI/BMWidgetBase.h"
-#include "BMHUDWidget.generated.h"
+#include "GameFramework/SaveGame.h"
+#include "BMSaveData.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class BLACKMYTH_API UBMHUDWidget : public UBMWidgetBase
+class BLACKMYTH_API UBMSaveData : public USaveGame
 {
 	GENERATED_BODY()
 	
