@@ -1,0 +1,6 @@
+Name,Physical,Fire,Ice,Poison,Lightning
+Physical,1.0,1.0,1.0,1.0,1.0
+Fire,1.0,0.5,2.0,1.0,1.5
+Ice,1.0,1.5,0.5,1.0,1.2
+Poison,1.0,1.0,1.0,0.5,1.3
+Lightning,1.0,0.8,1.2,1.0,0.5

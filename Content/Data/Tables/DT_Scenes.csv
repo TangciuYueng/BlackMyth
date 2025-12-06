@@ -1,0 +1,12 @@
+Name,MapPath,DisplayName
+Scene_Level1,,黑风山入口
+Scene_Level2,,黑风寨
+Scene_Level3,,枯松涧
+Scene_Level4,,白骨岭
+Scene_Level5,,鬼市
+Scene_Level6,,火焰洞窟
+Scene_Boss_BullKingArena,,大王殿
+Scene_UnderwaterTemple,,水中伏龙宫
+Scene_CloudPlatform,,云端祭坛
+Scene_FinalBattle,,凌霄殿
+

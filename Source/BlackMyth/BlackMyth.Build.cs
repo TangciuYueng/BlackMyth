@@ -18,8 +18,9 @@ public class BlackMyth : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
-			"Slate"
-		});
+			"Slate",
+            "DeveloperSettings"
+        });
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
 
