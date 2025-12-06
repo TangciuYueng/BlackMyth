@@ -1,0 +1,12 @@
+Name,SkillName,Cooldown,DamageMult,MontagePath
+Skill_StaffSweep,棍扫八荒,4.0,1.2,
+Skill_GoldenCudgelSmash,如意金箍落,8.0,2.5,
+Skill_CloudDash,筋斗腾云,3.0,0.8,
+Skill_FirePillar,火焰柱,6.0,2.0,
+Skill_IceBurst,寒冰碎裂,5.0,1.8,
+Skill_ShadowStrike,影袭,2.5,1.4,
+Skill_DemonRoar,妖吼,10.0,0.0,
+Skill_EarthStomp,震地踏,7.0,1.7,
+Skill_SpiritChain,摄魂锁,12.0,0.5,
+Skill_BGMTransformation,金身变,20.0,0.0,
+
