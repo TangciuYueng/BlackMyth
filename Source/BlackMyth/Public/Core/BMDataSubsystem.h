@@ -14,25 +14,19 @@ class BLACKMYTH_API UBMDataSubsystem : public UGameInstanceSubsystem
     GENERATED_BODY()
 
 public:
-    // 系统初始化
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
-    // --- 查询接口 (API) ---
-
-    // 获取技能数据
+    // API to get data from tables
     const FBMSkillData* GetSkillData(FName SkillID) const;
 
-    // 获取场景数据
     const FBMSceneData* GetSceneData(FName SceneID) const;
 
-    // 获取玩家成长数据
     const FBMPlayerGrowthData* GetPlayerGrowthData(int32 Level) const;
 
-    // 获取元素倍率
     float GetElementalMultiplier(FName AttackElement, FName DefendElement) const;
 
 protected:
-    // 缓存加载好的 DataTable 指针
+    // Caches for data tables
     UPROPERTY()
     UDataTable* SkillTableCache;
 
@@ -46,7 +40,7 @@ protected:
     UDataTable* PlayerGrowthTableCache;
 
 private:
-    // 内部通用查找函数
+    // Helper function to find a row in a data table
     template <typename T>
     T* FindRow(UDataTable* Table, FName RowName) const;
 };

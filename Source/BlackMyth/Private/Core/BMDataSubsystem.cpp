@@ -44,12 +44,28 @@ const FBMPlayerGrowthData* UBMDataSubsystem::GetPlayerGrowthData(int32 Level) co
 
 float UBMDataSubsystem::GetElementalMultiplier(FName AttackElement, FName DefendElement) const
 {
+    // Attacker 
     const FBMElementalData* Row = FindRow<FBMElementalData>(ElementTableCache, AttackElement);
-    if (!Row) return 1.0f;
+    if (!Row)
+    {
+        return 1.0f;
+    }
 
-    if (DefendElement == FName("Physical")) return Row->Physical;
-    if (DefendElement == FName("Fire")) return Row->Fire;
-    if (DefendElement == FName("Ice")) return Row->Ice;
+    // Defender
+    const UScriptStruct* Struct = FBMElementalData::StaticStruct();
 
-    return 1.0f;
+    // Find the property corresponding to the defend element
+    const FFloatProperty* FloatProp = FindFProperty<FFloatProperty>(Struct, DefendElement);
+
+    // Return the multiplier value
+    if (FloatProp)
+    {
+        return FloatProp->GetFloatingPointPropertyValue(FloatProp->ContainerPtrToValuePtr<void>(Row));
+    }
+    // If property not found, log a warning and return default multiplier
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Elemental Multiplier not found for Defense: %s"), *DefendElement.ToString());
+        return 1.0f;
+    }
 }
