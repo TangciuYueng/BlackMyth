@@ -29,4 +29,7 @@ public:
 
     UPROPERTY(Config, EditAnywhere, Category = "Data Tables")
     TSoftObjectPtr<UDataTable> EnemyDataTable;
+
+    UPROPERTY(Config, EditAnywhere, Category = "Data Tables")
+    TSoftObjectPtr<UDataTable> ItemDataTable;
 };
