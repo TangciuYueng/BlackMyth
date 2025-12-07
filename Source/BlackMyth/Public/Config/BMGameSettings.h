@@ -26,4 +26,7 @@ public:
 
     UPROPERTY(Config, EditAnywhere, Category = "Data Tables")
     TSoftObjectPtr<UDataTable> PlayerGrowthTable;
+
+    UPROPERTY(Config, EditAnywhere, Category = "Data Tables")
+    TSoftObjectPtr<UDataTable> EnemyDataTable;
 };

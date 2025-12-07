@@ -6,6 +6,7 @@
 #include "Data/BMSceneData.h"
 #include "Data/BMElementalData.h"
 #include "Data/BMPlayerGrowthData.h"
+#include "Data/BMEnemyData.h"
 #include "BMDataSubsystem.generated.h"
 
 UCLASS()
@@ -23,6 +24,8 @@ public:
 
     const FBMPlayerGrowthData* GetPlayerGrowthData(int32 Level) const;
 
+    const FBMEnemyData* GetEnemyData(FName EnemyID) const;
+
     float GetElementalMultiplier(FName AttackElement, FName DefendElement) const;
 
 protected:
@@ -38,6 +41,9 @@ protected:
 
     UPROPERTY()
     UDataTable* PlayerGrowthTableCache;
+
+    UPROPERTY()
+    UDataTable* EnemyTableCache;
 
 private:
     // Helper function to find a row in a data table
