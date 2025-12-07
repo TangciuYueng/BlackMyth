@@ -14,6 +14,7 @@ void UBMDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
         ElementTableCache = Settings->ElementDataTable.LoadSynchronous();
         PlayerGrowthTableCache = Settings->PlayerGrowthTable.LoadSynchronous();
         EnemyTableCache = Settings->EnemyDataTable.LoadSynchronous();
+        ItemTableCache = Settings->ItemDataTable.LoadSynchronous();
     }
     
     // Debug Log
@@ -46,6 +47,11 @@ const FBMPlayerGrowthData* UBMDataSubsystem::GetPlayerGrowthData(int32 Level) co
 const FBMEnemyData* UBMDataSubsystem::GetEnemyData(FName EnemyID) const
 {
     return FindRow<FBMEnemyData>(EnemyTableCache, EnemyID);
+}
+
+const FBMItemData* UBMDataSubsystem::GetItemData(FName ItemID) const
+{
+    return FindRow<FBMItemData>(ItemTableCache, ItemID);
 }
 
 float UBMDataSubsystem::GetElementalMultiplier(FName AttackElement, FName DefendElement) const
