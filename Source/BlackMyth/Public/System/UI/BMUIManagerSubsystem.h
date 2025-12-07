@@ -13,5 +13,30 @@ UCLASS()
 class BLACKMYTH_API UBMUIManagerSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
-	
+
+public:
+    UFUNCTION(BlueprintCallable)
+    void ShowHUD(TSubclassOf<class UBMHUDWidget> HUDClass);
+
+    UFUNCTION(BlueprintCallable)
+    void ShowBossBar(TSubclassOf<class UBMBossBarBase> BossBarClass);
+
+    UFUNCTION(BlueprintCallable)
+    void ShowNotification(TSubclassOf<class UBMNotificationWidget> NotificationClass);
+
+    UFUNCTION(BlueprintCallable)
+    void ShowPauseMenu(TSubclassOf<class UBMPauseMenuWidget> PauseClass);
+
+    UFUNCTION(BlueprintCallable)
+    void ShowMainMenu(TSubclassOf<class UBMMainWidget> MainClass);
+
+    UFUNCTION(BlueprintCallable)
+    void HideAllMenus();
+
+private:
+    TWeakObjectPtr<class UBMHUDWidget> HUD;
+    TWeakObjectPtr<class UBMBossBarBase> BossBar;
+    TWeakObjectPtr<class UBMNotificationWidget> Notification;
+    TWeakObjectPtr<class UBMPauseMenuWidget> PauseMenu;
+    TWeakObjectPtr<class UBMMainWidget> MainMenu;
 };
