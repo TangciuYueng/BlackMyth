@@ -45,6 +45,76 @@ enum class EBMEnemyType : uint8
 };
 
 /**
+ * AI 的思维状态（用于 Blackboard 决策）
+ * 区别于 CharacterState (动作)，这是 AI 的"意图"
+ */
+UENUM(BlueprintType)
+enum class EBMAIState : uint8
+{
+    Passive     UMETA(DisplayName="Passive"),       // 待机/发呆
+    Patrol      UMETA(DisplayName="Patrolling"),    // 巡逻中
+    Investigate UMETA(DisplayName="Investigating"), // 怀疑（听到声音/看到尸体）
+    Combat      UMETA(DisplayName="Combat"),        // 战斗状态（追击/攻击）
+    Reset       UMETA(DisplayName="Resetting"),     // 脱战回血/返回出生点
+    Dead        UMETA(DisplayName="Dead")           // 死亡
+};
+
+/**
+ * 黑板键名称常量 (Namespace)
+ * 在 C++ Task/Service 中使用这些常量，而不是手写字符串
+ */
+namespace BMBlackboardKeys
+{
+    // Object: 仇恨目标 (通常是 Player)
+    static const FName TargetActor = TEXT("TargetActor");
+
+    // Vector: 移动目的地 (巡逻点、玩家位置、怀疑点)
+    static const FName TargetLocation = TEXT("TargetLocation");
+    
+    // Vector: 出生点/原点 (用于脱战返回)
+    static const FName HomeLocation = TEXT("HomeLocation");
+
+    // Enum (EBMAIState): 当前 AI 的思维状态
+    static const FName AIState = TEXT("AIState");
+
+    // Float: 距离目标的距离 (Service 每帧更新，避免 Task 重复计算)
+    static const FName DistanceToTarget = TEXT("DistanceToTarget");
+
+    // Bool: 是否可以使用技能
+    static const FName CanUseSkill = TEXT("CanUseSkill");
+
+    // Float: 攻击冷却剩余时间
+    static const FName AttackCooldown = TEXT("AttackCooldown");
+}
+
+/**
+ * 掉落物配置结构体
+ */
+USTRUCT(BlueprintType)
+struct FBMLootItem
+{
+    GENERATED_BODY()
+
+    // 物品 ID (对应 DataTable)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FName ItemId = NAME_None;
+
+    // 掉落几率 (0.0 - 1.0)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin="0.0", ClampMax="1.0"))
+    float DropChance = 0.5f;
+
+    // 最小数量
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin="1"))
+    int32 MinQuantity = 1;
+
+    // 最大数量
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin="1"))
+    int32 MaxQuantity = 1;
+
+    FBMLootItem() = default;
+};
+
+/**
  * 技能槽位（用于 UI 显示技能冷却、快捷键映射）
  */
 UENUM(BlueprintType)
