@@ -1,28 +1,47 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Core/BMTypes.h"
 #include "BMStatsComponent.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogBMStats, Log, All);
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+// 纯C++死亡事件（不靠蓝图）
+DECLARE_MULTICAST_DELEGATE_OneParam(FBMOnDeathNative, AActor* /*Killer*/);
+
+UCLASS(ClassGroup = (BM), meta = (BlueprintSpawnableComponent))
 class BLACKMYTH_API UBMStatsComponent : public UActorComponent
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-public:	
-	// Sets default values for this component's properties
-	UBMStatsComponent();
+public:
+    UBMStatsComponent();
 
-protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
+    // 统一使用 FBMDamageInfo 作为伤害载体（会回填 DamageValue = 最终生效伤害）
+    float ApplyDamage(FBMDamageInfo& InOutInfo);
 
-public:	
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+    bool IsDead() const { return Stats.HP <= 0.f; }
 
-		
+    bool TryConsumeStamina(float Amount);
+
+    void AddGameplayTag(FName Tag);
+    void RemoveGameplayTag(FName Tag);
+    bool HasGameplayTag(FName Tag) const;
+
+    // 便于角色/系统读取
+    const FBMStatBlock& GetStatBlock() const { return Stats; }
+    FBMStatBlock& GetStatBlockMutable() { return Stats; }
+
+
+
+public:
+    UPROPERTY(EditAnywhere, Category = "BM|Stats")
+    FBMStatBlock Stats;
+
+    FBMOnDeathNative OnDeathNative;
+
+private:
+    bool bDeathBroadcasted = false;
+    TSet<FName> Tags;
 };

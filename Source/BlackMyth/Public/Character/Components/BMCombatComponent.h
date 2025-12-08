@@ -1,28 +1,34 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "BMCombatComponent.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogBMCombat, Log, All);
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+DECLARE_MULTICAST_DELEGATE(FBMOnLightAttackRequested);
+DECLARE_MULTICAST_DELEGATE_OneParam(FBMOnSkillRequested, int32 /*Slot*/);
+
+UCLASS(ClassGroup = (BM), meta = (BlueprintSpawnableComponent))
 class BLACKMYTH_API UBMCombatComponent : public UActorComponent
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-public:	
-	// Sets default values for this component's properties
-	UBMCombatComponent();
+public:
+    UBMCombatComponent();
 
-protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
+    bool RequestLightAttack();
+    void RequestSkill(int32 Slot);
 
-public:	
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+    void ResetHitList();
+    bool CanPerformAction() const;
 
-		
+    // 派生系统/角色监听这些事件来驱动动画/FSM（不靠蓝图）
+    FBMOnLightAttackRequested OnLightAttackRequested;
+    FBMOnSkillRequested OnSkillRequested;
+
+    void SetActionLock(bool bLocked) { bActionLocked = bLocked; }
+
+private:
+    bool bActionLocked = false;
 };
