@@ -14,17 +14,13 @@ void UBMPlayerState_Attack::OnEnter(float DeltaTime)
     ABMPlayerCharacter* PC = Cast<ABMPlayerCharacter>(GetContext());
     if (!PC) return;
 
-    // 锁动作：攻击中不允许再次触发攻击/跳跃等（你后续可做更细粒度）
+    UCharacterMovementComponent* Move = PC->GetCharacterMovement();
+    // 锁动作：攻击中不允许再次触发攻击/跳跃等
     if (UBMCombatComponent* Combat = PC->GetCombat())
     {
         Combat->SetActionLock(true);
     }
-
-    // 攻击时先停一下移动（是否允许移动你可再调）
-    if (UCharacterMovementComponent* Move = PC->GetCharacterMovement())
-    {
-        Move->StopMovementImmediately();
-    }
+    ApplyAttackInertiaSettings(Move);
 
     bFinished = false;
 
@@ -35,7 +31,7 @@ void UBMPlayerState_Attack::OnEnter(float DeltaTime)
         return;
     }
 
-    // 用 Timer 代替 Montage 回调（纯C++、不需要 AnimGraph Slot）
+    // 用 Timer 代替 Montage 回调
     PC->GetWorldTimerManager().SetTimer(TimerHandle, [this]()
         {
             FinishAttack(false);
@@ -56,6 +52,8 @@ void UBMPlayerState_Attack::OnExit(float DeltaTime)
     {
         Combat->SetActionLock(false);
     }
+    // 退出攻击恢复移动参数
+    RestoreMovementSettings(PC->GetCharacterMovement());
 
     bFinished = false;
 }
@@ -74,6 +72,38 @@ bool UBMPlayerState_Attack::CanTransitionTo(FName StateName) const
         return false;
     }
     return true;
+}
+
+void UBMPlayerState_Attack::ApplyAttackInertiaSettings(UCharacterMovementComponent* Move)
+{
+    if (!Move) return;
+
+    // 先保存
+    SavedGroundFriction = Move->GroundFriction;
+    SavedBrakingDecelWalking = Move->BrakingDecelerationWalking;
+    SavedBrakingFrictionFactor = Move->BrakingFrictionFactor;
+    bSavedUseSeparateBrakingFriction = Move->bUseSeparateBrakingFriction;
+    SavedBrakingFriction = Move->BrakingFriction;
+
+    // 再设置：让“无输入时的减速”更平滑一点，从而产生惯性
+    Move->GroundFriction = 2.0f;              // 默认通常较大，降低一点 -> 更滑
+    Move->BrakingDecelerationWalking = 350.f; // 默认可能很大，降低 -> 不会瞬停
+    Move->BrakingFrictionFactor = 0.6f;       // <1 更滑，>1 更刹
+
+    //单独的刹车摩擦，手感更可控
+    Move->bUseSeparateBrakingFriction = true;
+    Move->BrakingFriction = 2.0f;
+}
+
+void UBMPlayerState_Attack::RestoreMovementSettings(UCharacterMovementComponent* Move)
+{
+    if (!Move) return;
+
+    Move->GroundFriction = SavedGroundFriction;
+    Move->BrakingDecelerationWalking = SavedBrakingDecelWalking;
+    Move->BrakingFrictionFactor = SavedBrakingFrictionFactor;
+    Move->bUseSeparateBrakingFriction = bSavedUseSeparateBrakingFriction;
+    Move->BrakingFriction = SavedBrakingFriction;
 }
 
 void UBMPlayerState_Attack::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)

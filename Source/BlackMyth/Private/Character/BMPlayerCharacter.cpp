@@ -52,7 +52,7 @@ ABMPlayerCharacter::ABMPlayerCharacter()
     {
         // 1) SkeletalMesh
         static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshFinder(
-            TEXT("/Script/Engine.SkeletalMesh'/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple.SKM_Manny_Simple'")
+            TEXT("/Script/Engine.SkeletalMesh'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Meshes/Wukong.Wukong'")
         );
         if (MeshFinder.Succeeded())
         {
@@ -62,22 +62,30 @@ ABMPlayerCharacter::ABMPlayerCharacter()
 
         // 2) 动画（AnimSequence）
         static ConstructorHelpers::FObjectFinder<UAnimSequence> IdleFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/Characters/Mannequins/Anims/Unarmed/MM_Idle.MM_Idle'")
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Idle_Zero_Pose.Idle_Zero_Pose'")
         );
         static ConstructorHelpers::FObjectFinder<UAnimSequence> MoveFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/Characters/Mannequins/Anims/Unarmed/Jog/MF_Unarmed_Jog_Fwd.MF_Unarmed_Jog_Fwd'")
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Jog_Fwd.Jog_Fwd'")
         );
         static ConstructorHelpers::FObjectFinder<UAnimSequence> JumpFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/Characters/Mannequins/Anims/Unarmed/Jump/MM_Jump.MM_Jump'")
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Jump_Start.Jump_Start'")
         );
         static ConstructorHelpers::FObjectFinder<UAnimSequence> AttackFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01.MM_Attack_01'")
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_A_Slow_MSA.Primary_Melee_A_Slow_MSA'")
+        );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> JumpStartFinder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Flip_Fwd.Q_Flip_Fwd'")
+        );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> FallLoopFinder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Fall_Loop.Q_Fall_Loop'")
         );
 
         if (IdleFinder.Succeeded())   AnimIdle = IdleFinder.Object;
         if (MoveFinder.Succeeded())   AnimMove = MoveFinder.Object;
         if (JumpFinder.Succeeded())   AnimJumpLoop = JumpFinder.Object;
         if (AttackFinder.Succeeded()) AnimLightAttack = AttackFinder.Object;
+        if (JumpStartFinder.Succeeded()) AnimJumpStart = JumpStartFinder.Object;
+        if (FallLoopFinder.Succeeded())  AnimFallLoop = FallLoopFinder.Object;
     }
 
     // === Mesh 位置/朝向 ===
@@ -186,7 +194,13 @@ void ABMPlayerCharacter::Input_JumpPressed()
     {
         if (!C->CanPerformAction()) return;
     }
+    UCharacterMovementComponent* Move = GetCharacterMovement();
+    if (!Move || Move->IsFalling())
+    {
+        return; // 空中不允许再次起跳
+    }
 
+    bPendingJump = true;
     if (UBMStateMachineComponent* Machine = GetFSM())
     {
         Machine->ChangeStateByName(BMStateNames::Jump);
@@ -223,6 +237,7 @@ void ABMPlayerCharacter::Landed(const FHitResult& Hit)
 {
     Super::Landed(Hit);
 
+    bPendingJump = false;
     // 落地后回到 Move/Idle（Jump 状态会因此退出）
     if (UBMStateMachineComponent* Machine = GetFSM())
     {
@@ -278,4 +293,14 @@ void ABMPlayerCharacter::PlayJumpLoop()
 float ABMPlayerCharacter::PlayLightAttackOnce(float PlayRate)
 {
     return PlayOnce(AnimLightAttack, PlayRate);
+}
+
+float ABMPlayerCharacter::PlayJumpStartOnce(float PlayRate)
+{
+    return PlayOnce(AnimJumpStart, PlayRate);
+}
+
+void ABMPlayerCharacter::PlayFallLoop()
+{
+    PlayLoop(AnimFallLoop);
 }
