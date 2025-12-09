@@ -1,7 +1,6 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "BMGameModeBase.h"
+#include "Character/BMPlayerCharacter.h"
+#include "Character/BMPlayerController.h"
 #include "System/UI/BMUIManagerSubsystem.h"
 #include "UI/BMHUDWidget.h"
 #include "UI/BMNotificationWidget.h"
@@ -10,6 +9,7 @@
 
 ABMGameModeBase::ABMGameModeBase()
 {
+    DefaultPawnClass = ABMPlayerCharacter::StaticClass();
     PlayerControllerClass = ABMPlayerController::StaticClass();
 }
 
@@ -33,4 +33,5 @@ void ABMGameModeBase::BeginPlay()
         UIManager->ShowNotification(BMGI->NotificationClass.Get());
     }
 }
+
 
