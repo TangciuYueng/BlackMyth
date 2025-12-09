@@ -13,7 +13,7 @@ void UBMPlayerState_Move::OnEnter(float DeltaTime)
     ABMPlayerCharacter* PC = Cast<ABMPlayerCharacter>(GetContext());
     if (!PC) return;
 
-    // 进入 Move 时同步移动速度（从 Stats）
+    // 进入 Move 时同步移动速度
     if (UBMStatsComponent* Stats = PC->GetStats())
     {
         if (UCharacterMovementComponent* Move = PC->GetCharacterMovement())

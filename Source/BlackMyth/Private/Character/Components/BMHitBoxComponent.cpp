@@ -10,7 +10,7 @@ UBMHitBoxComponent::UBMHitBoxComponent()
 {
     PrimaryComponentTick.bCanEverTick = false;
 
-    // 默认配置（你后续可在角色构造里覆盖）
+    // 默认配置
     FBMHitBoxConfig Default;
     Default.BaseDamage = 10.f;
     Default.DamageType = EBMDamageType::Melee;
@@ -180,7 +180,7 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
         Info.HitNormal = FVector::UpVector;
     }
 
-    // 击退（示例：从攻击者指向受害者）
+    // 击退
     if (Cfg.KnockbackStrength > 0.f)
     {
         const FVector Dir = (VictimChar->GetActorLocation() - InstigatorChar->GetActorLocation()).GetSafeNormal();

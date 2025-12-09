@@ -25,7 +25,7 @@ ABMPlayerCharacter::ABMPlayerCharacter()
     CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
     CameraBoom->SetupAttachment(RootComponent);
     CameraBoom->TargetArmLength = 350.f;
-    CameraBoom->bUsePawnControlRotation = true;   // 关键：相机臂跟随控制器旋转
+    CameraBoom->bUsePawnControlRotation = true;   
     CameraBoom->bEnableCameraLag = true;
     CameraBoom->CameraLagSpeed = 12.f;
 
@@ -34,7 +34,7 @@ ABMPlayerCharacter::ABMPlayerCharacter()
     FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
     FollowCamera->bUsePawnControlRotation = false; // 相机本身不转，用 Boom 转
 
-    // 角色本体不要跟着 Controller 直接转
+    // 角色本体不跟着 Controller 直接转
     bUseControllerRotationYaw = false;
     bUseControllerRotationPitch = false;
     bUseControllerRotationRoll = false;
@@ -67,9 +67,6 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         static ConstructorHelpers::FObjectFinder<UAnimSequence> MoveFinder(
             TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Jog_Fwd.Jog_Fwd'")
         );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> JumpFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Jump_Start.Jump_Start'")
-        );
         static ConstructorHelpers::FObjectFinder<UAnimSequence> AttackFinder(
             TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_A_Slow_MSA.Primary_Melee_A_Slow_MSA'")
         );
@@ -82,7 +79,6 @@ ABMPlayerCharacter::ABMPlayerCharacter()
 
         if (IdleFinder.Succeeded())   AnimIdle = IdleFinder.Object;
         if (MoveFinder.Succeeded())   AnimMove = MoveFinder.Object;
-        if (JumpFinder.Succeeded())   AnimJumpLoop = JumpFinder.Object;
         if (AttackFinder.Succeeded()) AnimLightAttack = AttackFinder.Object;
         if (JumpStartFinder.Succeeded()) AnimJumpStart = JumpStartFinder.Object;
         if (FallLoopFinder.Succeeded())  AnimFallLoop = FallLoopFinder.Object;
@@ -92,7 +88,7 @@ ABMPlayerCharacter::ABMPlayerCharacter()
     GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -90.f));
     GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 
-    // 纯C++动画模式：单节点（不用 AnimBP）
+    // 纯C++动画模式：单节点
     GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
 }
 
@@ -141,7 +137,7 @@ void ABMPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-    // 这里用传统输入映射
+    // 传统输入映射
     // Axis: MoveForward / MoveRight
     PlayerInputComponent->BindAxis(TEXT("MoveForward"), this, &ABMPlayerCharacter::Input_MoveForward);
     PlayerInputComponent->BindAxis(TEXT("MoveRight"), this, &ABMPlayerCharacter::Input_MoveRight);
@@ -238,14 +234,14 @@ void ABMPlayerCharacter::Landed(const FHitResult& Hit)
     Super::Landed(Hit);
 
     bPendingJump = false;
-    // 落地后回到 Move/Idle（Jump 状态会因此退出）
+    // 落地后回到 Move/Idle
     if (UBMStateMachineComponent* Machine = GetFSM())
     {
         Machine->ChangeStateByName(HasMoveIntent() ? BMStateNames::Move : BMStateNames::Idle);
     }
 }
 
-// ===== 纯C++动画播放（无 AnimBP）=====
+// ===== 纯C++动画播放 =====
 
 void ABMPlayerCharacter::PlayLoop(UAnimSequence* Seq)
 {
@@ -283,11 +279,6 @@ void ABMPlayerCharacter::PlayIdleLoop()
 void ABMPlayerCharacter::PlayMoveLoop()
 {
     PlayLoop(AnimMove);
-}
-
-void ABMPlayerCharacter::PlayJumpLoop()
-{
-    PlayLoop(AnimJumpLoop);
 }
 
 float ABMPlayerCharacter::PlayLightAttackOnce(float PlayRate)

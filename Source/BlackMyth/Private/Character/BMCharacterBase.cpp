@@ -74,7 +74,7 @@ bool ABMCharacterBase::CanBeDamagedBy(const FBMDamageInfo& Info) const
         return false;
     }
 
-    // 默认不做阵营过滤；你可以在派生类 override 这里实现友伤/敌我判断
+    // 默认不做阵营过滤
     return true;
 }
 
@@ -117,14 +117,14 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
         InOutInfo.TargetActor = this;
     }
 
-    // 基础过滤（多态）
+    // 基础过滤
     if (!CanBeDamagedBy(InOutInfo))
     {
         InOutInfo.DamageValue = 0.f;
         return 0.f;
     }
 
-    // 统一：RawDamageValue 作为“原始输入”，DamageValue 作为“可变通道”
+    // 统一：RawDamageValue 作为原始输入，DamageValue 作为可变通道
     const float Base = (InOutInfo.RawDamageValue > 0.f) ? InOutInfo.RawDamageValue : InOutInfo.DamageValue;
     InOutInfo.RawDamageValue = Base;
     InOutInfo.DamageValue = Base;
@@ -154,18 +154,6 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
 
         HandleDamageTaken(InOutInfo);
         OnCharacterDamaged.Broadcast(this, InOutInfo);
-
-        // 可选：受击表现（按 HitReaction 选择动画）
-        if (!Stats->IsDead())
-        {
-            if (UAnimMontage* HitReact = GetHitReactMontage(InOutInfo.HitReaction))
-            {
-                if (UAnimInstance* Anim = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr)
-                {
-                    Anim->Montage_Play(HitReact, 1.0f);
-                }
-            }
-        }
     }
 
     return Applied;
@@ -173,7 +161,7 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
 
 void ABMCharacterBase::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
 {
-    // 基类只做轻量日志，派生类可 override（硬直/仇恨/UI飘字）
+    // 基类只做轻量日志，派生类可 override
     UE_LOG(LogBMCharacter, Verbose, TEXT("[%s] Took %.2f damage from %s"),
         *GetName(),
         FinalInfo.DamageValue,
@@ -182,7 +170,7 @@ void ABMCharacterBase::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
 
 void ABMCharacterBase::HandleStatsDeath(AActor* Killer)
 {
-    // 死亡时广播“最后一次有效伤害信息”
+    // 死亡时广播最后一次有效伤害信息
     if (!LastAppliedDamageInfo.TargetActor)
     {
         LastAppliedDamageInfo.TargetActor = this;
@@ -194,15 +182,6 @@ void ABMCharacterBase::HandleStatsDeath(AActor* Killer)
 
     HandleDeath(LastAppliedDamageInfo);
     OnCharacterDied.Broadcast(this, LastAppliedDamageInfo);
-
-    // 可选：死亡 montage
-    if (UAnimMontage* Death = GetDeathMontage())
-    {
-        if (UAnimInstance* Anim = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr)
-        {
-            Anim->Montage_Play(Death, 1.0f);
-        }
-    }
 }
 
 void ABMCharacterBase::HandleDeath(const FBMDamageInfo& LastHitInfo)

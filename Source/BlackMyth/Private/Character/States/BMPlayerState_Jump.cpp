@@ -45,13 +45,12 @@ void UBMPlayerState_Jump::OnEnter(float DeltaTime)
         }
         else
         {
-            // 没配动画也要能跑：立刻按“仍在空中就 FallLoop”
             StartFallLoopIfStillInAir();
         }
     }
     else
     {
-        // 2) 非起跳导致的下落（如走出平台边缘）：直接 FallLoop
+        // 2) 非起跳导致的下落：直接 FallLoop
         EnterFallLoop();
     }
 }
@@ -75,7 +74,7 @@ void UBMPlayerState_Jump::OnUpdate(float DeltaTime)
 {
     (void)DeltaTime;
 
-    // 兜底：如果某些情况下没走 Landed 回调，也可以靠这里回到地面状态
+    // 回到地面状态
     ABMPlayerCharacter* PC = Cast<ABMPlayerCharacter>(GetContext());
     if (!PC) return;
 
@@ -90,7 +89,7 @@ void UBMPlayerState_Jump::OnUpdate(float DeltaTime)
         }
         return;
     }
-    // 如果是“走边缘掉落”进入 Jump 状态
+    // 掉落进入 Jump 状态
     if (!bDidPlayJumpStart && !bInFallLoop)
     {
         EnterFallLoop();

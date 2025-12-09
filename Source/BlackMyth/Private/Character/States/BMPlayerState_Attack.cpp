@@ -60,11 +60,11 @@ void UBMPlayerState_Attack::OnExit(float DeltaTime)
 
 bool UBMPlayerState_Attack::CanTransitionTo(FName StateName) const
 {
-    // 攻击过程中默认不允许切走（除非你以后加 Death/Hit 强制切）
-    // 这里先简单：只有完成后才允许切换
+    // 攻击过程中默认不允许切走
+    // 只有完成后才允许切换
     if (!bFinished)
     {
-        // 允许死亡强制切（后面你加 Death 状态时就能直接用）
+        // 允许死亡强制切
         if (StateName == BMStateNames::Death)
         {
             return true;
@@ -104,12 +104,6 @@ void UBMPlayerState_Attack::RestoreMovementSettings(UCharacterMovementComponent*
     Move->BrakingFrictionFactor = SavedBrakingFrictionFactor;
     Move->bUseSeparateBrakingFriction = bSavedUseSeparateBrakingFriction;
     Move->BrakingFriction = SavedBrakingFriction;
-}
-
-void UBMPlayerState_Attack::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
-{
-    if (Montage != PlayingMontage) return;
-    FinishAttack(bInterrupted);
 }
 
 void UBMPlayerState_Attack::FinishAttack(bool bInterrupted)

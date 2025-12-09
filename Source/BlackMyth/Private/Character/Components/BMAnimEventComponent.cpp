@@ -48,7 +48,6 @@ void UBMAnimEventComponent::Anim_ResetHitList()
 void UBMAnimEventComponent::Anim_PublishEvent(FName EventTag)
 {
     (void)EventTag;
-    // 你后面接 EventBusSubsystem 时在这里 publish(FBMEventData)
 }
 
 void UBMAnimEventComponent::Anim_SpawnEffect(FName EffectName)

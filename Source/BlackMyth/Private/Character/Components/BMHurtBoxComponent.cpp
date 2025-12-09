@@ -43,7 +43,7 @@ void UBMHurtBoxComponent::ModifyIncomingDamage(FBMDamageInfo& InOutInfo) const
         InOutInfo.DamageValue *= 0.75f;
     }
 
-    // 3) 可选：根据倍率/伤害量推荐受击反馈（示例：倍率高则更重）
+    // 3)根据倍率/伤害量推荐受击反馈
     if (InOutInfo.HitReaction == EBMHitReaction::None)
     {
         InOutInfo.HitReaction = (DamageMultiplier >= 1.5f) ? EBMHitReaction::Heavy : EBMHitReaction::Light;

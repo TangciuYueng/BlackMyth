@@ -38,7 +38,7 @@ public:
     void DeactivateHitBox();
     void ResetHitList();
 
-    // 配置接口（你可以在构造里给不同 Type 配不同伤害）
+    // 配置接口
     void SetConfig(EBMHitBoxType Type, const FBMHitBoxConfig& InConfig);
 
     FBMOnHitLanded OnHitLanded;
