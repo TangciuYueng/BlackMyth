@@ -66,12 +66,18 @@ void UBMUIManagerSubsystem::ShowPauseMenu(TSubclassOf<UBMPauseMenuWidget> PauseC
 {
     UWorld* World = GetWorld();
     if (!World) return;
-    if (!PauseMenu.IsValid())
+    if (PauseMenu.IsValid())
     {
-        if (UUserWidget* W = CreateAndAdd(PauseClass, World))
+        UUserWidget* W = PauseMenu.Get();
+        if (W && !W->IsInViewport())
         {
-            PauseMenu = Cast<UBMPauseMenuWidget>(W);
+            W->AddToViewport();
         }
+        return;
+    }
+    if (UUserWidget* W = CreateAndAdd(PauseClass, World))
+    {
+        PauseMenu = Cast<UBMPauseMenuWidget>(W);
     }
 }
 
@@ -99,10 +105,22 @@ void UBMUIManagerSubsystem::HideAllMenus()
         WPtr = nullptr;
     };
 
-    TWeakObjectPtr<UUserWidget> Pause(PauseMenu.Get());
-    TWeakObjectPtr<UUserWidget> Main(MainMenu.Get());
+    RemoveIfValid(reinterpret_cast<TWeakObjectPtr<UUserWidget>&>(PauseMenu));
+    RemoveIfValid(reinterpret_cast<TWeakObjectPtr<UUserWidget>&>(MainMenu));
+}
 
-    RemoveIfValid(Pause);
-    RemoveIfValid(Main);
+void UBMUIManagerSubsystem::HidePauseMenu()
+{
+    if (UUserWidget* W = PauseMenu.Get())
+    {
+        W->RemoveFromParent();
+    }
+    PauseMenu = nullptr;
+}
+
+bool UBMUIManagerSubsystem::IsPauseMenuVisible() const
+{
+    const UUserWidget* W = PauseMenu.Get();
+    return W && W->IsInViewport();
 }
 
