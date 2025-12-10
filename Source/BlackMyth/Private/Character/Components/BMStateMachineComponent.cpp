@@ -1,34 +1,63 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Character/Components/BMStateMachineComponent.h"
+#include "Character/Components/BMCharacterState.h"
+#include "Core/BMTypes.h"
 
-// Sets default values for this component's properties
 UBMStateMachineComponent::UBMStateMachineComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
+    PrimaryComponentTick.bCanEverTick = false; // 由 ABMCharacterBase Tick 统一驱动
 }
 
-
-// Called when the game starts
-void UBMStateMachineComponent::BeginPlay()
+void UBMStateMachineComponent::RegisterState(FName Name, UBMCharacterState* State)
 {
-	Super::BeginPlay();
-
-	// ...
-	
+    if (Name.IsNone() || !State) return;
+    States.Add(Name, State);
 }
 
-
-// Called every frame
-void UBMStateMachineComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void UBMStateMachineComponent::ChangeState(UBMCharacterState* NewState)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    if (NewState == Current) return;
 
-	// ...
+    if (Current)
+    {
+        Current->OnExit(0.f);
+    }
+    Current = NewState;
+
+    // 反查名字
+    CurrentStateName = NAME_None;
+    for (const auto& It : States)
+    {
+        if (It.Value == Current)
+        {
+            CurrentStateName = It.Key;
+            break;
+        }
+    }
+
+    if (Current)
+    {
+        Current->OnEnter(0.f);
+    }
 }
 
+bool UBMStateMachineComponent::ChangeStateByName(FName Name)
+{
+    TObjectPtr<UBMCharacterState>* Found = States.Find(Name);
+    if (!Found || !(*Found)) return false;
+
+    if (Current && !Current->CanTransitionTo(Name))
+    {
+        return false;
+    }
+
+    ChangeState(*Found);
+    return true;
+}
+
+void UBMStateMachineComponent::TickState(float DeltaSeconds)
+{
+    if (Current)
+    {
+        Current->OnUpdate(DeltaSeconds);
+    }
+}
