@@ -1,61 +1,100 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
+#include "Core/BMTypes.h"
 #include "BMSaveData.generated.h"
 
-/**
- * 对应类图: FMBInventoryItemSaveData
- * 用于将 TMap 转换为 TArray 进行存储
- */
-USTRUCT(BlueprintType)
-struct FMBInventoryItemSaveData
-{
-    GENERATED_BODY()
-
-    UPROPERTY(VisibleAnywhere, Category = "SaveData")
-    FName ItemID;
-
-    UPROPERTY(VisibleAnywhere, Category = "SaveData")
-    int32 Quantity;
-};
+// 存档数据版本常量
+#define BM_SAVE_DATA_VERSION 1
 
 /**
- * 
+ * Actual save game data class
  */
 UCLASS()
 class BLACKMYTH_API UBMSaveData : public USaveGame
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
     UBMSaveData();
 
-    // === 基础元数据 ===
-    UPROPERTY(VisibleAnywhere, Category = "Basic")
+    /**
+     * 验证存档数据有效性
+     * 
+     * @return 如果数据有效返回 true，否则返回 false
+     */
+    bool IsValid() const;
+
+    /**
+     * 获取存档元信息
+     * 
+     * @return 包含时间戳、位置等信息的元数据结构
+     */
+    FBMSaveMeta GetSaveMeta() const;
+
+    // Save metadata
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
+    int32 SaveVersion;
+
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
     FString SaveSlotName;
 
-    UPROPERTY(VisibleAnywhere, Category = "Basic")
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
     FDateTime Timestamp;
 
-    // === 玩家核心属性 (Player Stats) ===
-    UPROPERTY(VisibleAnywhere, Category = "Player Stats")
-    float PlayerHP;
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
+    FName MapName;
 
-    UPROPERTY(VisibleAnywhere, Category = "Player Stats")
+    // Player stats
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
+    float MaxHP;
+
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
+    float HP;
+
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
+    float MaxMP;
+
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
+    float MP;
+
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
+    float MaxStamina;
+
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
+    float Stamina;
+
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
+    float Attack;
+
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
+    float Defense;
+
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
+    float MoveSpeed;
+
+    // Player level and experience
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
     int32 PlayerLevel;
 
-    UPROPERTY(VisibleAnywhere, Category = "Player Stats")
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
     float CurrentXP;
 
-    UPROPERTY(VisibleAnywhere, Category = "Player Stats")
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
     int32 SkillPoints;
 
-    UPROPERTY(VisibleAnywhere, Category = "Player Stats")
+    // Player position and rotation
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
     FVector Location;
 
-	UPROPERTY(VisibleAnywhere, Category = "Inventory")
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
+    FRotator Rotation;
+
+    // Inventory Data
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
     TArray<FMBInventoryItemSaveData> InventoryItems;
+
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
+    int32 Currency;
 };
