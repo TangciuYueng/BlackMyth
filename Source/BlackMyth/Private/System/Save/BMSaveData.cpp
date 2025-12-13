@@ -29,6 +29,7 @@ UBMSaveData::UBMSaveData()
     PlayerLevel = 1;
     CurrentXP = 0.0f;
     SkillPoints = 0;
+    AttributePoints = 0;
     
     Location = FVector::ZeroVector;
     Rotation = FRotator::ZeroRotator;

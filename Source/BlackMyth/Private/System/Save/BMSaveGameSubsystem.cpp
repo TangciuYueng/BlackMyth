@@ -385,12 +385,12 @@ void UBMSaveGameSubsystem::WriteSaveData(UBMSaveData* SaveData, ABMPlayerCharact
     // 3. 收集 Experience（使用 GetComponentByClass 查找组件）
     if (UBMExperienceComponent* ExpComp = Player->GetComponentByClass<UBMExperienceComponent>())
     {
-        // 注意：这些属性可能需要在 ExperienceComponent 中实际实现
-        // TODO: 需要根据组件实际接口调整
-        // SaveData->PlayerLevel = ExpComp->Level;
-        // SaveData->CurrentXP = ExpComp->CurrentXP;
-        // SaveData->SkillPoints = ExpComp->SkillPoints;
-        UE_LOG(LogBMSave, Verbose, TEXT("WriteSaveData: Experience component found (implementation pending)"));
+        SaveData->PlayerLevel = ExpComp->GetLevel();
+        SaveData->CurrentXP = ExpComp->GetCurrentXP();
+        SaveData->SkillPoints = ExpComp->GetSkillPoints();
+        SaveData->AttributePoints = ExpComp->GetAttributePoints();
+        UE_LOG(LogBMSave, Verbose, TEXT("WriteSaveData: Saved experience data - Level: %d, XP: %f, SkillPoints: %d, AttributePoints: %d"), 
+            SaveData->PlayerLevel, SaveData->CurrentXP, SaveData->SkillPoints, SaveData->AttributePoints);
     }
     else
     {
@@ -470,13 +470,18 @@ void UBMSaveGameSubsystem::ApplySaveData(UBMSaveData* SaveData, ABMPlayerCharact
     // 3. 恢复 Experience
     if (UBMExperienceComponent* ExpComp = Player->GetComponentByClass<UBMExperienceComponent>())
     {
-        // TODO: 这些属性可能需要在 ExperienceComponent 中实际实现
-        // 实际使用时需要根据组件实际接口调整
-        // ExpComp->Level = SaveData->PlayerLevel;
-        // ExpComp->CurrentXP = SaveData->CurrentXP;
-        // ExpComp->SkillPoints = SaveData->SkillPoints;
-        // ExpComp->CheckLevelUp(); // 视逻辑决定是否检查
-        UE_LOG(LogBMSave, Verbose, TEXT("ApplySaveData: Experience component found (implementation pending)"));
+        // 设置等级（会自动应用成长数据）
+        ExpComp->SetLevel(SaveData->PlayerLevel, true);
+        
+        // 设置经验值（会自动检查升级）
+        ExpComp->SetCurrentXP(SaveData->CurrentXP);
+        
+        // 设置技能点数和属性点数
+        ExpComp->SetSkillPoints(SaveData->SkillPoints);
+        ExpComp->SetAttributePoints(SaveData->AttributePoints);
+        
+        UE_LOG(LogBMSave, Log, TEXT("ApplySaveData: Restored experience data - Level: %d, XP: %f, SkillPoints: %d, AttributePoints: %d"), 
+            SaveData->PlayerLevel, SaveData->CurrentXP, SaveData->SkillPoints, SaveData->AttributePoints);
     }
     else
     {

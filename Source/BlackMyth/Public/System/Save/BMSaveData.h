@@ -84,6 +84,9 @@ public:
     UPROPERTY(VisibleAnywhere, Category = "SaveData")
     int32 SkillPoints;
 
+    UPROPERTY(VisibleAnywhere, Category = "SaveData")
+    int32 AttributePoints;
+
     // Player position and rotation
     UPROPERTY(VisibleAnywhere, Category = "SaveData")
     FVector Location;
