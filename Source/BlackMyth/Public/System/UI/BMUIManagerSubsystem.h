@@ -28,6 +28,12 @@ public:
     void ShowPauseMenu(TSubclassOf<class UBMPauseMenuWidget> PauseClass);
 
     UFUNCTION(BlueprintCallable)
+    void HidePauseMenu();
+
+    UFUNCTION(BlueprintCallable)
+    bool IsPauseMenuVisible() const;
+
+    UFUNCTION(BlueprintCallable)
     void ShowMainMenu(TSubclassOf<class UBMMainWidget> MainClass);
 
     UFUNCTION(BlueprintCallable)
