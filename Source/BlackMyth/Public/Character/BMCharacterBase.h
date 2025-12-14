@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Components/ActorComponent.h"
 #include "Core/BMTypes.h"
 #include "BMCharacterBase.generated.h"
 
@@ -144,6 +145,13 @@ public:
     UBMHitBoxComponent* GetHitBox() const { return HitBox; }
 
     /**
+     * 获取受击判定组件列表（HurtBoxes）
+     *
+     * @return HurtBox 组件数组的常量引用
+     */
+    const TArray<TObjectPtr<UBMHurtBoxComponent>>& GetHurtBoxes() const { return HurtBoxes; }
+
+    /**
      * 角色受击事件
      *
      * 在一次伤害结算完成后触发，携带最终 FBMDamageInfo
@@ -197,15 +205,6 @@ protected:
      */
     virtual void HandleDeath(const FBMDamageInfo& LastHitInfo);
 
-    /**
-     * 根据命中的组件计算伤害倍率
-     *
-     * 默认用于 HurtBox 体系
-     *
-     * @param HitComponent 命中的碰撞组件/骨骼附属组件
-     * @return 伤害倍率，默认为 1.0
-     */
-    virtual float GetDamageMultiplierForComponent(const UPrimitiveComponent* HitComponent) const;
 
 protected:
     /**
@@ -260,6 +259,7 @@ private:
     /**
      * 缓存角色身上的 HurtBox 组件集合
      *
+     * 在 BeginPlay 中调用，遍历并收集 Owner 上的 UBMHurtBoxComponent
      * 用于在运行时快速查询命中部位对应的倍率与属性，避免每次受击动态查找
      */
     void CacheHurtBoxes();

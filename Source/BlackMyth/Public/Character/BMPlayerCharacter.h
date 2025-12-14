@@ -222,14 +222,25 @@ private:
     /**
      * 工具函数：以非循环方式播放一次动画
      *
-     * 使用 AnimationSingleNode 模式播放一次性动作，
-     * 并返回预计播放时长，供状态机使用计时器进行状态切换
+     * 使用 AnimationSingleNode 模式播放一次性动作，并允许指定起始时间与最大播放时长：
+     * - StartTime 用于从动画中间开始播放
+     * - MaxPlayTime 用于限制本次播放的有效时长
      *
-     * @param Seq 需要播放的动画序列指针，可以为 nullptr
-     * @param PlayRate 动画播放速率，1.0 为原速
-     * @return 动画实际播放时长（秒），若动画不存在则返回 0
+     * 函数会返回本次有效播放时长，供状态机设置计时器或做状态切换。
+     *
+     * @param Seq         需要播放的动画序列指针
+     * @param PlayRate    动画播放速率，1.0 为原速
+     * @param StartTime   播放起始时间（秒），默认 0.0
+     * @param MaxPlayTime 本次最大播放时长（秒），默认 -1；<=0 表示播放到动画结尾
+     *
+     * @return 本次动画实际有效播放时长（秒），若动画不存在则返回 0
      */
-    float PlayOnce(UAnimSequence* Seq, float PlayRate);
+    float PlayOnce(
+        UAnimSequence* Seq,
+        float PlayRate = 1.0f,
+        float StartTime = 0.0f,
+        float MaxPlayTime = -1.0f
+    );
 
     /**
      * 相机臂组件

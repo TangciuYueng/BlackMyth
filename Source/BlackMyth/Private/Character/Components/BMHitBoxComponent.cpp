@@ -1,119 +1,259 @@
 #include "Character/Components/BMHitBoxComponent.h"
 
 #include "Character/BMCharacterBase.h"
+#include "Character/Components/BMStatsComponent.h"
+#include "Character/Components/BMHurtBoxComponent.h"
+
 #include "Components/BoxComponent.h"
-#include "Components/PrimitiveComponent.h"
+#include "GameFramework/Character.h"
+#include "Components/SkeletalMeshComponent.h"
 
 DEFINE_LOG_CATEGORY(LogBMHitBox);
 
 UBMHitBoxComponent::UBMHitBoxComponent()
 {
-    PrimaryComponentTick.bCanEverTick = false;
-
-    // 默认配置
-    FBMHitBoxConfig Default;
-    Default.BaseDamage = 10.f;
-    Default.DamageType = EBMDamageType::Melee;
-    Default.ElementType = EBMElementType::Physical;
-    Default.DefaultReaction = EBMHitReaction::Light;
-    Default.KnockbackStrength = 0.f;
-
-    Configs.Add(EBMHitBoxType::Default, Default);
-    Configs.Add(EBMHitBoxType::LightAttack, Default);
-    Configs.Add(EBMHitBoxType::HeavyAttack, Default);
-    Configs.Add(EBMHitBoxType::Skill, Default);
+    PrimaryComponentTick.bCanEverTick = true;
 }
 
 void UBMHitBoxComponent::BeginPlay()
 {
     Super::BeginPlay();
-    EnsureDefaultHitBoxCreated();
+
+    // 若用户没注册，创建一个默认定义
+    if (Definitions.Num() == 0)
+    {
+        FBMHitBoxDefinition Def;
+        Def.Name = TEXT("Default");
+        Def.Type = EBMHitBoxType::Default;
+        Def.AttachSocketOrBone = NAME_None;
+        Def.BoxExtent = FVector(8.f);
+        Def.DamageType = EBMDamageType::Melee;
+        Def.ElementType = ElementType;
+        Definitions.Add(Def);
+    }
+
+    for (const FBMHitBoxDefinition& Def : Definitions)
+    {
+        EnsureCreated(Def);
+    }
+
+    DeactivateHitBox();
 }
 
-ABMCharacterBase* UBMHitBoxComponent::GetOwnerCharacter() const
+void UBMHitBoxComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    for (auto& KVP : HitBoxes)
+    {
+        if (KVP.Value)
+        {
+            KVP.Value->DestroyComponent();
+        }
+    }
+    HitBoxes.Empty();
+    ActiveHitBox = nullptr;
+    HitActorsThisSwing.Reset();
+
+    Super::EndPlay(EndPlayReason);
+}
+
+void UBMHitBoxComponent::RegisterDefinition(const FBMHitBoxDefinition& Def)
+{
+    Definitions.Add(Def);
+}
+
+USkeletalMeshComponent* UBMHitBoxComponent::ResolveOwnerMesh() const
+{
+    if (ACharacter* C = Cast<ACharacter>(GetOwner()))
+    {
+        return C->GetMesh();
+    }
+    return nullptr;
+}
+
+ABMCharacterBase* UBMHitBoxComponent::ResolveOwnerCharacter() const
 {
     return Cast<ABMCharacterBase>(GetOwner());
 }
 
-void UBMHitBoxComponent::EnsureDefaultHitBoxCreated()
+FName UBMHitBoxComponent::TypeToName(EBMHitBoxType Type)
 {
-    if (HitBoxes.Contains(EBMHitBoxType::Default))
+    // 用 FName 做 key
+    switch (Type)
+    {
+        case EBMHitBoxType::LightAttack: return TEXT("LightAttack");
+        case EBMHitBoxType::HeavyAttack: return TEXT("HeavyAttack");
+        case EBMHitBoxType::Skill:       return TEXT("Skill");
+        default:                         return TEXT("Default");
+    }
+}
+
+const FBMHitBoxDefinition* UBMHitBoxComponent::FindDefByType(EBMHitBoxType Type) const
+{
+    for (const FBMHitBoxDefinition& Def : Definitions)
+    {
+        if (Def.Type == Type)
+        {
+            return &Def;
+        }
+    }
+    // 回退 Default
+    for (const FBMHitBoxDefinition& Def : Definitions)
+    {
+        if (Def.Type == EBMHitBoxType::Default)
+        {
+            return &Def;
+        }
+    }
+    return nullptr;
+}
+
+void UBMHitBoxComponent::EnsureCreated(const FBMHitBoxDefinition& Def)
+{
+    AActor* Owner = GetOwner();
+    if (!Owner) return;
+
+    if (Def.Name.IsNone())
+    {
+        UE_LOG(LogBMHitBox, Warning, TEXT("[%s] HitBoxDefinition has None name."), *Owner->GetName());
+        return;
+    }
+
+    if (HitBoxes.Contains(Def.Name))
     {
         return;
     }
 
-    ABMCharacterBase* OwnerChar = GetOwnerCharacter();
-    if (!OwnerChar)
+    USkeletalMeshComponent* Mesh = ResolveOwnerMesh();
+    if (!Mesh)
     {
-        UE_LOG(LogBMHitBox, Error, TEXT("HitBoxComponent owner is not ABMCharacterBase."));
+        UE_LOG(LogBMHitBox, Warning, TEXT("[%s] HitBox cannot resolve mesh."), *Owner->GetName());
         return;
     }
 
-    // 运行时创建默认 HitBox（纯C++）
-    UBoxComponent* Box = NewObject<UBoxComponent>(OwnerChar, TEXT("HitBox_Default"));
-    if (!Box) return;
-
-    USceneComponent* AttachParent = OwnerChar->GetMesh() ? (USceneComponent*)OwnerChar->GetMesh() : OwnerChar->GetRootComponent();
-    Box->SetupAttachment(AttachParent);
-
-    Box->SetBoxExtent(FVector(10.f, 10.f, 10.f));
-    Box->SetGenerateOverlapEvents(true);
-    Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    Box->SetCollisionObjectType(ECC_WorldDynamic);
-    Box->SetCollisionResponseToAllChannels(ECR_Ignore);
-    Box->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
-
-    Box->OnComponentBeginOverlap.AddDynamic(this, &UBMHitBoxComponent::OnHitBoxOverlap);
-
+    const FName CompName = MakeUniqueObjectName(Owner, UBoxComponent::StaticClass(), *FString::Printf(TEXT("BM_HitBox_%s"), *Def.Name.ToString()));
+    UBoxComponent* Box = NewObject<UBoxComponent>(Owner, CompName);
+    Owner->AddInstanceComponent(Box);
     Box->RegisterComponent();
 
-    HitBoxes.Add(EBMHitBoxType::Default, Box);
-}
+    Box->AttachToComponent(Mesh, FAttachmentTransformRules::KeepRelativeTransform, Def.AttachSocketOrBone);
+    Box->SetBoxExtent(Def.BoxExtent);
+    Box->SetRelativeTransform(Def.RelativeTransform);
 
-void UBMHitBoxComponent::SetConfig(EBMHitBoxType Type, const FBMHitBoxConfig& InConfig)
-{
-    Configs.Add(Type, InConfig);
-}
+    Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Box->SetGenerateOverlapEvents(true);
 
-const FBMHitBoxConfig& UBMHitBoxComponent::GetConfigForType(EBMHitBoxType Type) const
-{
-    if (const FBMHitBoxConfig* Found = Configs.Find(Type))
-    {
-        return *Found;
-    }
-    return Configs.FindChecked(EBMHitBoxType::Default);
+    // 只 Overlap WorldDynamic（避免 Pawn/Capsule 重复触发）
+    Box->SetCollisionObjectType(ECC_WorldDynamic);
+    Box->SetCollisionResponseToAllChannels(ECR_Ignore);
+    Box->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
+
+    Box->ComponentTags.Add(TEXT("BM_HitBox"));
+    Box->OnComponentBeginOverlap.AddDynamic(this, &UBMHitBoxComponent::OnHitBoxOverlap);
+
+    HitBoxes.Add(Def.Name, Box);
+
+
 }
 
 void UBMHitBoxComponent::ActivateHitBox(EBMHitBoxType Type)
 {
-    EnsureDefaultHitBoxCreated();
+    const FString TypeStr = UEnum::GetValueAsString(Type);
 
-    ActiveType = Type;
+    // 先打印请求启用
+    UE_LOG(LogBMHitBox, Warning, TEXT("[HitBox] Activate request: Type=%s Owner=%s"),
+        *TypeStr,
+        *GetNameSafe(GetOwner()));
 
-    TObjectPtr<UBoxComponent>* Found = HitBoxes.Find(Type);
-    if (!Found || !(*Found))
+    const FBMHitBoxDefinition* Def = FindDefByType(Type);
+    if (!Def)
     {
-        Found = HitBoxes.Find(EBMHitBoxType::Default);
+        UE_LOG(LogBMHitBox, Error, TEXT("[HitBox] Activate failed: no definition for Type=%s"), *TypeStr);
+        return;
     }
 
-    ActiveBox = Found ? *Found : nullptr;
+    UE_LOG(LogBMHitBox, Warning, TEXT("[HitBox] Found Def: Name=%s Type=%s Socket/Bone=%s Extent=%s"),
+        *Def->Name.ToString(),
+        *UEnum::GetValueAsString(Def->Type),
+        *Def->AttachSocketOrBone.ToString(),
+        *Def->BoxExtent.ToString());
 
-    if (ActiveBox)
+    if (Def->Name.IsNone())
     {
-        HitActorsThisSwing.Reset();
-        ActiveBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        UE_LOG(LogBMHitBox, Error, TEXT("[HitBox] Def->Name is None! (Type=%s) Please ensure Name is set or auto-filled."), *TypeStr);
     }
+
+    EnsureCreated(*Def);
+
+    ActiveHitBoxName = Def->Name;
+
+    // 用 FindRef 更清晰
+    ActiveHitBox = HitBoxes.FindRef(ActiveHitBoxName);
+
+    // 打印当前 HitBoxes 里有哪些 key
+    {
+        FString Keys;
+        for (const auto& KVP : HitBoxes)
+        {
+            Keys += KVP.Key.ToString() + TEXT(" ");
+        }
+
+        UE_LOG(LogBMHitBox, Warning, TEXT("[HitBox] Map Keys=%s | ActiveKey=%s"),
+            *Keys,
+            *ActiveHitBoxName.ToString());
+    }
+
+    HitActorsThisSwing.Reset();
+
+    if (!ActiveHitBox)
+    {
+        UE_LOG(LogBMHitBox, Error, TEXT("[HitBox] Activate failed: ActiveHitBox is null. ActiveName=%s Type=%s"),
+            *ActiveHitBoxName.ToString(), *TypeStr);
+        return;
+    }
+
+    ActiveHitBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
+    UE_LOG(LogBMHitBox, Warning, TEXT("[HitBox] ON: Name=%s Type=%s Comp=%s Collision=%d"),
+        *ActiveHitBoxName.ToString(),
+        *TypeStr,
+        *GetNameSafe(ActiveHitBox),
+        (int32)ActiveHitBox->GetCollisionEnabled());
 }
 
 void UBMHitBoxComponent::DeactivateHitBox()
 {
-    if (ActiveBox)
+    if (!ActiveHitBox)
     {
-        ActiveBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        ActiveBox = nullptr;
+        UE_LOG(LogBMHitBox, Display, TEXT("[HitBox] OFF: (no active) Owner=%s ActiveName=%s"),
+            *GetNameSafe(GetOwner()),
+            *ActiveHitBoxName.ToString());
+
+        ActiveHitBoxName = NAME_None;
+        HitActorsThisSwing.Reset();
+        return;
     }
+
+    const int32 Before = (int32)ActiveHitBox->GetCollisionEnabled();
+
+    UE_LOG(LogBMHitBox, Warning, TEXT("[HitBox] OFF request: Name=%s Comp=%s CollisionBefore=%d"),
+        *ActiveHitBoxName.ToString(),
+        *GetNameSafe(ActiveHitBox),
+        Before);
+
+    ActiveHitBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+    const int32 After = (int32)ActiveHitBox->GetCollisionEnabled();
+
+    UE_LOG(LogBMHitBox, Warning, TEXT("[HitBox] OFF done: Name=%s Comp=%s CollisionAfter=%d"),
+        *ActiveHitBoxName.ToString(),
+        *GetNameSafe(ActiveHitBox),
+        After);
+
+    ActiveHitBox = nullptr;
+    ActiveHitBoxName = NAME_None;
     HitActorsThisSwing.Reset();
 }
+
 
 void UBMHitBoxComponent::ResetHitList()
 {
@@ -131,42 +271,69 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
     (void)OverlappedComponent;
     (void)OtherBodyIndex;
 
-    if (!ActiveBox || !OtherActor || OtherActor == GetOwner())
+    if (!ActiveHitBox || !OtherActor || OtherActor == GetOwner())
     {
         return;
     }
 
+    // 一次挥砍窗口同一目标只结算一次
     if (HitActorsThisSwing.Contains(OtherActor))
     {
         return;
     }
 
-    ABMCharacterBase* InstigatorChar = GetOwnerCharacter();
-    ABMCharacterBase* VictimChar = Cast<ABMCharacterBase>(OtherActor);
-    if (!InstigatorChar || !VictimChar)
+    ABMCharacterBase* Attacker = ResolveOwnerCharacter();
+    ABMCharacterBase* Victim = Cast<ABMCharacterBase>(OtherActor);
+    if (!Attacker || !Victim)
+    {
+        return;
+    }
+
+    // 必须命中对方的 HurtBox（避免打到 Capsule/其它组件）
+    if (!OtherComp || !OtherComp->ComponentHasTag(TEXT("BM_HurtBox")))
     {
         return;
     }
 
     HitActorsThisSwing.Add(OtherActor);
 
-    const FBMHitBoxConfig& Cfg = GetConfigForType(ActiveType);
+    // 取当前 HitBox 定义
+    const FBMHitBoxDefinition* Def = nullptr;
+    for (const FBMHitBoxDefinition& D : Definitions)
+    {
+        if (D.Name == ActiveHitBoxName)
+        {
+            Def = &D;
+            break;
+        }
+    }
+    if (!Def)
+    {
+        return;
+    }
+
+    // 计算基础伤害：优先 HitBoxComponent.Damage 覆盖，否则用 Attacker Stats.Attack
+    float BaseAttack = 0.f;
+    if (Damage > 0.f)
+    {
+        BaseAttack = Damage;
+    }
+    else if (UBMStatsComponent* S = Attacker->GetStats())
+    {
+        BaseAttack = S->GetStatBlock().Attack;
+    }
 
     FBMDamageInfo Info;
-    Info.InstigatorActor = InstigatorChar;
-    Info.TargetActor = VictimChar;
+    Info.InstigatorActor = Attacker;
+    Info.TargetActor = Victim;
 
-    // 统一：原始伤害写 RawDamageValue，DamageValue 作为“可变的计算通道”
-    Info.RawDamageValue = Cfg.BaseDamage;
-    Info.DamageValue = Cfg.BaseDamage;
+    Info.RawDamageValue = BaseAttack;
+    Info.DamageValue = BaseAttack * Def->DamageScale + Def->AdditiveDamage;
 
-    Info.DamageType = Cfg.DamageType;
-    Info.ElementType = Cfg.ElementType;
+    Info.DamageType = Def->DamageType;
+    Info.ElementType = Def->ElementType;
+    Info.HitReaction = Def->DefaultReaction;
 
-    // 默认受击反馈（Victim 侧也可进一步改）
-    Info.HitReaction = Cfg.DefaultReaction;
-
-    // 命中组件/点/法线
     Info.HitComponent = OtherComp;
 
     if (bFromSweep)
@@ -176,22 +343,47 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
     }
     else
     {
-        Info.HitLocation = OtherComp ? OtherComp->GetComponentLocation() : VictimChar->GetActorLocation();
+        Info.HitLocation = OtherComp->GetComponentLocation();
         Info.HitNormal = FVector::UpVector;
     }
 
-    // 击退
-    if (Cfg.KnockbackStrength > 0.f)
+    if (Def->KnockbackStrength > 0.f)
     {
-        const FVector Dir = (VictimChar->GetActorLocation() - InstigatorChar->GetActorLocation()).GetSafeNormal();
-        Info.Knockback = Dir * Cfg.KnockbackStrength;
+        const FVector Dir = (Victim->GetActorLocation() - Attacker->GetActorLocation()).GetSafeNormal();
+        Info.Knockback = Dir * Def->KnockbackStrength;
     }
 
-    // 关键：Victim 侧会“回填” Info.DamageValue（最终扣血量等）
-    const float Applied = VictimChar->TakeDamageFromHit(Info);
+    // Victim 侧会执行 HurtBox->ModifyIncomingDamage + Stats->ApplyDamage（并回填 DamageValue 为最终扣血）
+    const float Applied = Victim->TakeDamageFromHit(Info);
 
-    if (Applied > 0.f)
+    // Applied==0 代表被过滤/被免疫/没扣血，不需要额外处理
+    (void)Applied;
+}
+
+void UBMHitBoxComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    if (!bDebugDraw) return;
+
+    for (const auto& KVP : HitBoxes)
     {
-        OnHitLanded.Broadcast(InstigatorChar, VictimChar, Info);
+        UBoxComponent* Box = KVP.Value;
+        if (!Box) continue;
+
+        const bool bIsCurrentActiveHitBox = (Box == ActiveHitBox);
+        const FColor Color = bIsCurrentActiveHitBox ? DebugColorActive : DebugColorInactive;
+
+        DrawDebugBox(
+            GetWorld(),
+            Box->GetComponentLocation(),
+            Box->GetScaledBoxExtent(),
+            Box->GetComponentQuat(),
+            Color,
+            false,
+            0.0f,
+            0,
+            DebugLineThickness
+        );
     }
+
 }
