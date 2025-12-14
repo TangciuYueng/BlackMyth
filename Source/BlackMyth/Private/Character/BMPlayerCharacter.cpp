@@ -13,7 +13,11 @@
 
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
+
+#include "Character/Components/BMHurtBoxComponent.h"
+#include "Character/Components/BMHitBoxComponent.h"
+
+#include "Animation/AnimSingleNodeInstance.h"
 
 
 ABMPlayerCharacter::ABMPlayerCharacter()
@@ -90,6 +94,35 @@ ABMPlayerCharacter::ABMPlayerCharacter()
 
     // 纯C++动画模式：单节点
     GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+
+    // === HurtBoxes ===
+    UBMHurtBoxComponent* Head = CreateDefaultSubobject<UBMHurtBoxComponent>(TEXT("HB_Head"));
+    Head->AttachSocketOrBone = TEXT("head");
+    Head->BoxExtent = FVector(10, 10, 10);
+    Head->DamageMultiplier = 1.6f; // 头部更疼
+
+    UBMHurtBoxComponent* Body = CreateDefaultSubobject<UBMHurtBoxComponent>(TEXT("HB_Body"));
+    Body->AttachSocketOrBone = TEXT("spine_03");
+    Body->BoxExtent = FVector(14, 18, 20);
+    Body->DamageMultiplier = 1.0f;
+
+    // === HitBox 定义 ===
+    if (UBMHitBoxComponent* HB = GetHitBox())
+    {
+        FBMHitBoxDefinition Light;
+        Light.Name = TEXT("LightAttack");
+        Light.Type = EBMHitBoxType::LightAttack;
+        Light.AttachSocketOrBone = TEXT("weapon_r");  
+        Light.BoxExtent = FVector(8, 108, 8);
+        Light.DamageType = EBMDamageType::Melee;
+        Light.ElementType = EBMElementType::Physical;
+        Light.DamageScale = 1.0f;
+        Light.AdditiveDamage = 0.f;
+        Light.DefaultReaction = EBMHitReaction::Light;
+        Light.KnockbackStrength = 120.f;
+
+        HB->RegisterDefinition(Light);
+    }
 }
 
 void ABMPlayerCharacter::BeginPlay()
@@ -106,6 +139,14 @@ void ABMPlayerCharacter::BeginPlay()
 
     // 初始动画
     PlayIdleLoop();
+
+	// 调试：启用 HitBox/HurtBox 可视化
+    if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
+    for (UBMHurtBoxComponent* HB : HurtBoxes)
+    {
+        if (!HB) continue;
+        HB->bDebugDraw = true;
+    }
 }
 
 void ABMPlayerCharacter::InitFSMStates()
@@ -258,18 +299,55 @@ void ABMPlayerCharacter::PlayLoop(UAnimSequence* Seq)
     GetMesh()->PlayAnimation(Seq, true);
 }
 
-float ABMPlayerCharacter::PlayOnce(UAnimSequence* Seq, float PlayRate)
+float ABMPlayerCharacter::PlayOnce(UAnimSequence* Seq, float PlayRate, float StartTime, float MaxPlayTime)
 {
-    if (!Seq || !GetMesh()) return 0.f;
+    if (!Seq || !GetMesh())
+    {
+        return 0.f;
+    }
 
     CurrentLoopAnim = nullptr;
 
+    // 确保是单节点模式
     GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
-    GetMesh()->PlayAnimation(Seq, false);
+
+    // 用 SingleNodeInstance 控制起始时间/播放率
+    UAnimSingleNodeInstance* Inst = GetMesh()->GetSingleNodeInstance();
+
+    // 第一次没创建 Instance，先 PlayAnimation 一次
+    if (!Inst)
+    {
+        GetMesh()->PlayAnimation(Seq, false);
+        Inst = GetMesh()->GetSingleNodeInstance();
+    }
 
     const float Len = Seq->GetPlayLength();
-    return (PlayRate > 0.f) ? (Len / PlayRate) : Len;
+    const float SafePlayRate = (PlayRate > 0.f) ? PlayRate : 1.0f;
+
+    const float ClampedStart = FMath::Clamp(StartTime, 0.f, Len);
+    const float Remaining = FMath::Max(0.f, Len - ClampedStart);
+
+    // MaxPlayTime <= 0 表示播完整剩余段，否则裁剪
+    const float EffectivePlayTime = (MaxPlayTime > 0.f) ? FMath::Min(Remaining, MaxPlayTime) : Remaining;
+
+    if (Inst)
+    {
+        Inst->SetAnimationAsset(Seq, /*bIsLooping=*/false);
+        Inst->SetPosition(ClampedStart, /*bFireNotifies=*/true);
+        Inst->SetPlayRate(SafePlayRate);
+        Inst->SetPlaying(true);
+    }
+    else
+    {
+        // 若无法控制起始时间/裁剪
+        GetMesh()->PlayAnimation(Seq, false);
+        return Len / SafePlayRate;
+    }
+
+    // 返回时长
+    return EffectivePlayTime / SafePlayRate;
 }
+
 
 void ABMPlayerCharacter::PlayIdleLoop()
 {
@@ -283,7 +361,7 @@ void ABMPlayerCharacter::PlayMoveLoop()
 
 float ABMPlayerCharacter::PlayLightAttackOnce(float PlayRate)
 {
-    return PlayOnce(AnimLightAttack, PlayRate);
+    return PlayOnce(AnimLightAttack, PlayRate, 0.0, 0.3);
 }
 
 float ABMPlayerCharacter::PlayJumpStartOnce(float PlayRate)
