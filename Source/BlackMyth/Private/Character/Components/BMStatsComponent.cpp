@@ -22,7 +22,7 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
         return 0.f;
     }
 
-    // TrueDamage ²»³Ô·ÀÓù£¬ÆäËüÄ¬ÈÏ³Ô·ÀÓù£¨ÄãºóÃæ¿É¸ÄÇúÏß/±ÈÀý£©
+    // TrueDamage ï¿½ï¿½ï¿½Ô·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¬ï¿½Ï³Ô·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¸ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     float Mitigated = Input;
     if (InOutInfo.DamageType != EBMDamageType::TrueDamage)
     {
@@ -34,7 +34,7 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
 
     const float Applied = OldHP - Stats.HP;
 
-    // »ØÌî£º×îÖÕÕæÕý¿ÛÑªÁ¿£¨ÓÃÓÚ UI/Æ®×Ö/EventBus£©
+    // ï¿½ï¿½ï¿½î£ºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ UI/Æ®ï¿½ï¿½/EventBusï¿½ï¿½
     InOutInfo.DamageValue = Applied;
 
     if (IsDead() && !bDeathBroadcasted)
@@ -51,6 +51,14 @@ bool UBMStatsComponent::TryConsumeStamina(float Amount)
     if (Amount <= 0.f) return true;
     if (Stats.Stamina < Amount) return false;
     Stats.Stamina -= Amount;
+    return true;
+}
+
+bool UBMStatsComponent::TryConsumeMP(float Amount)
+{
+    if (Amount <= 0.f) return true;
+    if (Stats.MP < Amount) return false;
+    Stats.MP -= Amount;
     return true;
 }
 
