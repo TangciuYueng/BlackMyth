@@ -78,24 +78,6 @@ bool ABMCharacterBase::CanBeDamagedBy(const FBMDamageInfo& Info) const
     return true;
 }
 
-float ABMCharacterBase::GetDamageMultiplierForComponent(const UPrimitiveComponent* HitComponent) const
-{
-    if (!HitComponent)
-    {
-        return 1.f;
-    }
-
-    for (const TObjectPtr<UBMHurtBoxComponent>& HB : HurtBoxes)
-    {
-        if (HB && HB->IsBoundTo(HitComponent))
-        {
-            return HB->GetDamageMultiplier();
-        }
-    }
-
-    return 1.f;
-}
-
 float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
 {
     if (!Stats)
@@ -129,16 +111,14 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
     InOutInfo.RawDamageValue = Base;
     InOutInfo.DamageValue = Base;
 
-    // 1) 组件倍率（若没 HurtBox，就默认 1）
+    UBMHurtBoxComponent* MatchedHB = nullptr;
     if (UPrimitiveComponent* HitComp = InOutInfo.HitComponent.Get())
     {
-        InOutInfo.DamageValue *= GetDamageMultiplierForComponent(HitComp);
-
-        // 2) HurtBox 更细粒度修改（弱抗/额外逻辑）
         for (const TObjectPtr<UBMHurtBoxComponent>& HB : HurtBoxes)
         {
             if (HB && HB->IsBoundTo(HitComp))
             {
+                MatchedHB = HB;
                 HB->ModifyIncomingDamage(InOutInfo);
                 break;
             }
@@ -150,8 +130,12 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
 
     if (Applied > 0.f)
     {
-        LastAppliedDamageInfo = InOutInfo;
+        if (MatchedHB)
+        {
+            MatchedHB->OnHit(Applied);
+        }
 
+        LastAppliedDamageInfo = InOutInfo;
         HandleDamageTaken(InOutInfo);
         OnCharacterDamaged.Broadcast(this, InOutInfo);
     }

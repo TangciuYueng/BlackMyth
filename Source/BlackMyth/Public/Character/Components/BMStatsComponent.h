@@ -7,7 +7,7 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogBMStats, Log, All);
 
-// ´¿C++ËÀÍöÊÂ¼þ£¨²»¿¿À¶Í¼£©
+// ï¿½ï¿½C++ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½
 DECLARE_MULTICAST_DELEGATE_OneParam(FBMOnDeathNative, AActor* /*Killer*/);
 
 UCLASS(ClassGroup = (BM), meta = (BlueprintSpawnableComponent))
@@ -18,18 +18,26 @@ class BLACKMYTH_API UBMStatsComponent : public UActorComponent
 public:
     UBMStatsComponent();
 
-    // Í³Ò»Ê¹ÓÃ FBMDamageInfo ×÷ÎªÉËº¦ÔØÌå£¨»á»ØÌî DamageValue = ×îÖÕÉúÐ§ÉËº¦£©
+    // Í³Ò»Ê¹ï¿½ï¿½ FBMDamageInfo ï¿½ï¿½Îªï¿½Ëºï¿½ï¿½ï¿½ï¿½å£¨ï¿½ï¿½ï¿½ï¿½ï¿½ DamageValue = ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½Ëºï¿½ï¿½ï¿½
     float ApplyDamage(FBMDamageInfo& InOutInfo);
 
     bool IsDead() const { return Stats.HP <= 0.f; }
 
     bool TryConsumeStamina(float Amount);
 
+    /**
+     * å°è¯•æ¶ˆè€—é­”æ³•å€¼ï¼ˆMPï¼‰
+     * 
+     * @param Amount è¦æ¶ˆè€—çš„ MP æ•°é‡ï¼ˆå¿…é¡»å¤§äºŽ0ï¼‰
+     * @return å¦‚æžœå½“å‰ MP è¶³å¤Ÿå¹¶æˆåŠŸæ¶ˆè€—è¿”å›ž trueï¼Œå¦åˆ™è¿”å›ž false
+     */
+    bool TryConsumeMP(float Amount);
+
     void AddGameplayTag(FName Tag);
     void RemoveGameplayTag(FName Tag);
     bool HasGameplayTag(FName Tag) const;
 
-    // ±ãÓÚ½ÇÉ«/ÏµÍ³¶ÁÈ¡
+    // ï¿½ï¿½ï¿½Ú½ï¿½É«/ÏµÍ³ï¿½ï¿½È¡
     const FBMStatBlock& GetStatBlock() const { return Stats; }
     FBMStatBlock& GetStatBlockMutable() { return Stats; }
 
