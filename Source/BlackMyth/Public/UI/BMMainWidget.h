@@ -17,6 +17,7 @@ class BLACKMYTH_API UBMMainWidget : public UBMWidgetBase
 
 public:
     UPROPERTY(meta=(BindWidget)) class UButton* StartButton = nullptr;
+    UPROPERTY(meta=(BindWidget)) class UButton* BossBattle = nullptr; // “boss战（我是老手）”
     UPROPERTY(meta=(BindWidget)) class UButton* QuitButton = nullptr;
 
 protected:
@@ -26,6 +27,8 @@ protected:
 private:
     UFUNCTION()
     void OnStartClicked();
+    UFUNCTION()
+    void OnBossBattleClicked();
     UFUNCTION()
     void OnQuitClicked();
 };

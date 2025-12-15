@@ -7,6 +7,7 @@
 #include "UI/BMMainWidget.h"
 #include "UI/BMPauseMenuWidget.h"
 #include "InputCoreTypes.h"
+#include "Kismet/GameplayStatics.h"
 
 void ABMPlayerController::BeginPlay()
 {
@@ -18,6 +19,16 @@ void ABMPlayerController::BeginPlay()
         UBMGameInstance* BMGI = Cast<UBMGameInstance>(GI);
         if (UIManager)
         {
+            // 仅在指定主菜单关卡显示主菜单
+            const UWorld* World = GetWorld();
+            const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(const_cast<UObject*>(static_cast<const UObject*>(World)), /*bRemovePrefixPIE*/ true);
+            const FString ExpectedLevelName = TEXT("Lvl_ThirdPerson");
+            if (CurrentLevelName != ExpectedLevelName)
+            {
+                UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: CurrentLevelName=%s, expected=%s"), *CurrentLevelName, *ExpectedLevelName);
+                UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Skipping auto main menu on level: %s"), *CurrentLevelName);
+                return;
+            }
             TSubclassOf<UBMMainWidget> ClassToUse = nullptr;
             if (BMGI && BMGI->MainMenuClass.IsValid())
             {
@@ -29,11 +40,11 @@ void ABMPlayerController::BeginPlay()
                 UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Trying /Game/UI/WBP_MainMenu.WBP_MainMenu_C"));
                 ClassToUse = LoadClass<UBMMainWidget>(nullptr, TEXT("/Game/UI/WBP_MainMenu.WBP_MainMenu_C"));
             }
-            if (!ClassToUse)
-            {
-                UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Trying /Game/BlackMyth/UI/WBP_MainMenu.WBP_MainMenu_C"));
-                ClassToUse = LoadClass<UBMMainWidget>(nullptr, TEXT("/Game/BlackMyth/UI/WBP_MainMenu.WBP_MainMenu_C"));
-            }
+            //if (!ClassToUse)
+            //{
+             //   UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Trying /Game/BlackMyth/UI/WBP_MainMenu.WBP_MainMenu_C"));
+             //   ClassToUse = LoadClass<UBMMainWidget>(nullptr, TEXT("/Game/BlackMyth/UI/WBP_MainMenu.WBP_MainMenu_C"));
+           // }
 
             if (ClassToUse)
             {
