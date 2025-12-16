@@ -5,6 +5,7 @@
 #include "Character/Components/BMStatsComponent.h"
 #include "Character/Components/BMInventoryComponent.h"
 #include "Character/Components/BMExperienceComponent.h"
+#include "System/Event/BMEventBusSubsystem.h"
 
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
@@ -73,14 +74,18 @@ bool UBMSaveGameSubsystem::DoesSaveExist(int32 Slot)
  */
 void UBMSaveGameSubsystem::AutoSave()
 {
-    SaveGame(AUTO_SAVE_SLOT);
-    UE_LOG(LogBMSave, Log, TEXT("Successfully saved game to slot %d"), AUTO_SAVE_SLOT);
-    // TODO: 在此处调用 UI Subsystem 显示 "Saving..." 通知
-    // UBMUIManager* UIManager = GetUIManager();
-    // if (UIManager)
-    // {
-    //     UIManager->ShowSavingNotification();
-    // }
+    // 发送保存开始通知
+    if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+    {
+        EventBus->EmitNotify(NSLOCTEXT("BMSave", "Saving", "Saving..."));
+    }
+
+    bool bSuccess = SaveGame(AUTO_SAVE_SLOT);
+    
+    if (bSuccess)
+    {
+        UE_LOG(LogBMSave, Log, TEXT("Successfully saved game to slot %d"), AUTO_SAVE_SLOT);
+    }
 }
 
 /**
@@ -131,29 +136,31 @@ bool UBMSaveGameSubsystem::SaveGame(int32 Slot)
         return false;
     }
 
+    // 发送保存开始通知（如果不是自动保存）
+    if (Slot != AUTO_SAVE_SLOT)
+    {
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "Saving", "Saving..."));
+        }
+    }
+
     // 保存存档数据到磁盘
     bool bSuccess = UGameplayStatics::SaveGameToSlot(SaveDataInstance, SaveDataInstance->SaveSlotName, 0);
 
-    // 检查保存是否成功
-    if (bSuccess)
+    // 检查保存是否成功并发送通知
+    if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
     {
-        UE_LOG(LogBMSave, Log, TEXT("Successfully saved game to slot %d"), Slot);
-        // TODO: 在此处调用 UI Subsystem 显示 "Saved" 通知
-        // UBMUIManager* UIManager = GetUIManager();
-        // if (UIManager)
-        // {
-        //     UIManager->ShowSavedNotification();
-        // }
-    }
-    else
-    {
-        UE_LOG(LogBMSave, Error, TEXT("Failed to save game to slot %d"), Slot);
-        // TODO: 在此处调用 UI Subsystem 显示 "Failed to save" 通知
-        // UBMUIManager* UIManager = GetUIManager();
-        // if (UIManager)
-        // {
-        //     UIManager->ShowFailedToSaveNotification();
-        // }
+        if (bSuccess)
+        {
+            UE_LOG(LogBMSave, Log, TEXT("Successfully saved game to slot %d"), Slot);
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "Saved", "Game saved successfully"));
+        }
+        else
+        {
+            UE_LOG(LogBMSave, Error, TEXT("Failed to save game to slot %d"), Slot);
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "SaveFailed", "Failed to save game"));
+        }
     }
 
     return bSuccess;
@@ -180,12 +187,10 @@ bool UBMSaveGameSubsystem::LoadGame(int32 Slot)
     if (!UGameplayStatics::DoesSaveGameExist(SlotName, 0))
     {
         UE_LOG(LogBMSave, Warning, TEXT("LoadGame Failed: Slot %d does not exist."), Slot);
-        // TODO: 在此处调用 UI Subsystem 显示 "Slot does not exist" 通知
-        // UBMUIManager* UIManager = GetUIManager();
-        // if (UIManager)
-        // {
-        //     UIManager->ShowSlotDoesNotExistNotification();
-        // }
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "SlotNotExist", "Save slot does not exist"));
+        }
         return false;
     }
 
@@ -197,12 +202,10 @@ bool UBMSaveGameSubsystem::LoadGame(int32 Slot)
     if (!LoadedData)
     {
         UE_LOG(LogBMSave, Error, TEXT("LoadGame Failed: Failed to load SaveData from slot %d"), Slot);
-        // TODO: 在此处调用 UI Subsystem 显示 "Failed to load" 通知
-        // UBMUIManager* UIManager = GetUIManager();
-        // if (UIManager)
-        // {
-        //     UIManager->ShowFailedToLoadNotification();
-        // }
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "LoadFailed", "Failed to load game"));
+        }
         return false;
     }
 
@@ -210,12 +213,10 @@ bool UBMSaveGameSubsystem::LoadGame(int32 Slot)
     if (!ValidateSaveData(LoadedData))
     {
         UE_LOG(LogBMSave, Error, TEXT("LoadGame Failed: Loaded SaveData validation failed."));
-        // TODO: 在此处调用 UI Subsystem 显示 "Validation failed" 通知
-        // UBMUIManager* UIManager = GetUIManager();
-        // if (UIManager)
-        // {
-        //     UIManager->ShowValidationFailedNotification();
-        // }
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "ValidationFailed", "Save data is corrupted"));
+        }
         return false;
     }
 
@@ -228,12 +229,13 @@ bool UBMSaveGameSubsystem::LoadGame(int32 Slot)
 
     // 应用数据
     ApplySaveData(LoadedData, Player);
-    // TODO: 在此处调用 UI Subsystem 显示 "Loaded" 通知
-    // UBMUIManager* UIManager = GetUIManager();
-    // if (UIManager)
-    // {
-    //     UIManager->ShowLoadedNotification();
-    // }
+    
+    // 发送加载成功通知
+    if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+    {
+        EventBus->EmitNotify(NSLOCTEXT("BMSave", "Loaded", "Game loaded successfully"));
+    }
+    
     UE_LOG(LogBMSave, Log, TEXT("Successfully loaded game from slot %d"), Slot);
     return true;
 }
@@ -281,12 +283,10 @@ bool UBMSaveGameSubsystem::DeleteSave(int32 Slot)
     if (Slot < 0)
     {
         UE_LOG(LogBMSave, Error, TEXT("DeleteSave Failed: Invalid slot number %d"), Slot);
-        // TODO: 在此处调用 UI Subsystem 显示 "Failed to delete save" 通知
-        // UBMUIManager* UIManager = GetUIManager();
-        // if (UIManager)
-        // {
-        //     UIManager->ShowFailedToDeleteSaveNotification();
-        // }
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "DeleteFailed", "Failed to delete save"));
+        }
         return false;
     }
 
@@ -300,16 +300,54 @@ bool UBMSaveGameSubsystem::DeleteSave(int32 Slot)
 
     bool bSuccess = UGameplayStatics::DeleteGameInSlot(SlotName, 0);
     
-    if (bSuccess)
+    // 发送删除结果通知
+    if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
     {
-        UE_LOG(LogBMSave, Log, TEXT("Successfully deleted save from slot %d"), Slot);
-    }
-    else
-    {
-        UE_LOG(LogBMSave, Error, TEXT("Failed to delete save from slot %d"), Slot);
+        if (bSuccess)
+        {
+            UE_LOG(LogBMSave, Log, TEXT("Successfully deleted save from slot %d"), Slot);
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "Deleted", "Save deleted successfully"));
+        }
+        else
+        {
+            UE_LOG(LogBMSave, Error, TEXT("Failed to delete save from slot %d"), Slot);
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "DeleteFailed", "Failed to delete save"));
+        }
     }
 
     return bSuccess;
+}
+
+TArray<FBMSaveSlotInfo> UBMSaveGameSubsystem::GetAllSaveSlots(int32 MaxSlots)
+{
+    TArray<FBMSaveSlotInfo> SaveSlots;
+    SaveSlots.Reserve(MaxSlots);
+
+    for (int32 Slot = 0; Slot < MaxSlots; ++Slot)
+    {
+        FBMSaveSlotInfo SlotInfo;
+        SlotInfo.SlotNumber = Slot;
+        SlotInfo.bExists = DoesSaveExist(Slot);
+
+        if (SlotInfo.bExists)
+        {
+            // 获取存档元信息
+            GetSaveMeta(Slot, SlotInfo.Meta);
+        }
+
+        SaveSlots.Add(SlotInfo);
+    }
+
+    return SaveSlots;
+}
+
+UBMEventBusSubsystem* UBMSaveGameSubsystem::GetEventBusSubsystem() const
+{
+    if (UGameInstance* GameInstance = GetGameInstance())
+    {
+        return GameInstance->GetSubsystem<UBMEventBusSubsystem>();
+    }
+    return nullptr;
 }
 
 /**

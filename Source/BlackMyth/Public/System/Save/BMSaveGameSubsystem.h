@@ -9,6 +9,7 @@
 
 class UBMSaveData;
 class ABMPlayerCharacter;
+class UBMEventBusSubsystem;
 
 /**
  * 存档游戏子系统日志分类
@@ -75,6 +76,14 @@ public:
      */
     bool DeleteSave(int32 Slot);
 
+    /**
+     * 获取所有存档槽位信息（用于UI显示存档列表）
+     * 
+     * @param MaxSlots 最大槽位数（默认10）
+     * @return 存档槽位信息数组
+     */
+    TArray<FBMSaveSlotInfo> GetAllSaveSlots(int32 MaxSlots = 10);
+
 protected:
     /**
      * 辅助函数：格式化槽位名称
@@ -126,6 +135,13 @@ protected:
      * @return 数据有效返回 true，否则返回 false
      */
     bool ValidateSaveData(const UBMSaveData* SaveData) const;
+
+    /**
+     * 获取事件总线子系统（用于发送通知）
+     * 
+     * @return 事件总线子系统指针
+     */
+    UBMEventBusSubsystem* GetEventBusSubsystem() const;
 
 private:
     /** 默认自动存档槽位编号 */
