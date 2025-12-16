@@ -334,8 +334,6 @@ bool UBMSaveGameSubsystem::ValidateSaveData(const UBMSaveData* SaveData) const
 /**
  * 将游戏世界数据写入 SaveData 对象
  * 
- * 将游戏世界数据写入 SaveData 对象
- * 
  * @param SaveData 要写入的存档数据对象
  * @param Player 玩家角色指针
  */
@@ -362,7 +360,7 @@ void UBMSaveGameSubsystem::WriteSaveData(UBMSaveData* SaveData, ABMPlayerCharact
         }
     }
 
-    // 2. 收集完整 Stats（使用正确的访问器 GetStats()）
+    // 2. 收集完整 Stats
     if (UBMStatsComponent* Stats = Player->GetStats())
     {
         const FBMStatBlock& StatBlock = Stats->GetStatBlock();
@@ -382,7 +380,7 @@ void UBMSaveGameSubsystem::WriteSaveData(UBMSaveData* SaveData, ABMPlayerCharact
         UE_LOG(LogBMSave, Warning, TEXT("WriteSaveData: Stats component not found"));
     }
 
-    // 3. 收集 Experience（使用 GetComponentByClass 查找组件）
+    // 3. 收集 Experience
     if (UBMExperienceComponent* ExpComp = Player->GetComponentByClass<UBMExperienceComponent>())
     {
         SaveData->PlayerLevel = ExpComp->GetLevel();
@@ -397,24 +395,26 @@ void UBMSaveGameSubsystem::WriteSaveData(UBMSaveData* SaveData, ABMPlayerCharact
         UE_LOG(LogBMSave, Warning, TEXT("WriteSaveData: Experience component not found"));
     }
 
-    // 4. 收集 Inventory（使用 GetComponentByClass 查找组件）
+    // 4. 收集 Inventory
     if (UBMInventoryComponent* InvComp = Player->GetComponentByClass<UBMInventoryComponent>())
     {
         SaveData->InventoryItems.Empty();
         
-        // 注意：这里假设 InventoryComponent 有 Items 成员（TMap<FName, int32>）
-        // TODO: 需要根据组件实际接口调整
-        // 实际使用时需要根据组件实际接口调整
-        // 如果组件有 GetItems() 方法，应该使用它
-        // const TMap<FName, int32>& Items = InvComp->GetItems();
-        // for (const auto& Pair : Items)
-        // {
-        //     FMBInventoryItemSaveData NewItem;
-        //     NewItem.ItemID = Pair.Key;
-        //     NewItem.Quantity = Pair.Value;
-        //     SaveData->InventoryItems.Add(NewItem);
-        // }
-        UE_LOG(LogBMSave, Verbose, TEXT("WriteSaveData: Inventory component found (implementation pending)"));
+        // 使用公共接口获取所有物品，转换为 SaveData 格式
+        const TMap<FName, int32>& Items = InvComp->GetAllItems();
+        for (const auto& ItemPair : Items)
+        {
+            FMBInventoryItemSaveData ItemSaveData;
+            ItemSaveData.ItemID = ItemPair.Key;
+            ItemSaveData.Quantity = ItemPair.Value;
+            SaveData->InventoryItems.Add(ItemSaveData);
+        }
+        
+        // 保存货币
+        SaveData->Currency = InvComp->GetCurrency();
+        
+        UE_LOG(LogBMSave, Verbose, TEXT("WriteSaveData: Saved inventory - %d item types, Currency: %d"), 
+            SaveData->InventoryItems.Num(), SaveData->Currency);
     }
     else
     {
@@ -424,8 +424,6 @@ void UBMSaveGameSubsystem::WriteSaveData(UBMSaveData* SaveData, ABMPlayerCharact
 
 // === 数据恢复逻辑 ===
 /**
- * 将 SaveData 对象的数据应用回游戏世界
- * 
  * 将 SaveData 对象的数据应用回游戏世界
  * 
  * @param SaveData 要应用的存档数据对象
@@ -491,14 +489,35 @@ void UBMSaveGameSubsystem::ApplySaveData(UBMSaveData* SaveData, ABMPlayerCharact
     // 4. 恢复 Inventory
     if (UBMInventoryComponent* InvComp = Player->GetComponentByClass<UBMInventoryComponent>())
     {
-        // TODO: 这里假设 InventoryComponent 有 Items 成员（TMap<FName, int32>）
-        // TODO: 如果组件有 ClearItems() 和 AddItem() 方法，应该使用它们
-        // InvComp->ClearItems();
-        // for (const FMBInventoryItemSaveData& ItemData : SaveData->InventoryItems)
-        // {
-        //     InvComp->AddItem(ItemData.ItemID, ItemData.Quantity);
-        // }
-        UE_LOG(LogBMSave, Verbose, TEXT("ApplySaveData: Inventory component found (implementation pending)"));
+        // 清空当前背包
+        InvComp->ClearInventory();
+        
+        // 恢复所有物品
+        for (const FMBInventoryItemSaveData& ItemData : SaveData->InventoryItems)
+        {
+            // 验证 ItemID 和 Quantity 的有效性
+            if (ItemData.ItemID != NAME_None && ItemData.Quantity > 0)
+            {
+                // 使用 AddItem 方法添加物品（会自动处理堆叠限制等逻辑）
+                if (!InvComp->AddItem(ItemData.ItemID, ItemData.Quantity))
+                {
+                    UE_LOG(LogBMSave, Warning, TEXT("ApplySaveData: Failed to restore item %s (Quantity: %d)"), 
+                        *ItemData.ItemID.ToString(), ItemData.Quantity);
+                }
+            }
+            else
+            {
+                UE_LOG(LogBMSave, Warning, TEXT("ApplySaveData: Invalid inventory item data - ItemID: %s, Quantity: %d"), 
+                    *ItemData.ItemID.ToString(), ItemData.Quantity);
+            }
+        }
+        
+        // 恢复货币
+        // 使用存档系统专用接口直接设置货币值
+        InvComp->SetCurrencyDirect(SaveData->Currency);
+        
+        UE_LOG(LogBMSave, Log, TEXT("ApplySaveData: Restored inventory - %d item types, Currency: %d"), 
+            SaveData->InventoryItems.Num(), SaveData->Currency);
     }
     else
     {

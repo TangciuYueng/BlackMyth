@@ -226,6 +226,21 @@ public:
 	 */
 	const FBMItemData* GetItemData(FName ItemID) const;
 
+	// ==================== 存档系统接口 ====================
+	
+	/**
+	 * 获取所有物品（用于存档系统）
+	 * @return 所有物品的只读引用
+	 */
+	const TMap<FName, int32>& GetAllItems() const { return Items; }
+
+	/**
+	 * 设置货币（用于存档系统）
+	 * 直接设置货币值，不进行验证（存档系统专用）
+	 * @param NewCurrency 新的货币值
+	 */
+	void SetCurrencyDirect(int32 NewCurrency) { Currency = NewCurrency; }
+
 private:
 	/**
 	 * 获取数据子系统（缓存以提高性能）

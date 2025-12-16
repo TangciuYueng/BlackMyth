@@ -166,25 +166,26 @@ void UBMExperienceComponent::ApplyLevelUpBonuses()
     // 获取可修改的 StatBlock
     FBMStatBlock& StatBlock = Stats->GetStatBlockMutable();
 
-    // 保存当前 HP 和 Stamina 的百分比，以便在更新最大值后保持比例
+    // 保存当前 HP、Stamina 和 MP 的百分比，以便在更新最大值后保持比例
     const float HPRatio = StatBlock.MaxHP > 0.0f ? (StatBlock.HP / StatBlock.MaxHP) : 1.0f;
     const float StaminaRatio = StatBlock.MaxStamina > 0.0f ? (StatBlock.Stamina / StatBlock.MaxStamina) : 1.0f;
+    const float MPRatio = StatBlock.MaxMP > 0.0f ? (StatBlock.MP / StatBlock.MaxMP) : 1.0f;
 
     // 应用成长数据表中的属性值
     StatBlock.MaxHP = PlayerGrowthData->MaxHP;
     StatBlock.Attack = PlayerGrowthData->AttackPower;
     StatBlock.Defense = PlayerGrowthData->Defense;
     StatBlock.MaxStamina = PlayerGrowthData->Stamina;
+    StatBlock.MaxMP = PlayerGrowthData->MaxMP;
+    StatBlock.MoveSpeed = PlayerGrowthData->MoveSpeed;
 
-    // 恢复 HP 和 Stamina，保持之前的百分比（但确保不超过最大值）
+    // 恢复 HP、Stamina 和 MP，保持之前的百分比（但确保不超过最大值）
     StatBlock.HP = FMath::Clamp(StatBlock.MaxHP * HPRatio, 0.0f, StatBlock.MaxHP);
     StatBlock.Stamina = FMath::Clamp(StatBlock.MaxStamina * StaminaRatio, 0.0f, StatBlock.MaxStamina);
+    StatBlock.MP = FMath::Clamp(StatBlock.MaxMP * MPRatio, 0.0f, StatBlock.MaxMP);
 
-    // TODO：PlayerGrowthData 中没有 MaxMP/MP 和 MoveSpeed
-    // 这些属性可以保持原值，或者根据需要单独处理
-
-    UE_LOG(LogBMExperience, Log, TEXT("ApplyLevelUpBonuses: Applied growth data for level %d - MaxHP: %.1f, Attack: %.1f, Defense: %.1f, MaxStamina: %.1f"),
-        Level, StatBlock.MaxHP, StatBlock.Attack, StatBlock.Defense, StatBlock.MaxStamina);
+    UE_LOG(LogBMExperience, Log, TEXT("ApplyLevelUpBonuses: Applied growth data for level %d - MaxHP: %.1f, Attack: %.1f, Defense: %.1f, MaxStamina: %.1f, MaxMP: %.1f, MoveSpeed: %.1f"),
+        Level, StatBlock.MaxHP, StatBlock.Attack, StatBlock.Defense, StatBlock.MaxStamina, StatBlock.MaxMP, StatBlock.MoveSpeed);
 }
 
 float UBMExperienceComponent::GetExpPercent() const
