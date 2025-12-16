@@ -24,16 +24,18 @@ public:
 
     bool CanPerformAction() const;
 
-    // 兼容：旧接口仍可用
-    bool RequestLightAttack();
-    bool RequestHeavyAttack();
-
     // 统一接口（推荐上层用它）
     bool RequestAction(EBMCombatAction Action);
 
     void RequestSkill(int32 Slot);
 
     void ResetHitList();
+
+    // ===== HitBox Window Context（供 AnimNotifyState 查询）=====
+    void SetActiveHitBoxWindowContext(const TArray<FName>& HitBoxNames, const FBMHitBoxActivationParams& Params);
+    void ClearActiveHitBoxWindowContext();
+    bool GetActiveHitBoxWindowContext(TArray<FName>& OutHitBoxNames, FBMHitBoxActivationParams& OutParams) const;
+
 
     FBMOnLightAttackRequested OnLightAttackRequested;
     FBMOnSkillRequested OnSkillRequested;
@@ -43,4 +45,13 @@ public:
 
 private:
     bool bActionLocked = false;
+
+    UPROPERTY(Transient)
+    TArray<FName> ActiveHitBoxNames;
+
+    UPROPERTY(Transient)
+    FBMHitBoxActivationParams ActiveHitBoxParams;
+
+    UPROPERTY(Transient)
+    bool bHasActiveHitBoxContext = false;
 };

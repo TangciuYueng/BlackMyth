@@ -162,36 +162,38 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         FBMPlayerAttackSpec S;
         S.Id = TEXT("Light_01");
         S.Anim = AnimLightAttack;
-        S.Weight = 1.0f;
-        S.PlayRate = 1.0f;
-        S.StartTime = 0.0f;
-        S.MaxPlayTime = 0.30f; 
-        S.HitBoxType = EBMHitBoxType::LightAttack;
+        S.MaxPlayTime = 0.30f;
 
-        S.bUninterruptible = false;
+        S.HitBoxNames = { TEXT("LightAttack") };
+
+        S.HitBoxParams.bOverrideReaction = true;
+        S.HitBoxParams.OverrideReaction = EBMHitReaction::Light;
+
         S.InterruptChance = 0.65f;
         S.InterruptChanceOnHeavyHit = 1.0f;
 
-        S.Cooldown = 0.0f;
+        S.Cooldown = 2.0f;
         LightAttackSpecs.Add(S);
     }
+
 
     HeavyAttackSpecs.Reset();
     {
         FBMPlayerAttackSpec S;
         S.Id = TEXT("Heavy_01");
-        S.Anim = AnimHeavyAttack;      
-        S.Weight = 1.0f;
-        S.PlayRate = 1.0f;
-        S.StartTime = 0.0f;
-        S.MaxPlayTime = -1.0f;
-        S.HitBoxType = EBMHitBoxType::HeavyAttack;
+        S.Anim = AnimHeavyAttack;
 
-        S.bUninterruptible = true;     // 示例：重攻击霸体
-        S.InterruptChance = 0.0f;
-        S.InterruptChanceOnHeavyHit = 0.0f;
+        S.HitBoxNames = { TEXT("HeavyAttack") };
 
-        S.Cooldown = 0.0f;
+        S.HitBoxParams.DamageMultiplier = 1.25f;
+        S.HitBoxParams.bOverrideReaction = true;
+        S.HitBoxParams.OverrideReaction = EBMHitReaction::Heavy;
+
+        S.bUninterruptible = true;
+        S.InterruptChance = 0.1f;
+        S.InterruptChanceOnHeavyHit = 0.3f;
+
+        S.Cooldown = 3.0f;
         HeavyAttackSpecs.Add(S);
     }
 }
@@ -391,19 +393,6 @@ bool ABMPlayerCharacter::ConsumePendingAction(EBMCombatAction& OutAction)
     return true;
 }
 
-static bool IsHeavyIncoming(const FBMDamageInfo& Info)
-{
-    switch (Info.HitReaction)
-    {
-        case EBMHitReaction::Heavy:
-        case EBMHitReaction::KnockDown:
-        case EBMHitReaction::Airborne:
-            return true;
-        default:
-            return false;
-    }
-}
-
 static bool SelectWeighted(const TArray<FBMPlayerAttackSpec>& Specs, FBMPlayerAttackSpec& Out)
 {
     float TotalW = 0.f;
@@ -471,7 +460,7 @@ bool ABMPlayerCharacter::ShouldInterruptCurrentAttack(const FBMDamageInfo& Incom
         return false;
     }
 
-    float P = IsHeavyIncoming(Incoming) ? Spec.InterruptChanceOnHeavyHit : Spec.InterruptChance;
+    float P = BMCombatUtils::IsHeavyIncoming(Incoming) ? Spec.InterruptChanceOnHeavyHit : Spec.InterruptChance;
     P = FMath::Clamp(P, 0.f, 1.f);
 
     return FMath::FRand() < P;
@@ -577,7 +566,7 @@ float ABMPlayerCharacter::PlayAttackOnce(const FBMPlayerAttackSpec& Spec)
 
 float ABMPlayerCharacter::PlayHitOnce(const FBMDamageInfo& Info)
 {
-    UAnimSequence* Seq = IsHeavyIncoming(Info) ? (AnimHitHeavy ? AnimHitHeavy : AnimHitLight)
+    UAnimSequence* Seq = BMCombatUtils::IsHeavyIncoming(Info) ? (AnimHitHeavy ? AnimHitHeavy : AnimHitLight)
         : (AnimHitLight ? AnimHitLight : AnimHitHeavy);
     return PlayOnce(Seq, 1.0f);
 }
@@ -638,3 +627,30 @@ void ABMPlayerCharacter::HandleDeath(const FBMDamageInfo& LastHitInfo)
     Super::HandleDeath(LastHitInfo);
 }
 
+bool ABMPlayerCharacter::ResolveHitBoxWindow(
+    FName WindowId,
+    TArray<FName>& OutHitBoxNames,
+    FBMHitBoxActivationParams& OutParams
+) const
+{
+    OutHitBoxNames.Reset();
+    OutParams = FBMHitBoxActivationParams();
+
+    if (!bHasActiveAttackSpec)
+    {
+        return false;
+    }
+
+    // 约定：默认窗口名就是 "HitWindow"
+    static const FName DefaultWindowId(TEXT("HitWindow"));
+
+    if (WindowId.IsNone() || WindowId == DefaultWindowId)
+    {
+        OutHitBoxNames = ActiveAttackSpec.HitBoxNames;
+        OutParams = ActiveAttackSpec.HitBoxParams;
+        return OutHitBoxNames.Num() > 0;
+    }
+
+    // 如果你后续升级到多窗口结构（Spec.Windows），在这里再补分支查找 WindowId
+    return false;
+}

@@ -12,7 +12,7 @@ void UBMEnemyState_Death::OnEnter(float)
 
     if (UBMHitBoxComponent* HB = E->GetHitBox())
     {
-        HB->DeactivateHitBox();
+        HB->DeactivateAllHitBoxes();
     }
 
     if (UCapsuleComponent* Cap = E->GetCapsuleComponent())

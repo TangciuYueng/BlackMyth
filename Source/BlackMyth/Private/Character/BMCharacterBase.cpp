@@ -173,3 +173,40 @@ void ABMCharacterBase::HandleDeath(const FBMDamageInfo& LastHitInfo)
     (void)LastHitInfo;
     // 留给派生类：敌人掉落/玩家复活/切UI/禁用输入等
 }
+
+bool ABMCharacterBase::GetActiveHitWindow(TArray<FName>& OutHitBoxNames, FBMHitBoxActivationParams& OutParams) const
+{
+    if (!bHasActiveHitWindow || ActiveHitWindowHitBoxes.Num() == 0)
+    {
+        return false;
+    }
+    OutHitBoxNames = ActiveHitWindowHitBoxes;
+    OutParams = ActiveHitWindowParams;
+    return true;
+}
+
+void ABMCharacterBase::SetActiveHitWindow(const TArray<FName>& InHitBoxNames, const FBMHitBoxActivationParams& InParams)
+{
+    ActiveHitWindowHitBoxes = InHitBoxNames;
+    ActiveHitWindowParams = InParams;
+    bHasActiveHitWindow = (ActiveHitWindowHitBoxes.Num() > 0);
+}
+
+void ABMCharacterBase::ClearActiveHitWindow()
+{
+    ActiveHitWindowHitBoxes.Reset();
+    ActiveHitWindowParams = FBMHitBoxActivationParams();
+    bHasActiveHitWindow = false;
+}
+
+bool ABMCharacterBase::ResolveHitBoxWindow(
+    FName WindowId,
+    TArray<FName>& OutHitBoxNames,
+    FBMHitBoxActivationParams& OutParams
+) const
+{
+    (void)WindowId;
+    OutHitBoxNames.Reset();
+    OutParams = FBMHitBoxActivationParams();
+    return false;
+}

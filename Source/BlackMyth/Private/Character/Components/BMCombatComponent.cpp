@@ -45,3 +45,28 @@ void UBMCombatComponent::ResetHitList()
 {
     // 命中列表在 HitBoxComponent 内部维护；这里只保留接口
 }
+
+void UBMCombatComponent::SetActiveHitBoxWindowContext(const TArray<FName>& HitBoxNames, const FBMHitBoxActivationParams& Params)
+{
+    ActiveHitBoxNames = HitBoxNames;
+    ActiveHitBoxParams = Params;
+    bHasActiveHitBoxContext = (ActiveHitBoxNames.Num() > 0);
+}
+
+void UBMCombatComponent::ClearActiveHitBoxWindowContext()
+{
+    ActiveHitBoxNames.Reset();
+    ActiveHitBoxParams = FBMHitBoxActivationParams();
+    bHasActiveHitBoxContext = false;
+}
+
+bool UBMCombatComponent::GetActiveHitBoxWindowContext(TArray<FName>& OutHitBoxNames, FBMHitBoxActivationParams& OutParams) const
+{
+    if (!bHasActiveHitBoxContext)
+    {
+        return false;
+    }
+    OutHitBoxNames = ActiveHitBoxNames;
+    OutParams = ActiveHitBoxParams;
+    return OutHitBoxNames.Num() > 0;
+}

@@ -63,7 +63,11 @@ public:
     bool HasActiveAttackSpec() const { return bHasActiveAttackSpec; }
     const FBMEnemyAttackSpec& GetActiveAttackSpec() const { return ActiveAttackSpec; }
     const FBMDamageInfo& GetLastDamageInfo() const { return LastDamageInfo; }
-
+    virtual bool ResolveHitBoxWindow(
+        FName WindowId,
+        TArray<FName>& OutHitBoxNames,
+        FBMHitBoxActivationParams& OutParams
+    ) const override;
 
     // 受击/死亡：由 HandleDamageTaken/HandleDeath 触发，最终切换到 Hit/Death 状态
     void RequestHitState(const FBMDamageInfo& FinalInfo);

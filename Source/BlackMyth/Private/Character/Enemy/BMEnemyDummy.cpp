@@ -76,6 +76,18 @@ void ABMEnemyDummy::ApplyConfiguredAssets()
 void ABMEnemyDummy::BuildAttackSpecs()
 {
     AttackSpecs.Reset();
+    auto MakeWindowParams = [](float DamageMul, EBMHitReaction OverrideReaction)
+    {
+            FBMHitBoxActivationParams P;
+            P.bResetHitRecords = true;                 // 每次进入攻击窗口都清命中记录（常用）
+            P.DedupPolicy = EBMHitDedupPolicy::PerWindow;
+            P.MaxHitsPerTarget = 1;
+            P.DamageMultiplier = DamageMul;
+
+            P.bOverrideReaction = (OverrideReaction != EBMHitReaction::None);
+            P.OverrideReaction = OverrideReaction;
+            return P;
+    };
 
     // 轻攻击（可被打断）
     {
@@ -83,11 +95,8 @@ void ABMEnemyDummy::BuildAttackSpecs()
         S.Anim = AttackLightAsset.IsNull() ? nullptr : AttackLightAsset.LoadSynchronous();
         S.AttackWeight = EBMEnemyAttackWeight::Light;
         S.Weight = 2.0f;
-
-        S.MinRange = 0.f;
-        S.MaxRange = 180.f;
-        S.Cooldown = 1.0f;
-        S.PlayRate = 1.0f;
+        S.MinRange = 0.f;  S.MaxRange = 180.f;
+        S.Cooldown = 1.0f; S.PlayRate = 1.0f;
 
         S.bUninterruptible = false;
         S.InterruptChance = 0.65f;
@@ -95,6 +104,10 @@ void ABMEnemyDummy::BuildAttackSpecs()
 
         S.bStopPathFollowingOnEnter = true;
         S.bFaceTargetOnEnter = true;
+
+        // 关键：按 Name 指定要开的盒子（可多个）
+        S.HitBoxNames = { TEXT("hand_r") };
+        S.HitBoxParams = MakeWindowParams(/*DamageMul=*/1.0f, EBMHitReaction::Light);
 
         if (S.Anim) AttackSpecs.Add(S);
     }
@@ -105,18 +118,18 @@ void ABMEnemyDummy::BuildAttackSpecs()
         S.Anim = AttackHeavy1Asset.IsNull() ? nullptr : AttackHeavy1Asset.LoadSynchronous();
         S.AttackWeight = EBMEnemyAttackWeight::Heavy;
         S.Weight = 1.0f;
+        S.MinRange = 0.f;  S.MaxRange = 220.f;
+        S.Cooldown = 1.6f; S.PlayRate = 1.0f;
 
-        S.MinRange = 0.f;
-        S.MaxRange = 220.f;
-        S.Cooldown = 1.6f;
-        S.PlayRate = 1.0f;
-
-        S.bUninterruptible = true;          // 霸体
+        S.bUninterruptible = true;
         S.InterruptChance = 0.0f;
         S.InterruptChanceOnHeavyHit = 0.0f;
 
         S.bStopPathFollowingOnEnter = true;
         S.bFaceTargetOnEnter = true;
+
+        S.HitBoxNames = { TEXT("hand_l") };
+        S.HitBoxParams = MakeWindowParams(/*DamageMul=*/1.15f, EBMHitReaction::Heavy);
 
         if (S.Anim) AttackSpecs.Add(S);
     }
@@ -127,18 +140,18 @@ void ABMEnemyDummy::BuildAttackSpecs()
         S.Anim = AttackHeavy2Asset.IsNull() ? nullptr : AttackHeavy2Asset.LoadSynchronous();
         S.AttackWeight = EBMEnemyAttackWeight::Heavy;
         S.Weight = 1.0f;
-
-        S.MinRange = 120.f;  // 适当拉开距离，让它更像“蓄力挥击”
-        S.MaxRange = 260.f;
-        S.Cooldown = 1.8f;
-        S.PlayRate = 1.0f;
+        S.MinRange = 120.f; S.MaxRange = 260.f;
+        S.Cooldown = 1.8f;  S.PlayRate = 1.0f;
 
         S.bUninterruptible = false;
-        S.InterruptChance = 0.15f;          // 轻受击：小概率打断
-        S.InterruptChanceOnHeavyHit = 0.85f; // 重受击：大概率打断
+        S.InterruptChance = 0.15f;
+        S.InterruptChanceOnHeavyHit = 0.85f;
 
         S.bStopPathFollowingOnEnter = true;
         S.bFaceTargetOnEnter = true;
+
+        S.HitBoxNames = { TEXT("foot_r") };
+        S.HitBoxParams = MakeWindowParams(/*DamageMul=*/1.35f, EBMHitReaction::Heavy);
 
         if (S.Anim) AttackSpecs.Add(S);
     }
@@ -182,7 +195,7 @@ void ABMEnemyDummy::BuildHitBoxes()
 
     {
         FBMHitBoxDefinition Def;
-        Def.Name = TEXT("HB_Light");
+        Def.Name = TEXT("hand_r");
         Def.Type = EBMHitBoxType::LightAttack;
         Def.AttachSocketOrBone = TEXT("hand_r");
         Def.BoxExtent = FVector(8.f, 8.f, 8.f);
@@ -198,7 +211,7 @@ void ABMEnemyDummy::BuildHitBoxes()
 
     {
         FBMHitBoxDefinition Def;
-        Def.Name = TEXT("HB_Heavy_1");
+        Def.Name = TEXT("hand_l");
         Def.Type = EBMHitBoxType::HeavyAttack;
         Def.AttachSocketOrBone = TEXT("hand_l");
         Def.BoxExtent = FVector(12.f, 12.f, 12.f);
@@ -214,7 +227,7 @@ void ABMEnemyDummy::BuildHitBoxes()
 
     {
         FBMHitBoxDefinition Def;
-        Def.Name = TEXT("HB_Heavy_2");
+        Def.Name = TEXT("foot_r");
         Def.Type = EBMHitBoxType::HeavyAttack;
         Def.AttachSocketOrBone = TEXT("foot_r");
         Def.BoxExtent = FVector(12.f, 12.f, 12.f);

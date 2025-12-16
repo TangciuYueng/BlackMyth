@@ -182,6 +182,14 @@ enum class EBMHitBoxType : uint8
     Skill       UMETA(DisplayName = "Skill")
 };
 
+UENUM(BlueprintType)
+enum class EBMHitDedupPolicy : uint8
+{
+    PerWindow,      // 默认：一次攻击窗口内，每个目标最多结算 MaxHitsPerTarget 次（通常=1）
+    PerHitBox,      // 每个目标对每个 HitBoxName 分开计数
+    Unlimited       // 不去重（不建议默认用）
+};
+
 /**
  * 游戏全局事件类型（EventBus 使用）
  */
@@ -270,6 +278,39 @@ struct FBMStatBlock
     float MoveSpeed = 600.f;
 };
 
+USTRUCT(BlueprintType)
+struct FBMHitBoxActivationParams
+{
+    GENERATED_BODY()
+
+    // 这次窗口是谁触发的（可用于调试/回放/技能系统）
+    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Window")
+    FName AttackId = NAME_None;
+
+    // 这次窗口的额外倍率（用于同一套 HitBox 定义在不同招式里复用）
+    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Window", meta = (ClampMin = "0.0"))
+    float DamageMultiplier = 1.0f;
+
+    // 是否在窗口开始时清空命中记录
+    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Window")
+    bool bResetHitRecords = true;
+
+    // 去重策略
+    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Window")
+    EBMHitDedupPolicy DedupPolicy = EBMHitDedupPolicy::PerWindow;
+
+    // 每个目标允许命中次数（PerWindow 下通常=1；做多段斩可以调大）
+    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Window", meta = (ClampMin = "1"))
+    int32 MaxHitsPerTarget = 1;
+
+    // 可选：覆写受击类型（某些技能想强制 KnockDown 等）
+    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Window")
+    bool bOverrideReaction = false;
+
+    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Window")
+    EBMHitReaction OverrideReaction = EBMHitReaction::None;
+};
+
 /**
  * 敌人攻击规格
  */ 
@@ -318,6 +359,13 @@ struct FBMEnemyAttackSpec
 
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|Motion")
     bool bFaceTargetOnEnter = true;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|HitBox")
+    TArray<FName> HitBoxNames;
+
+    // 这个攻击窗口的参数（倍率/去重/反馈覆写等）
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|HitBox")
+    FBMHitBoxActivationParams HitBoxParams;
 };
 
 USTRUCT(BlueprintType)
@@ -366,6 +414,13 @@ struct FBMPlayerAttackSpec
     // 被“重受击”打断概率
     UPROPERTY(EditAnywhere, Category = "BM|Player|Attack|Interrupt", meta = (ClampMin = "0.0", ClampMax = "1.0"))
     float InterruptChanceOnHeavyHit = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack|HitBox")
+    TArray<FName> HitBoxNames;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack|HitBox")
+    FBMHitBoxActivationParams HitBoxParams;
+
 };
 
 /**
@@ -676,4 +731,20 @@ namespace BMEnemyStateNames
     static const FName Attack = TEXT("Enemy.Attack");
     static const FName Hit = TEXT("Enemy.Hit");
     static const FName Death = TEXT("Enemy.Death");
+}
+
+namespace BMCombatUtils
+{
+    FORCEINLINE bool IsHeavyIncoming(const FBMDamageInfo& Info)
+    {
+        switch (Info.HitReaction)
+        {
+            case EBMHitReaction::Heavy:
+            case EBMHitReaction::KnockDown:
+            case EBMHitReaction::Airborne:
+                return true;
+            default:
+                return false;
+        }
+    }
 }

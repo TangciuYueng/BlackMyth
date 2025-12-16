@@ -91,6 +91,11 @@ public:
     void SetActiveAttackSpec(const FBMPlayerAttackSpec& Spec);
     void ClearActiveAttackSpec();
     bool ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) const;
+    virtual bool ResolveHitBoxWindow(
+        FName WindowId,
+        TArray<FName>& OutHitBoxNames,
+        FBMHitBoxActivationParams& OutParams
+    ) const override;
 
     // === 纯C++动画播放接口 ===
     /**

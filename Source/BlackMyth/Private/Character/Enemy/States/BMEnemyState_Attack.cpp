@@ -1,6 +1,7 @@
 #include "Character/Enemy/States/BMEnemyState_Attack.h"
 #include "Character/Enemy/BMEnemyBase.h"
 #include "Character/Components/BMStateMachineComponent.h"
+#include "Character/Components/BMCombatComponent.h"
 #include "Core/BMTypes.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -30,7 +31,23 @@ void UBMEnemyState_Attack::OnEnter(float)
         if (E->GetFSM()) E->GetFSM()->ChangeStateByName(BMEnemyStateNames::Chase);
         return;
     }
+
+    // 1) 写入 Combat 上下文：给 NotifyState 使用（开启哪些 HitBox）
+    if (UBMCombatComponent* Combat = E->FindComponentByClass<UBMCombatComponent>())
+    {
+        FBMHitBoxActivationParams Params;
+        Params.AttackId = TEXT("EnemyAttack");
+        Params.DamageMultiplier = 1.0f;          // 以后你可从 Spec 扩展 DamageMultiplier
+        Params.bResetHitRecords = true;
+        Params.DedupPolicy = EBMHitDedupPolicy::PerWindow;
+        Params.MaxHitsPerTarget = 1;
+
+        Combat->SetActiveHitBoxWindowContext(ActiveAttack.HitBoxNames, Params);
+    }
+
+    // 2) 同步 EnemyBase 当前招式
     E->SetActiveAttackSpec(ActiveAttack);
+
     // 按 Spec 控制执行策略（工程性：以后扩展技能/霸体无需改 State）
     if (ActiveAttack.bStopPathFollowingOnEnter)
     {
@@ -63,6 +80,10 @@ void UBMEnemyState_Attack::OnExit(float)
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());
     if (!E) return;
 
+    if (UBMCombatComponent* Combat = E->FindComponentByClass<UBMCombatComponent>())
+    {
+        Combat->ClearActiveHitBoxWindowContext();
+    }
     E->GetWorldTimerManager().ClearTimer(AttackFinishHandle);
     E->ClearActiveAttackSpec();
     bFinished = false;

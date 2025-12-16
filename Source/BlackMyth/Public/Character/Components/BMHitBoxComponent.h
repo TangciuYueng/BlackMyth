@@ -18,6 +18,16 @@ class ABMCharacterBase;
  */
 DECLARE_LOG_CATEGORY_EXTERN(LogBMHitBox, Log, All);
 
+USTRUCT()
+struct FBMHitRecord
+{
+    GENERATED_BODY()
+
+    int32 TotalHits = 0;                 // 当前窗口该目标总命中次数
+    TMap<FName, int32> HitBoxHits;       // 当前窗口该目标按 HitBoxName 的命中次数
+};
+
+
 /**
  * HitBox 配置定义
  *
@@ -93,6 +103,7 @@ struct FBMHitBoxDefinition
     float KnockbackStrength = 0.f;
 };
 
+
 /**
  * 攻击判定组件（HitBox）
  *
@@ -154,30 +165,40 @@ public:
     float DebugLineThickness = 2.0f;
 
 public:
+    // 新：按名字列表激活多个 HitBox（一次攻击窗口）
+    void ActivateHitBoxesByNames(const TArray<FName>& HitBoxNames, const FBMHitBoxActivationParams& Params);
 
-    /**
-     * 启用指定类型的 HitBox
-     *
-     * 行为：
-     * - 根据 Type 查找定义（FindDefByType），若不存在则回退 Default
-     * - 确保对应 UBoxComponent 已创建并附着到 Mesh（EnsureCreated）
-     * - 清空本次挥砍命中列表（HitActorsThisSwing）
-     * - 将 HitBox 碰撞启用为 QueryOnly
-     *
-     * @param Type 要启用的 HitBox 类型（轻击/重击/技能等）
-     */
-    void ActivateHitBox(EBMHitBoxType Type);
+    // 新：关闭指定名字列表的 HitBox（窗口结束）
+    void DeactivateHitBoxesByNames(const TArray<FName>& HitBoxNames);
 
-    /**
-     * 禁用当前激活的 HitBox
-     *
-     * 行为：
-     * - 将 ActiveHitBox 的碰撞关闭为 NoCollision
-     * - 清空 ActiveHitBox/ActiveHitBoxName 并重置命中列表
-     *
-     * 该函数应在攻击窗口结束时调用
-     */
-    void DeactivateHitBox();
+    // 新：关闭全部 HitBox（保险用）
+    void DeactivateAllHitBoxes();
+
+
+
+    ///**
+    // * 启用指定类型的 HitBox
+    // *
+    // * 行为：
+    // * - 根据 Type 查找定义（FindDefByType），若不存在则回退 Default
+    // * - 确保对应 UBoxComponent 已创建并附着到 Mesh（EnsureCreated）
+    // * - 清空本次挥砍命中列表（HitActorsThisSwing）
+    // * - 将 HitBox 碰撞启用为 QueryOnly
+    // *
+    // * @param Type 要启用的 HitBox 类型（轻击/重击/技能等）
+    // */
+    //void ActivateHitBox(EBMHitBoxType Type);
+
+    ///**
+    // * 禁用当前激活的 HitBox
+    // *
+    // * 行为：
+    // * - 将 ActiveHitBox 的碰撞关闭为 NoCollision
+    // * - 清空 ActiveHitBox/ActiveHitBoxName 并重置命中列表
+    // *
+    // * 该函数应在攻击窗口结束时调用
+    // */
+    //void DeactivateHitBox();
 
     /** 设置基础伤害覆盖值 */
     void SetDamage(float NewDamage) { Damage = NewDamage; }
@@ -276,6 +297,9 @@ private:
      */
     const FBMHitBoxDefinition* FindDefByType(EBMHitBoxType Type) const;
 
+    void SetHitBoxCollisionEnabled(FName HitBoxName, bool bEnabled);
+    TArray<FName> FindNamesByType(EBMHitBoxType Type) const;
+
     /**
      * HitBox Overlap 回调：命中处理入口
      *
@@ -314,25 +338,21 @@ private:
     UPROPERTY(EditAnywhere, Category = "BM|HitBox|Definitions")
     TArray<FBMHitBoxDefinition> Definitions;
 
-    /**
-     * 当前激活的 HitBox 碰撞组件
-     *
-     * 仅该组件处于 QueryOnly 状态用于检测命中
-     */
+    // 当前窗口激活的 HitBox 名字集合（支持多开）
     UPROPERTY(Transient)
-    TObjectPtr<UBoxComponent> ActiveHitBox = nullptr;
+    TSet<FName> ActiveHitBoxNames;
 
-    /**
-     * 当前激活 HitBox 的名称 Key
-     */
+    // 组件 -> HitBoxName 的反查表（Overlap 时 O(1) 找到属于哪个定义）
     UPROPERTY(Transient)
-    FName ActiveHitBoxName = NAME_None;
+    TMap<TObjectPtr<UPrimitiveComponent>, FName> ComponentToHitBoxName;
 
+    // Name -> Definitions 下标，加速 Def 查找（避免每次 overlap 遍历）
+    UPROPERTY(Transient)
+    TMap<FName, int32> NameToDefIndex;
 
-    /**
-     * 单次攻击窗口命中的 Actor 集合（去重）
-     *
-     * 用于避免在同一挥砍窗口内由于多次 Overlap 事件而对同一目标重复结算伤害
-     */
-    TSet<TWeakObjectPtr<AActor>> HitActorsThisSwing;
+    // 当前攻击窗口参数（一次窗口内多个 hitbox 共享）
+    FBMHitBoxActivationParams ActiveWindowParams;
+
+    // 命中记录（去重/多段命中用）
+    TMap<TWeakObjectPtr<AActor>, FBMHitRecord> HitRecordsThisWindow;
 };

@@ -181,6 +181,16 @@ public:
     UPROPERTY(EditAnywhere, Category = "BM|Identity")
     EBMCharacterType CharacterType = EBMCharacterType::Enemy;
 
+    bool GetActiveHitWindow(TArray<FName>& OutHitBoxNames, FBMHitBoxActivationParams& OutParams) const;
+    void SetActiveHitWindow(const TArray<FName>& InHitBoxNames, const FBMHitBoxActivationParams& InParams);
+    void ClearActiveHitWindow();
+
+    virtual bool ResolveHitBoxWindow(
+        FName WindowId,
+        TArray<FName>& OutHitBoxNames,
+        FBMHitBoxActivationParams& OutParams
+    ) const;
+
 protected:
 
     /**
@@ -254,6 +264,15 @@ protected:
      */
     UPROPERTY(VisibleAnywhere, Category = "BM|Components")
     TArray<TObjectPtr<UBMHurtBoxComponent>> HurtBoxes;
+
+    UPROPERTY(Transient)
+    TArray<FName> ActiveHitWindowHitBoxes;
+
+    UPROPERTY(Transient)
+    FBMHitBoxActivationParams ActiveHitWindowParams;
+
+    UPROPERTY(Transient)
+    bool bHasActiveHitWindow = false;
 
 private:
     /**

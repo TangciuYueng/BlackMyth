@@ -258,19 +258,6 @@ void ABMEnemyBase::SetSingleNodePlayRate(float Rate)
     }
 }
 
-static bool IsHeavyIncoming(const FBMDamageInfo& Info)
-{
-    switch (Info.HitReaction)
-    {
-        case EBMHitReaction::Heavy:
-        case EBMHitReaction::KnockDown:
-        case EBMHitReaction::Airborne:
-            return true;
-        default:
-            return false;
-    }
-}
-
 void ABMEnemyBase::PlayLoop(UAnimSequence* Seq, float PlayRate)
 {
     if (!Seq || !GetMesh()) return;
@@ -335,7 +322,7 @@ float ABMEnemyBase::PlayHitOnce(const FBMDamageInfo& Info)
 {
     UAnimSequence* Seq = nullptr;
 
-    if (IsHeavyIncoming(Info))
+    if (BMCombatUtils::IsHeavyIncoming(Info))
         Seq = AnimHitHeavy ? AnimHitHeavy : AnimHitLight;
     else
         Seq = AnimHitLight ? AnimHitLight : AnimHitHeavy;
@@ -421,7 +408,7 @@ bool ABMEnemyBase::ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) c
         return false; // 霸体：不可打断
     }
 
-    const float P = IsHeavyIncoming(Incoming) ? Spec.InterruptChanceOnHeavyHit : Spec.InterruptChance;
+    const float P = BMCombatUtils::IsHeavyIncoming(Incoming) ? Spec.InterruptChanceOnHeavyHit : Spec.InterruptChance;
     const float ClampedP = FMath::Clamp(P, 0.f, 1.f);
     const float R = FMath::FRand();
     const bool bWillInterrupt = (R < ClampedP);
@@ -433,7 +420,7 @@ bool ABMEnemyBase::ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) c
         TEXT("[%s] InterruptCheck: Attack=%s, Incoming=%s, Chance=%.2f, Rand=%.2f, Result=%s"),
         *GetName(),
         Spec.Anim ? *Spec.Anim->GetName() : TEXT("None"),
-        IsHeavyIncoming(Incoming) ? TEXT("Heavy") : TEXT("Normal"),
+        BMCombatUtils::IsHeavyIncoming(Incoming) ? TEXT("Heavy") : TEXT("Normal"),
         ClampedP,
         R,
         bWillInterrupt ? TEXT("INTERRUPTED") : TEXT("NOT_INTERRUPTED")
@@ -514,4 +501,32 @@ void ABMEnemyBase::HandleDeath(const FBMDamageInfo& LastHitInfo)
 
     Super::HandleDeath(LastHitInfo);
     DropLoot();
+}
+
+bool ABMEnemyBase::ResolveHitBoxWindow(
+    FName WindowId,
+    TArray<FName>& OutHitBoxNames,
+    FBMHitBoxActivationParams& OutParams
+) const
+{
+    OutHitBoxNames.Reset();
+    OutParams = FBMHitBoxActivationParams();
+
+    if (!bHasActiveAttackSpec)
+    {
+        return false;
+    }
+
+    static const FName DefaultWindowId(TEXT("HitWindow"));
+
+    // 目前你 Enemy Spec 也建议用“单窗口”字段（HitBoxNames/HitBoxParams）
+    if (WindowId.IsNone() || WindowId == DefaultWindowId)
+    {
+        OutHitBoxNames = ActiveAttackSpec.HitBoxNames;
+        OutParams = ActiveAttackSpec.HitBoxParams;
+        return OutHitBoxNames.Num() > 0;
+    }
+
+    // 后续如果做多窗口（ActiveAttackSpec.Windows），在这里补 WindowId 查找即可
+    return false;
 }
