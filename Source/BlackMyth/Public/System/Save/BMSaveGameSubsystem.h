@@ -30,6 +30,19 @@ class BLACKMYTH_API UBMSaveGameSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 public:
+
+    /**
+     * 获取下一个可用的存档槽位
+     * 
+     * @return 下一个可用的存档槽位编号
+     */
+    int32 GetNextAvailableSlot();
+
+    /**
+     * 开始新游戏
+     */
+    void StartNewGame();
+
     /**
      * 保存游戏到指定槽位
      * 
@@ -37,6 +50,13 @@ public:
      * @return 保存成功返回 true，失败返回 false
      */
     bool SaveGame(int32 Slot);
+
+    /**
+     * 保存游戏到当前槽位
+     * 
+     * @return 保存成功返回 true，失败返回 false
+     */
+    bool SaveCurrentGame();
 
     /**
      * 从指定槽位加载游戏
@@ -85,6 +105,9 @@ public:
     TArray<FBMSaveSlotInfo> GetAllSaveSlots(int32 MaxSlots = 10);
 
 protected:
+    /** 当前存档槽位索引 */
+    int32 CurrentSlotIndex = 1;
+
     /**
      * 辅助函数：格式化槽位名称
      * 
@@ -146,4 +169,6 @@ protected:
 private:
     /** 默认自动存档槽位编号 */
     static const int32 AUTO_SAVE_SLOT = 0;
+    /** 最大存档槽位数 */
+    static const int32 MAX_SAVE_SLOTS = 50;
 };

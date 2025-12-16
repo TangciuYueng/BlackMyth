@@ -182,6 +182,8 @@ bool UBMSaveGameSubsystem::LoadGame(int32 Slot)
         return false;
     }
 
+    // 设置当前存档槽位索引
+    CurrentSlotIndex = Slot;
     FString SlotName = GetSlotName(Slot);
     
     if (!UGameplayStatics::DoesSaveGameExist(SlotName, 0))
@@ -559,6 +561,39 @@ void UBMSaveGameSubsystem::ApplySaveData(UBMSaveData* SaveData, ABMPlayerCharact
     }
     else
     {
-        UE_LOG(LogBMSave, Warning, TEXT("ApplySaveData: Inventory component not found"));
+        UE_LOG(LogBMSave, Warning, TEXT("ApplySaveData: Inventory component not found"));   
+    }
+}
+
+bool UBMSaveGameSubsystem::SaveCurrentGame()
+{
+    return SaveGame(CurrentSlotIndex);
+}
+
+int32 UBMSaveGameSubsystem::GetNextAvailableSlot(){
+    for (int32 Slot = 0; Slot < MAX_SAVE_SLOTS; ++Slot)
+    {
+        if (!DoesSaveExist(Slot))
+        {
+            return Slot;
+        }
+    }
+    return MAX_SAVE_SLOTS;
+}
+
+void UBMSaveGameSubsystem::StartNewGame()
+{
+    CurrentSlotIndex = GetNextAvailableSlot();
+    if (CurrentSlotIndex != MAX_SAVE_SLOTS)
+    {
+        SaveGame(CurrentSlotIndex);
+    }
+    else
+    {
+        UE_LOG(LogBMSave, Error, TEXT("StartNewGame Failed: No available slot found"));
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "StartNewGameFailed", "Failed to start new game"));
+        }
     }
 }
