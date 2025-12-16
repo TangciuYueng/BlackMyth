@@ -130,6 +130,20 @@ void UBMHitBoxComponent::EnsureCreated(const FBMHitBoxDefinition& Def)
         return;
     }
 
+    // === Debug: 检查骨骼 / 插槽是否存在 ===
+    if (Def.AttachSocketOrBone != NAME_None && !Mesh->DoesSocketExist(Def.AttachSocketOrBone))
+    {
+        UE_LOG(
+            LogBMHitBox,
+            Warning,
+            TEXT("[%s] HitBox '%s' AttachSocketOrBone '%s' does NOT exist on mesh '%s'."),
+            *Owner->GetName(),
+            *Def.Name.ToString(),
+            *Def.AttachSocketOrBone.ToString(),
+            *Mesh->GetName()
+        );
+    }
+
     const FName CompName = MakeUniqueObjectName(Owner, UBoxComponent::StaticClass(), *FString::Printf(TEXT("BM_HitBox_%s"), *Def.Name.ToString()));
     UBoxComponent* Box = NewObject<UBoxComponent>(Owner, CompName);
     Owner->AddInstanceComponent(Box);
@@ -151,18 +165,12 @@ void UBMHitBoxComponent::EnsureCreated(const FBMHitBoxDefinition& Def)
     Box->OnComponentBeginOverlap.AddDynamic(this, &UBMHitBoxComponent::OnHitBoxOverlap);
 
     HitBoxes.Add(Def.Name, Box);
-
-
 }
 
 void UBMHitBoxComponent::ActivateHitBox(EBMHitBoxType Type)
 {
     const FString TypeStr = UEnum::GetValueAsString(Type);
 
-    // 先打印请求启用
-    UE_LOG(LogBMHitBox, Warning, TEXT("[HitBox] Activate request: Type=%s Owner=%s"),
-        *TypeStr,
-        *GetNameSafe(GetOwner()));
 
     const FBMHitBoxDefinition* Def = FindDefByType(Type);
     if (!Def)
@@ -170,12 +178,6 @@ void UBMHitBoxComponent::ActivateHitBox(EBMHitBoxType Type)
         UE_LOG(LogBMHitBox, Error, TEXT("[HitBox] Activate failed: no definition for Type=%s"), *TypeStr);
         return;
     }
-
-    UE_LOG(LogBMHitBox, Warning, TEXT("[HitBox] Found Def: Name=%s Type=%s Socket/Bone=%s Extent=%s"),
-        *Def->Name.ToString(),
-        *UEnum::GetValueAsString(Def->Type),
-        *Def->AttachSocketOrBone.ToString(),
-        *Def->BoxExtent.ToString());
 
     if (Def->Name.IsNone())
     {
@@ -189,19 +191,6 @@ void UBMHitBoxComponent::ActivateHitBox(EBMHitBoxType Type)
     // 用 FindRef 更清晰
     ActiveHitBox = HitBoxes.FindRef(ActiveHitBoxName);
 
-    // 打印当前 HitBoxes 里有哪些 key
-    {
-        FString Keys;
-        for (const auto& KVP : HitBoxes)
-        {
-            Keys += KVP.Key.ToString() + TEXT(" ");
-        }
-
-        UE_LOG(LogBMHitBox, Warning, TEXT("[HitBox] Map Keys=%s | ActiveKey=%s"),
-            *Keys,
-            *ActiveHitBoxName.ToString());
-    }
-
     HitActorsThisSwing.Reset();
 
     if (!ActiveHitBox)
@@ -212,22 +201,12 @@ void UBMHitBoxComponent::ActivateHitBox(EBMHitBoxType Type)
     }
 
     ActiveHitBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-
-    UE_LOG(LogBMHitBox, Warning, TEXT("[HitBox] ON: Name=%s Type=%s Comp=%s Collision=%d"),
-        *ActiveHitBoxName.ToString(),
-        *TypeStr,
-        *GetNameSafe(ActiveHitBox),
-        (int32)ActiveHitBox->GetCollisionEnabled());
 }
 
 void UBMHitBoxComponent::DeactivateHitBox()
 {
     if (!ActiveHitBox)
     {
-        UE_LOG(LogBMHitBox, Display, TEXT("[HitBox] OFF: (no active) Owner=%s ActiveName=%s"),
-            *GetNameSafe(GetOwner()),
-            *ActiveHitBoxName.ToString());
-
         ActiveHitBoxName = NAME_None;
         HitActorsThisSwing.Reset();
         return;
@@ -235,19 +214,9 @@ void UBMHitBoxComponent::DeactivateHitBox()
 
     const int32 Before = (int32)ActiveHitBox->GetCollisionEnabled();
 
-    UE_LOG(LogBMHitBox, Warning, TEXT("[HitBox] OFF request: Name=%s Comp=%s CollisionBefore=%d"),
-        *ActiveHitBoxName.ToString(),
-        *GetNameSafe(ActiveHitBox),
-        Before);
-
     ActiveHitBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
     const int32 After = (int32)ActiveHitBox->GetCollisionEnabled();
-
-    UE_LOG(LogBMHitBox, Warning, TEXT("[HitBox] OFF done: Name=%s Comp=%s CollisionAfter=%d"),
-        *ActiveHitBoxName.ToString(),
-        *GetNameSafe(ActiveHitBox),
-        After);
 
     ActiveHitBox = nullptr;
     ActiveHitBoxName = NAME_None;

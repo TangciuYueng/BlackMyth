@@ -124,6 +124,36 @@ enum class EBMHitReaction : uint8
 };
 
 /**
+ * 敌人攻击权重分类（用于 AI 攻击选择）
+ */ 
+UENUM(BlueprintType)
+enum class EBMEnemyAttackWeight : uint8
+{
+    Light   UMETA(DisplayName = "Light"),
+    Heavy   UMETA(DisplayName = "Heavy"),
+    Skill   UMETA(DisplayName = "Skill")
+};
+
+/**
+ * 玩家攻击请求类型
+ */ 
+
+UENUM(BlueprintType)
+enum class EBMCombatAction : uint8
+{
+    None        UMETA(DisplayName = "None"),
+    LightAttack UMETA(DisplayName = "Light Attack"),
+    HeavyAttack UMETA(DisplayName = "Heavy Attack"),
+
+    // 先留接口：后续 SkillCast 状态会用
+    Skill1      UMETA(DisplayName = "Skill 1"),
+    Skill2      UMETA(DisplayName = "Skill 2"),
+    Skill3      UMETA(DisplayName = "Skill 3"),
+    Ultimate    UMETA(DisplayName = "Ultimate"),
+};
+
+
+/**
  * 角色逻辑状态 ID（FSM 使用的“状态枚举”）
  */
 UENUM(BlueprintType)
@@ -241,7 +271,105 @@ struct FBMStatBlock
 };
 
 /**
- * 存档：背包物品条目（你类图里用到的 FMBInventoryItemSaveData）
+ * 敌人攻击规格
+ */ 
+USTRUCT(BlueprintType)
+struct FBMEnemyAttackSpec
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack")
+    TObjectPtr<UAnimSequence> Anim = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack", meta = (ClampMin = "0.01"))
+    float Weight = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack", meta = (ClampMin = "0"))
+    float MinRange = 0.f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack", meta = (ClampMin = "0"))
+    float MaxRange = 220.f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack", meta = (ClampMin = "0.05"))
+    float Cooldown = 1.2f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack", meta = (ClampMin = "0.1"))
+    float PlayRate = 1.0f;
+
+    // ===== 关键：打断规则 =====
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|Interrupt")
+    bool bUninterruptible = false; // 重攻击：不可打断（霸体）
+
+    // 轻攻击：可按概率被打断（0=永不，1=必定）
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|Interrupt", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float InterruptChance = 0.6f;
+
+    // 遭遇“重受击”时的打断概率（可让重受击更容易打断轻攻击）
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|Interrupt", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float InterruptChanceOnHeavyHit = 1.0f;
+
+    // ===== 攻击轻重（用于技能/霸体/受击反馈扩展）=====
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack")
+    EBMEnemyAttackWeight AttackWeight = EBMEnemyAttackWeight::Light;
+
+    // ===== 工程参数：出手时的移动/转向策略（可按招式定制）=====
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|Motion")
+    bool bStopPathFollowingOnEnter = true; // StopMovement（保留惯性）
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|Motion")
+    bool bFaceTargetOnEnter = true;
+};
+
+USTRUCT(BlueprintType)
+struct FBMPlayerAttackSpec
+{
+    GENERATED_BODY()
+
+    // 识别用（日志/调试/数据驱动时方便）
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
+    FName Id = NAME_None;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
+    TObjectPtr<UAnimSequence> Anim = nullptr;
+
+    // 用于“同类招式多段随机”
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack", meta = (ClampMin = "0.01"))
+    float Weight = 1.0f;
+
+    // 动画播放控制
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack", meta = (ClampMin = "0.01"))
+    float PlayRate = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack", meta = (ClampMin = "0.0"))
+    float StartTime = 0.0f;
+
+    // <=0 表示播完整（从 StartTime 到结尾）
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
+    float MaxPlayTime = -1.0f;
+
+    // 这段招式应打开哪个 HitBox（由动画 Notify/AnimEvent 调用 ActivateHitBox）
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
+    EBMHitBoxType HitBoxType = EBMHitBoxType::LightAttack;
+
+    // 冷却
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack", meta = (ClampMin = "0.0"))
+    float Cooldown = 0.0f;
+
+    // ===== 打断规则 =====
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack|Interrupt")
+    bool bUninterruptible = false;
+
+    // 被“轻受击”打断概率（0=永不，1=必定）
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack|Interrupt", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float InterruptChance = 0.6f;
+
+    // 被“重受击”打断概率
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack|Interrupt", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float InterruptChanceOnHeavyHit = 1.0f;
+};
+
+/**
+ * 存档：背包物品条目
  */
 USTRUCT(BlueprintType)
 struct FMBInventoryItemSaveData
@@ -537,4 +665,15 @@ namespace BMStateNames
             default:                             return None;
         }
     }
+}
+
+
+namespace BMEnemyStateNames
+{
+    static const FName Idle = TEXT("Enemy.Idle");
+    static const FName Patrol = TEXT("Enemy.Patrol");
+    static const FName Chase = TEXT("Enemy.Chase");
+    static const FName Attack = TEXT("Enemy.Attack");
+    static const FName Hit = TEXT("Enemy.Hit");
+    static const FName Death = TEXT("Enemy.Death");
 }

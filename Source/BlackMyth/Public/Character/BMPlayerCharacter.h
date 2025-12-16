@@ -4,11 +4,12 @@
 #include "Character/BMCharacterBase.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Core/BMTypes.h"
 #include "BMPlayerCharacter.generated.h"
 
 
 class UInputComponent;
-class UAnimMontage;
+class UAnimSequence;
 class USpringArmComponent;
 class UCameraComponent;
 
@@ -48,6 +49,16 @@ public:
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
     /**
+     * 落地回调
+     *
+     * 在角色从空中落到地面时触发，用于清理跳跃状态标记并根据移动意图
+     * 切换回 Idle 或 Move 状态
+     *
+     * @param Hit 描述落地碰撞信息的命中结果
+     */
+    virtual void Landed(const FHitResult& Hit) override;
+
+    /**
      * 判断当前是否存在有效的移动意图
      *
      * 通常由状态机在 Idle/Move 状态中使用，用于决定是否需要切换到移动状态
@@ -71,6 +82,16 @@ public:
         return b;
     }
 
+    // Pending action（供 Attack 状态读取）
+    bool ConsumePendingAction(EBMCombatAction& OutAction);
+
+    // 招式选择与打断判定
+    bool SelectAttackSpec(EBMCombatAction Action, FBMPlayerAttackSpec& OutSpec) const;
+
+    void SetActiveAttackSpec(const FBMPlayerAttackSpec& Spec);
+    void ClearActiveAttackSpec();
+    bool ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) const;
+
     // === 纯C++动画播放接口 ===
     /**
      * 播放待机循环动画。
@@ -85,6 +106,10 @@ public:
      * 一般在进入 Move 状态时调用，根据当前速度与移动意图呈现持续移动效果
      */
     void PlayMoveLoop();
+
+    float PlayAttackOnce(const FBMPlayerAttackSpec& Spec);   // 新增：通用
+    float PlayHitOnce(const FBMDamageInfo& Info);            // 新增
+    float PlayDeathOnce();                                   // 新增
 
     // === 跳跃更新 ===
     /**
@@ -116,16 +141,12 @@ public:
      */
     float PlayLightAttackOnce(float PlayRate = 1.0f);
 
+	FBMDamageInfo GetLastDamageInfo() const { return LastDamageInfo; }
+
 protected:
-    /**
-     * 落地回调
-     *
-     * 在角色从空中落到地面时触发，用于清理跳跃状态标记并根据移动意图
-     * 切换回 Idle 或 Move 状态
-     *
-     * @param Hit 描述落地碰撞信息的命中结果
-     */
-    virtual void Landed(const FHitResult& Hit) override;
+    // 伤害链路：与 EnemyBase 同逻辑
+    virtual void HandleDamageTaken(const FBMDamageInfo& FinalInfo) override;
+    virtual void HandleDeath(const FBMDamageInfo& LastHitInfo) override;
 
 private:
     /**
@@ -164,6 +185,10 @@ private:
      */
     void Input_AttackPressed();
 
+    // 输入
+    void Input_AttackLightPressed();
+    void Input_AttackHeavyPressed();
+
     /**
      * 水平视角旋转输入回调
      *
@@ -200,6 +225,8 @@ private:
      * 并注册到 UBMStateMachineComponent 中，同时设置初始状态
      */
     void InitFSMStates();
+
+    void OnActionRequested(EBMCombatAction Action);
 
     /**
      * 根据当前 MoveIntent 向量与控制器朝向应用移动输入
@@ -290,6 +317,41 @@ private:
     UPROPERTY(EditAnywhere, Category = "BM|Assets")
     TObjectPtr<UAnimSequence> AnimLightAttack;
     
+    UPROPERTY(EditAnywhere, Category = "BM|Assets")
+    TObjectPtr<UAnimSequence> AnimHeavyAttack;
+
+    // 轻/重攻击规格
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
+    TArray<FBMPlayerAttackSpec> LightAttackSpecs;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
+    TArray<FBMPlayerAttackSpec> HeavyAttackSpecs;
+
+    // 受击/死亡动画
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimHitLight = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimHitHeavy = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimDeath = nullptr;
+
+    // Pending / Active
+    EBMCombatAction PendingAction = EBMCombatAction::None;
+
+
+    bool bHasActiveAttackSpec = false;
+    FBMPlayerAttackSpec ActiveAttackSpec;
+
+    FBMDamageInfo LastDamageInfo; // Hit/Death 状态会用
+
+    // 简单冷却（可选）
+    float NextLightAllowedTime = 0.f;
+    float NextHeavyAllowedTime = 0.f;
+
+
+
     /**
      * 待起跳标记
      *

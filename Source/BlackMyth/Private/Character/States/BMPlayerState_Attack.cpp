@@ -7,71 +7,82 @@
 #include "Animation/AnimInstance.h"
 #include "Core/BMTypes.h"
 
-void UBMPlayerState_Attack::OnEnter(float DeltaTime)
+void UBMPlayerState_Attack::OnEnter(float)
 {
-    (void)DeltaTime;
-
     ABMPlayerCharacter* PC = Cast<ABMPlayerCharacter>(GetContext());
     if (!PC) return;
 
-    UCharacterMovementComponent* Move = PC->GetCharacterMovement();
-    // 锁动作：攻击中不允许再次触发攻击/跳跃等
+    PC->GetWorldTimerManager().ClearTimer(TimerHandle);
+
     if (UBMCombatComponent* Combat = PC->GetCombat())
     {
         Combat->SetActionLock(true);
     }
-    ApplyAttackInertiaSettings(Move);
+
+    // 空中禁止攻击
+    if (UCharacterMovementComponent* Move = PC->GetCharacterMovement(); Move && Move->IsFalling())
+    {
+        FinishAttack(true);
+        return;
+    }
+
+    // 取 PendingAction
+    EBMCombatAction Action = EBMCombatAction::LightAttack;
+    PC->ConsumePendingAction(Action);
+
+    // 选招式 Spec
+    FBMPlayerAttackSpec Spec;
+    if (!PC->SelectAttackSpec(Action, Spec))
+    {
+        FinishAttack(true);
+        return;
+    }
+
+    // 关键：锁定当前招式，供“被打断判定”使用
+    PC->SetActiveAttackSpec(Spec);
+
+    // 惯性参数
+    ApplyAttackInertiaSettings(PC->GetCharacterMovement());
 
     bFinished = false;
 
-    const float Duration = PC->PlayLightAttackOnce(1.0f);
+    const float Duration = PC->PlayAttackOnce(Spec);
     if (Duration <= 0.f)
     {
         FinishAttack(false);
         return;
     }
 
-    // 用 Timer 代替 Montage 回调
-    PC->GetWorldTimerManager().SetTimer(TimerHandle, [this]()
+    FTimerDelegate D = FTimerDelegate::CreateWeakLambda(this, [this]()
         {
             FinishAttack(false);
-        }, Duration, false);
+        });
+    PC->GetWorldTimerManager().SetTimer(TimerHandle, D, Duration, false);
 }
 
-void UBMPlayerState_Attack::OnExit(float DeltaTime)
+void UBMPlayerState_Attack::OnExit(float)
 {
-    (void)DeltaTime;
-
     ABMPlayerCharacter* PC = Cast<ABMPlayerCharacter>(GetContext());
     if (!PC) return;
 
-
     PC->GetWorldTimerManager().ClearTimer(TimerHandle);
+
+    PC->ClearActiveAttackSpec();
 
     if (UBMCombatComponent* Combat = PC->GetCombat())
     {
         Combat->SetActionLock(false);
     }
-    // 退出攻击恢复移动参数
-    RestoreMovementSettings(PC->GetCharacterMovement());
 
+    RestoreMovementSettings(PC->GetCharacterMovement());
     bFinished = false;
 }
 
 bool UBMPlayerState_Attack::CanTransitionTo(FName StateName) const
 {
-    // 攻击过程中默认不允许切走
-    // 只有完成后才允许切换
-    if (!bFinished)
-    {
-        // 允许死亡强制切
-        if (StateName == BMStateNames::Death)
-        {
-            return true;
-        }
-        return false;
-    }
-    return true;
+    if (StateName == BMStateNames::Death) return true;
+    if (StateName == BMStateNames::Hit)   return true; 
+    return bFinished;
 }
 
 void UBMPlayerState_Attack::ApplyAttackInertiaSettings(UCharacterMovementComponent* Move)

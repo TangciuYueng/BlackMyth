@@ -12,13 +12,21 @@ bool UBMCombatComponent::CanPerformAction() const
     return !bActionLocked;
 }
 
-bool UBMCombatComponent::RequestLightAttack()
+bool UBMCombatComponent::RequestAction(EBMCombatAction Action)
 {
     if (!CanPerformAction())
     {
+        UE_LOG(LogBMCombat, Verbose, TEXT("RequestAction rejected: locked"));
         return false;
     }
-    OnLightAttackRequested.Broadcast();
+
+    if (Action == EBMCombatAction::None)
+    {
+        return false;
+    }
+
+    OnActionRequested.Broadcast(Action);
+
     return true;
 }
 
@@ -26,12 +34,14 @@ void UBMCombatComponent::RequestSkill(int32 Slot)
 {
     if (!CanPerformAction())
     {
+        UE_LOG(LogBMCombat, Verbose, TEXT("RequestSkill rejected: locked"));
         return;
     }
+
     OnSkillRequested.Broadcast(Slot);
 }
 
 void UBMCombatComponent::ResetHitList()
 {
-    // 具体命中列表在 HitBoxComponent 内维护；这里只留接口给 AnimEvent 调用
+    // 命中列表在 HitBoxComponent 内部维护；这里只保留接口
 }
