@@ -19,10 +19,26 @@ public:
     void ShowHUD(TSubclassOf<class UBMHUDWidget> HUDClass);
 
     UFUNCTION(BlueprintCallable)
+    void HideHUD();
+
+    UFUNCTION(BlueprintCallable)
+    bool IsHUDVisible() const;
+
+    UFUNCTION(BlueprintCallable)
     void ShowBossBar(TSubclassOf<class UBMBossBarBase> BossBarClass);
 
     UFUNCTION(BlueprintCallable)
     void ShowNotification(TSubclassOf<class UBMNotificationWidget> NotificationClass);
+
+    UFUNCTION(BlueprintCallable)
+    void HideNotification();
+
+    UFUNCTION(BlueprintCallable)
+    bool IsNotificationVisible() const;
+
+    // Convenience to push a notification via EventBus
+    UFUNCTION(BlueprintCallable)
+    void PushNotificationMessage(const FText& Message);
 
     UFUNCTION(BlueprintCallable)
     void ShowPauseMenu(TSubclassOf<class UBMPauseMenuWidget> PauseClass);
