@@ -21,12 +21,13 @@ void ABMPlayerController::BeginPlay()
         {
             // 仅在指定主菜单关卡显示主菜单
             const UWorld* World = GetWorld();
+            // Compare against the asset name of the startup map. For full path "/Game/emptymap/emptymap" the asset name is "emptymap".
             const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(const_cast<UObject*>(static_cast<const UObject*>(World)), /*bRemovePrefixPIE*/ true);
-            const FString ExpectedLevelName = TEXT("Lvl_ThirdPerson");
+            const FString ExpectedLevelName = TEXT("emptymap");
             if (CurrentLevelName != ExpectedLevelName)
             {
-                UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: CurrentLevelName=%s, expected=%s"), *CurrentLevelName, *ExpectedLevelName);
-                UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Skipping auto main menu on level: %s"), *CurrentLevelName);
+                UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: CurrentLevelName=%s, expected startup=%s"), *CurrentLevelName, *ExpectedLevelName);
+                UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Skipping auto main menu on non-startup level: %s"), *CurrentLevelName);
                 return;
             }
             TSubclassOf<UBMMainWidget> ClassToUse = nullptr;

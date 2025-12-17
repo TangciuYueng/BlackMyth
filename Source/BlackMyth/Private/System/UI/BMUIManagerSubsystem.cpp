@@ -8,6 +8,7 @@
 #include "UI/BMPauseMenuWidget.h"
 #include "UI/BMMainWidget.h"
 #include "Blueprint/UserWidget.h"
+#include "System/Event/BMEventBusSubsystem.h"
 
 namespace
 {
@@ -27,12 +28,18 @@ void UBMUIManagerSubsystem::ShowHUD(TSubclassOf<UBMHUDWidget> HUDClass)
 {
     UWorld* World = GetWorld();
     if (!World) return;
-    if (!HUD.IsValid())
+    if (HUD.IsValid())
     {
-        if (UUserWidget* W = CreateAndAdd(HUDClass, World))
+        UUserWidget* W = HUD.Get();
+        if (W && !W->IsInViewport())
         {
-            HUD = Cast<UBMHUDWidget>(W);
+            W->AddToViewport();
         }
+        return;
+    }
+    if (UUserWidget* W = CreateAndAdd(HUDClass, World))
+    {
+        HUD = Cast<UBMHUDWidget>(W);
     }
 }
 
@@ -53,12 +60,18 @@ void UBMUIManagerSubsystem::ShowNotification(TSubclassOf<UBMNotificationWidget> 
 {
     UWorld* World = GetWorld();
     if (!World) return;
-    if (!Notification.IsValid())
+    if (Notification.IsValid())
     {
-        if (UUserWidget* W = CreateAndAdd(NotificationClass, World))
+        UUserWidget* W = Notification.Get();
+        if (W && !W->IsInViewport())
         {
-            Notification = Cast<UBMNotificationWidget>(W);
+            W->AddToViewport();
         }
+        return;
+    }
+    if (UUserWidget* W = CreateAndAdd(NotificationClass, World))
+    {
+        Notification = Cast<UBMNotificationWidget>(W);
     }
 }
 
@@ -122,5 +135,46 @@ bool UBMUIManagerSubsystem::IsPauseMenuVisible() const
 {
     const UUserWidget* W = PauseMenu.Get();
     return W && W->IsInViewport();
+}
+
+void UBMUIManagerSubsystem::HideHUD()
+{
+    if (UUserWidget* W = HUD.Get())
+    {
+        W->RemoveFromParent();
+    }
+    // Keep pointer; HUD could be re-added later without recreation
+}
+
+bool UBMUIManagerSubsystem::IsHUDVisible() const
+{
+    const UUserWidget* W = HUD.Get();
+    return W && W->IsInViewport();
+}
+
+void UBMUIManagerSubsystem::HideNotification()
+{
+    if (UUserWidget* W = Notification.Get())
+    {
+        W->RemoveFromParent();
+    }
+    // Keep pointer; Notification list persists across toggles
+}
+
+bool UBMUIManagerSubsystem::IsNotificationVisible() const
+{
+    const UUserWidget* W = Notification.Get();
+    return W && W->IsInViewport();
+}
+
+void UBMUIManagerSubsystem::PushNotificationMessage(const FText& Message)
+{
+    if (UGameInstance* GI = GetGameInstance())
+    {
+        if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+        {
+            Bus->EmitNotify(Message);
+        }
+    }
 }
 
