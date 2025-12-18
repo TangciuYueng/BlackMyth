@@ -2,6 +2,7 @@
 #include "Character/Components/BMStatsComponent.h"
 #include "Core/BMDataSubsystem.h"
 #include "Data/BMPlayerGrowthData.h"
+#include "System/Event/BMEventBusSubsystem.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -32,9 +33,15 @@ void UBMExperienceComponent::BeginPlay()
     
     // 广播初始状态
     const float MaxXP = GetMaxXPForNextLevel();
-    OnXPChangedNative.Broadcast(CurrentXP, MaxXP, GetExpPercent());
+    const float Percent = GetExpPercent();
+    OnXPChangedNative.Broadcast(CurrentXP, MaxXP, Percent);
     OnSkillPointChangedNative.Broadcast(SkillPoints);
     OnAttributePointChangedNative.Broadcast(AttributePoints);
+    
+    // 发送到 EventBus 供 UI 使用
+    EmitXPChangedToEventBus(CurrentXP, MaxXP, Percent);
+    EmitSkillPointsChangedToEventBus(SkillPoints);
+    EmitAttributePointsChangedToEventBus(AttributePoints);
 }
 
 int32 UBMExperienceComponent::AddXP(float Amount)
@@ -65,7 +72,11 @@ int32 UBMExperienceComponent::AddXP(float Amount)
 
     // 广播经验值变化事件
     const float MaxXP = GetMaxXPForNextLevel();
-    OnXPChangedNative.Broadcast(CurrentXP, MaxXP, GetExpPercent());
+    const float Percent = GetExpPercent();
+    OnXPChangedNative.Broadcast(CurrentXP, MaxXP, Percent);
+    
+    // 发送到 EventBus 供 UI 使用
+    EmitXPChangedToEventBus(CurrentXP, MaxXP, Percent);
 
     return LevelsGained;
 }
@@ -117,6 +128,16 @@ bool UBMExperienceComponent::PerformLevelUp()
     OnLevelUpNative.Broadcast(OldLevel, Level);
     OnSkillPointChangedNative.Broadcast(SkillPoints);
     OnAttributePointChangedNative.Broadcast(AttributePoints);
+    
+    // 发送到 EventBus 供 UI 使用
+    EmitLevelUpToEventBus(OldLevel, Level);
+    EmitSkillPointsChangedToEventBus(SkillPoints);
+    EmitAttributePointsChangedToEventBus(AttributePoints);
+    
+    // 同时更新 XP 显示（因为升级后 XP 可能变化）
+    const float MaxXP = GetMaxXPForNextLevel();
+    const float Percent = GetExpPercent();
+    EmitXPChangedToEventBus(CurrentXP, MaxXP, Percent);
 
     UE_LOG(LogBMExperience, Log, TEXT("Level Up! %d -> %d. XP remaining: %f / %f. Skill Points: %d, Attribute Points: %d"),
         OldLevel, Level, CurrentXP, GetMaxXPForNextLevel(), SkillPoints, AttributePoints);
@@ -208,6 +229,7 @@ bool UBMExperienceComponent::SpendSkillPoint()
 
     SkillPoints--;
     OnSkillPointChangedNative.Broadcast(SkillPoints);
+    EmitSkillPointsChangedToEventBus(SkillPoints);
     UE_LOG(LogBMExperience, Log, TEXT("SpendSkillPoint: Spent 1 skill point. Remaining: %d"), SkillPoints);
     return true;
 }
@@ -222,6 +244,7 @@ bool UBMExperienceComponent::SpendAttributePoint()
 
     AttributePoints--;
     OnAttributePointChangedNative.Broadcast(AttributePoints);
+    EmitAttributePointsChangedToEventBus(AttributePoints);
     UE_LOG(LogBMExperience, Log, TEXT("SpendAttributePoint: Spent 1 attribute point. Remaining: %d"), AttributePoints);
     return true;
 }
@@ -270,9 +293,17 @@ void UBMExperienceComponent::SetLevel(int32 NewLevel, bool bApplyGrowth)
     if (OldLevel != NewLevel)
     {
         OnLevelUpNative.Broadcast(OldLevel, NewLevel);
+        EmitLevelUpToEventBus(OldLevel, NewLevel);
     }
     OnSkillPointChangedNative.Broadcast(SkillPoints);
     OnAttributePointChangedNative.Broadcast(AttributePoints);
+    EmitSkillPointsChangedToEventBus(SkillPoints);
+    EmitAttributePointsChangedToEventBus(AttributePoints);
+    
+    // 更新 XP 显示
+    const float MaxXP = GetMaxXPForNextLevel();
+    const float Percent = GetExpPercent();
+    EmitXPChangedToEventBus(CurrentXP, MaxXP, Percent);
 
     UE_LOG(LogBMExperience, Log, TEXT("SetLevel: Set to level %d"), NewLevel);
 }
@@ -303,7 +334,9 @@ void UBMExperienceComponent::SetCurrentXP(float NewXP, bool bCheckLevelUp)
 
     // 广播经验值变化
     const float MaxXP = GetMaxXPForNextLevel();
-    OnXPChangedNative.Broadcast(CurrentXP, MaxXP, GetExpPercent());
+    const float Percent = GetExpPercent();
+    OnXPChangedNative.Broadcast(CurrentXP, MaxXP, Percent);
+    EmitXPChangedToEventBus(CurrentXP, MaxXP, Percent);
 }
 
 void UBMExperienceComponent::SetSkillPoints(int32 NewSkillPoints)
@@ -316,6 +349,7 @@ void UBMExperienceComponent::SetSkillPoints(int32 NewSkillPoints)
 
     SkillPoints = NewSkillPoints;
     OnSkillPointChangedNative.Broadcast(SkillPoints);
+    EmitSkillPointsChangedToEventBus(SkillPoints);
 }
 
 void UBMExperienceComponent::SetAttributePoints(int32 NewAttributePoints)
@@ -328,6 +362,7 @@ void UBMExperienceComponent::SetAttributePoints(int32 NewAttributePoints)
 
     AttributePoints = NewAttributePoints;
     OnAttributePointChangedNative.Broadcast(AttributePoints);
+    EmitAttributePointsChangedToEventBus(AttributePoints);
 }
 
 float UBMExperienceComponent::CalculateXPForLevel(int32 TargetLevel) const
@@ -363,4 +398,50 @@ float UBMExperienceComponent::CalculateXPForNextLevel(int32 FromLevel) const
     // 公式：BaseXP * (Multiplier ^ (FromLevel - 1))
     const float XPForThisLevel = BaseXPRequired * FMath::Pow(XPGrowthMultiplier, static_cast<float>(FromLevel - 1));
     return XPForThisLevel;
+}
+
+// === EventBus Integration ===
+
+UBMEventBusSubsystem* UBMExperienceComponent::GetEventBusSubsystem() const
+{
+    if (UWorld* World = GetWorld())
+    {
+        if (UGameInstance* GameInstance = World->GetGameInstance())
+        {
+            return GameInstance->GetSubsystem<UBMEventBusSubsystem>();
+        }
+    }
+    return nullptr;
+}
+
+void UBMExperienceComponent::EmitLevelUpToEventBus(int32 OldLevel, int32 NewLevel)
+{
+    if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+    {
+        EventBus->EmitPlayerLevelUp(OldLevel, NewLevel);
+    }
+}
+
+void UBMExperienceComponent::EmitXPChangedToEventBus(float InCurrentXP, float InMaxXP, float InPercent)
+{
+    if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+    {
+        EventBus->EmitPlayerXPChanged(InCurrentXP, InMaxXP, InPercent);
+    }
+}
+
+void UBMExperienceComponent::EmitSkillPointsChangedToEventBus(int32 NewSkillPoints)
+{
+    if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+    {
+        EventBus->EmitPlayerSkillPointsChanged(NewSkillPoints);
+    }
+}
+
+void UBMExperienceComponent::EmitAttributePointsChangedToEventBus(int32 NewAttributePoints)
+{
+    if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+    {
+        EventBus->EmitPlayerAttributePointsChanged(NewAttributePoints);
+    }
 }
