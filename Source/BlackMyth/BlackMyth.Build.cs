@@ -20,7 +20,7 @@ public class BlackMyth : ModuleRules
 			"UMG",
 			"Slate",
             "GameplayTasks",
-			"NavigationSystem"
+			"NavigationSystem",
 			"SlateCore",
             "DeveloperSettings"
         });

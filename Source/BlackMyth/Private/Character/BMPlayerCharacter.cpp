@@ -22,15 +22,11 @@
 #include "Character/Components/BMHurtBoxComponent.h"
 #include "Character/Components/BMHitBoxComponent.h"
 #include "Character/Components/BMStatsComponent.h"
-
-<<<<<<< HEAD
-#include "UObject/ConstructorHelpers.h"
-=======
 #include "Character/Components/BMInventoryComponent.h"
 
+#include "UObject/ConstructorHelpers.h"
 #include "Core/BMDataSubsystem.h"
 
->>>>>>> dev
 #include "Animation/AnimSingleNodeInstance.h"
 
 
