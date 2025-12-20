@@ -87,7 +87,10 @@ bool UBMInventoryComponent::AddItem(FName ItemID, int32 Count)
 	const FBMItemData* ItemData = GetItemData(ItemID);
 	if (!ItemData)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::AddItem - 物品 %s 在数据表中不存在"), *ItemID.ToString());
+		UBMDataSubsystem* DataSubsystem = GetDataSubsystem();
+		UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::AddItem - 物品 %s 在数据表中不存在 (ItemTable=%s)"),
+			*ItemID.ToString(),
+			DataSubsystem ? *DataSubsystem->GetItemTablePathDebug() : TEXT("null"));
 		return false;
 	}
 
@@ -607,7 +610,8 @@ bool UBMInventoryComponent::OpenInventoryUI()
 	PC->SetShowMouseCursor(true);
 	FInputModeGameAndUI InputMode;
 	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-	InputMode.SetWidgetToFocus(InventoryWidgetInstance->TakeWidget());
+	// Don't force focus to the widget, otherwise the widget may consume number key events
+	// and prevent PlayerInputComponent hotkeys (1-9) from firing.
 	PC->SetInputMode(InputMode);
 
 	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::OpenInventoryUI - 背包UI已打开"));
@@ -666,6 +670,52 @@ void UBMInventoryComponent::RefreshInventoryUI()
 	OnInventoryChanged.Broadcast();
 
 	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::RefreshInventoryUI - 已请求UI刷新"));
+}
+
+void UBMInventoryComponent::SetInventoryWidgetClass(TSubclassOf<UUserWidget> InWidgetClass)
+{
+	if (IsInventoryUIVisible())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::SetInventoryWidgetClass - Cannot change widget class while UI is visible"));
+		return;
+	}
+
+	InventoryWidgetClass = InWidgetClass;
+}
+
+void UBMInventoryComponent::ToggleTestAutoAddCurrency()
+{
+	bTestAutoAddCurrency = !bTestAutoAddCurrency;
+
+	if (bTestAutoAddCurrency)
+	{
+		StartTestAutoAddCurrency();
+		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::ToggleTestAutoAddCurrency - Enabled"));
+	}
+	else
+	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().ClearTimer(TestAutoAddCurrencyTimer);
+		}
+		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::ToggleTestAutoAddCurrency - Disabled"));
+	}
+}
+
+void UBMInventoryComponent::ToggleTestForceItemPrice10()
+{
+	bTestForceItemPrice = !bTestForceItemPrice;
+	if (bTestForceItemPrice)
+	{
+		TestForcedItemPrice = 10.0f;
+		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::ToggleTestForceItemPrice10 - Enabled (price=10)"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::ToggleTestForceItemPrice10 - Disabled"));
+	}
+
+	OnInventoryChanged.Broadcast();
 }
 
 APlayerController* UBMInventoryComponent::GetPlayerController() const
