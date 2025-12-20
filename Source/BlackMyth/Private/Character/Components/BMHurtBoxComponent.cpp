@@ -130,3 +130,16 @@ void UBMHurtBoxComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
         DebugLineThickness
     );
 }
+
+bool UBMHurtBoxComponent::IsHurtBoxEnabled() const
+{
+    return CollisionBox && CollisionBox->GetCollisionEnabled() != ECollisionEnabled::NoCollision;
+}
+
+void UBMHurtBoxComponent::SetHurtBoxEnabled(bool bEnabled)
+{
+    if (!CollisionBox) return;
+
+    CollisionBox->SetCollisionEnabled(bEnabled ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+    CollisionBox->SetGenerateOverlapEvents(bEnabled);
+}

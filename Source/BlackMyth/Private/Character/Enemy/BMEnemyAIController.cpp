@@ -1,97 +1,94 @@
-
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Character/Enemy/BMEnemyAIController.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "GameFramework/Actor.h"
 
-// ================== Ìõ¼þ¼ì²é½Ó¿Ú ==================
+// ================== ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¿ï¿½ ==================
 bool ABMEnemyAIController::IsPlayerInSight_Implementation()
 {
-    // ¡¾Ðè½ÓÈë¡¿UAIPerceptionComponent¸ÐÖª½á¹û»ò×Ô¶¨ÒåÊÓÏß¼ì²â
-    // ·µ»Øtrue±íÊ¾Ö÷½ÇÔÚÊÓÒ°ÄÚ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë¡¿UAIPerceptionComponentï¿½ï¿½Öªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½ï¿½
+    // ï¿½ï¿½ï¿½ï¿½trueï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò°ï¿½ï¿½
     return false;
 }
 
 float ABMEnemyAIController::GetEnemyHealth_Implementation()
 {
-    // ¡¾Ðè½ÓÈë¡¿µÐÈË½ÇÉ«µÄÑªÁ¿×é¼þ
-    // ÀýÈç£ºCast<ABMEnemyBase>(GetPawn())->GetHealth();
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë¡¿ï¿½ï¿½ï¿½Ë½ï¿½É«ï¿½ï¿½Ñªï¿½ï¿½ï¿½ï¿½ï¿½
+    // ï¿½ï¿½ï¿½ç£ºCast<ABMEnemyBase>(GetPawn())->GetHealth();
     return 1000.f;
 }
 
 float ABMEnemyAIController::GetPlayerHealth_Implementation()
 {
-    // ¡¾Ðè½ÓÈë¡¿Ö÷½ÇµÄÑªÁ¿×é¼þ
-    // ÀýÈç£ºTargetPlayer->GetHealth();
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë¡¿ï¿½ï¿½ï¿½Çµï¿½Ñªï¿½ï¿½ï¿½ï¿½ï¿½
+    // ï¿½ï¿½ï¿½ç£ºTargetPlayer->GetHealth();
     return 1000.f;
 }
 
 bool ABMEnemyAIController::IsPlayerInAttackRange_Implementation()
 {
-    // ¡¾Ðè½ÓÈë¡¿Ö÷½ÇÓëµÐÈË¾àÀë¼ì²â
-    // ÀýÈç£ºFVector::Dist(GetPawn()->GetActorLocation(), TargetPlayer->GetActorLocation()) < AttackRange
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë¡¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë¾ï¿½ï¿½ï¿½ï¿½ï¿½
+    // ï¿½ï¿½ï¿½ç£ºFVector::Dist(GetPawn()->GetActorLocation(), TargetPlayer->GetActorLocation()) < AttackRange
     return false;
 }
 
 bool ABMEnemyAIController::IsPlayerAttacking_Implementation()
 {
-    // ¡¾Ðè½ÓÈë¡¿Ö÷½Ç¹¥»÷×´Ì¬£¨¶¯»­»òÕ½¶·×é¼þ£©
-    // ÀýÈç£ºTargetPlayer->IsAttacking();
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë¡¿ï¿½ï¿½ï¿½Ç¹ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    // ï¿½ï¿½ï¿½ç£ºTargetPlayer->IsAttacking();
     return false;
 }
 
-// ================== ÐÐÎªÖ´ÐÐ½Ó¿Ú ==================
+// ================== ï¿½ï¿½ÎªÖ´ï¿½Ð½Ó¿ï¿½ ==================
 void ABMEnemyAIController::ExecutePatrol_Implementation()
 {
-    // ¡¾ÐèÊµÏÖ¡¿Ñ²ÂßÐÐÎª
-    // ÀýÈç£ºÒÆ¶¯µ½Ñ²Âßµã
+    // ï¿½ï¿½ï¿½ï¿½Êµï¿½Ö¡ï¿½Ñ²ï¿½ï¿½ï¿½ï¿½Îª
+    // ï¿½ï¿½ï¿½ç£ºï¿½Æ¶ï¿½ï¿½ï¿½Ñ²ï¿½ßµï¿½
 }
 
 void ABMEnemyAIController::ExecuteChase_Implementation()
 {
-    // ¡¾ÐèÊµÏÖ¡¿×·»÷Ö÷½ÇÐÐÎª
-    // ÀýÈç£ºMoveToActor(TargetPlayer)
+    // ï¿½ï¿½ï¿½ï¿½Êµï¿½Ö¡ï¿½×·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª
+    // ï¿½ï¿½ï¿½ç£ºMoveToActor(TargetPlayer)
 }
 
 void ABMEnemyAIController::ExecuteAttack_Implementation()
 {
-    // ¡¾ÐèÊµÏÖ¡¿¹¥»÷ÐÐÎª
-    // ÀýÈç£ºµ÷ÓÃµÐÈË¹¥»÷º¯Êý
+    // ï¿½ï¿½ï¿½ï¿½Êµï¿½Ö¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª
+    // ï¿½ï¿½ï¿½ç£ºï¿½ï¿½ï¿½Ãµï¿½ï¿½Ë¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
 void ABMEnemyAIController::ExecuteFlee_Implementation()
 {
-    // ¡¾ÐèÊµÏÖ¡¿ÌÓÅÜÐÐÎª
-    // ÀýÈç£ºÔ¶ÀëÖ÷½Ç·½ÏòÒÆ¶¯
+    // ï¿½ï¿½ï¿½ï¿½Êµï¿½Ö¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª
+    // ï¿½ï¿½ï¿½ç£ºÔ¶ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Æ¶ï¿½
 }
 
 void ABMEnemyAIController::ExecuteDodge_Implementation()
 {
-    // ¡¾ÐèÊµÏÖ¡¿ÉÁ±ÜÐÐÎª
-    // ÀýÈç£º¿ìËÙÒÆ¶¯µ½Ô¶ÀëÖ÷½ÇµÄÎ»ÖÃ
+    // ï¿½ï¿½ï¿½ï¿½Êµï¿½Ö¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª
+    // ï¿½ï¿½ï¿½ç£ºï¿½ï¿½ï¿½ï¿½ï¿½Æ¶ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½Çµï¿½Î»ï¿½ï¿½
 }
 
 void ABMEnemyAIController::OnEnterCombat_Implementation()
 {
-    // ¡¾ÐèÊµÏÖ¡¿½øÈëÕ½¶·×´Ì¬Ê±µÄ³õÊ¼»¯
+    // ï¿½ï¿½ï¿½ï¿½Êµï¿½Ö¡ï¿½ï¿½ï¿½ï¿½ï¿½Õ½ï¿½ï¿½×´Ì¬Ê±ï¿½Ä³ï¿½Ê¼ï¿½ï¿½
 }
 
 void ABMEnemyAIController::OnExitCombat_Implementation()
 {
-    // ¡¾ÐèÊµÏÖ¡¿ÍË³öÕ½¶·×´Ì¬Ê±µÄÇåÀí
+    // ï¿½ï¿½ï¿½ï¿½Êµï¿½Ö¡ï¿½ï¿½Ë³ï¿½Õ½ï¿½ï¿½×´Ì¬Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
 void ABMEnemyAIController::OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 {
-    // ¡¾ÐèÊµÏÖ¡¿¸ÐÖª»Øµ÷£¬¸üÐÂTargetPlayerµÈ
+    // ï¿½ï¿½ï¿½ï¿½Êµï¿½Ö¡ï¿½ï¿½ï¿½Öªï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½TargetPlayerï¿½ï¿½
 }
 ABMEnemyAIController::ABMEnemyAIController()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-    // ³õÊ¼»¯¸ÐÖª×é¼þ
+    // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Öªï¿½ï¿½ï¿½
     AIPerceptionComp = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("AIPerceptionComp"));
     SightConfig = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("SightConfig"));
     if (AIPerceptionComp && SightConfig)
@@ -124,13 +121,13 @@ void ABMEnemyAIController::Tick(float DeltaTime)
 void ABMEnemyAIController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
-    // ¿ÉÔÚ´Ë´¦»º´æµÐÈË½ÇÉ«Ö¸Õë
+    // ï¿½ï¿½ï¿½Ú´Ë´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë½ï¿½É«Ö¸ï¿½ï¿½
 }
 
 void ABMEnemyAIController::RunDecisionTree()
 {
-    // ¾ö²ßÊ÷Ö÷Âß¼­¿ò¼Ü
-    // 1. ¼ì²éÖ÷½ÇÊÇ·ñÔÚÊÓÒ°ÄÚ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½ï¿½ï¿½ï¿½
+    // 1. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½Ò°ï¿½ï¿½
     if (IsPlayerInSight())
     {
         LostTargetTimer = 0.f;
@@ -140,17 +137,17 @@ void ABMEnemyAIController::RunDecisionTree()
             bFirstTimeSpotPlayer = false;
             OnEnterCombat();
         }
-        // 2. ÅÐ¶ÏÌÓÅÜÌõ¼þ
+        // 2. ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if (GetEnemyHealth() < FleeHealthThreshold && GetPlayerHealth() > PlayerHealthThreshold)
         {
             SetAIState(EEnemyAIState::Flee);
         }
-        // 3. ÅÐ¶ÏÖ÷½ÇÊÇ·ñÔÚ¹¥»÷·¶Î§ÄÚ
+        // 3. ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ú¹ï¿½ï¿½ï¿½ï¿½ï¿½Î§ï¿½ï¿½
         else if (IsPlayerInAttackRange())
         {
             SetAIState(EEnemyAIState::Attack);
         }
-        // 4. ÅÐ¶ÏÖ÷½ÇÊÇ·ñÕýÔÚ¹¥»÷
+        // 4. ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Ú¹ï¿½ï¿½ï¿½
         else if (IsPlayerAttacking())
         {
             SetAIState(EEnemyAIState::Dodge);
@@ -162,7 +159,7 @@ void ABMEnemyAIController::RunDecisionTree()
     }
     else
     {
-        // Ö÷½Ç²»ÔÚÊÓÒ°ÄÚ£¬¼ÆÊ±
+        // ï¿½ï¿½ï¿½Ç²ï¿½ï¿½ï¿½ï¿½ï¿½Ò°ï¿½Ú£ï¿½ï¿½ï¿½Ê±
         LostTargetTimer += GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
         if (LostTargetTimer > LostTargetThreshold)
         {
@@ -190,7 +187,7 @@ void ABMEnemyAIController::ExecuteCurrentStateBehavior()
         ExecutePatrol();
         break;
     case EEnemyAIState::Combat:
-        // Õ½¶·×´Ì¬ÏÂ¿É×ö³õÊ¼»¯
+        // Õ½ï¿½ï¿½×´Ì¬ï¿½Â¿ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½
         break;
     case EEnemyAIState::Chase:
         ExecuteChase();
@@ -209,3 +206,49 @@ void ABMEnemyAIController::ExecuteCurrentStateBehavior()
     }
 }
 
+#include "BehaviorTree/BlackboardComponent.h"
+#include "BehaviorTree/BehaviorTreeComponent.h"
+
+ABMEnemyAIController::ABMEnemyAIController()
+{
+    PrimaryActorTick.bCanEverTick = true;
+    BlackboardComp = CreateDefaultSubobject<UBlackboardComponent>(TEXT("BlackboardComp"));
+    BehaviorComp = CreateDefaultSubobject<UBehaviorTreeComponent>(TEXT("BehaviorComp"));
+}
+
+void ABMEnemyAIController::OnPossess(APawn* InPawn)
+{
+    Super::OnPossess(InPawn);
+}
+
+void ABMEnemyAIController::Tick(float DeltaSeconds)
+{
+    Super::Tick(DeltaSeconds);
+    // ï¿½ï¿½Ñ¡ï¿½ï¿½Í¬ï¿½ï¿½ï¿½Ú°å£¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ß£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ BT Ò²ï¿½ï¿½ï¿½ï¿½
+}
+
+bool ABMEnemyAIController::RequestMoveToActor(AActor* Target, float AcceptanceRadius)
+{
+    if (!Target) return false;
+    MoveToActor(Target, AcceptanceRadius, true, true, true, nullptr, true);
+    return true;
+}
+
+bool ABMEnemyAIController::RequestMoveToLocation(const FVector& Location, float AcceptanceRadius)
+{
+    MoveToLocation(Location, AcceptanceRadius, true, true, false, true);
+    return true;
+}
+
+void ABMEnemyAIController::RequestStopMovement()
+{
+    StopMovement();
+    ClearFocus(EAIFocusPriority::Gameplay);
+}
+
+bool ABMEnemyAIController::IsMoveActive() const
+{
+    const UPathFollowingComponent* P = GetPathFollowingComponent();
+    if (!P) return false;
+    return P->GetStatus() == EPathFollowingStatus::Moving;
+}

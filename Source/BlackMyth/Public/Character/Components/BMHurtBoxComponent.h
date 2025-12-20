@@ -146,6 +146,9 @@ public:
      */
     virtual void ModifyIncomingDamage(FBMDamageInfo& InOutInfo) const;
 
+    void SetHurtBoxEnabled(bool bEnabled);
+    bool IsHurtBoxEnabled() const;
+
     /** Debug »æÖÆÑÕÉ« */
     UPROPERTY(EditAnywhere, Category = "BM|HurtBox|Debug")
     FColor DebugColor = FColor::Green;

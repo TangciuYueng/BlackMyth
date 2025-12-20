@@ -6,6 +6,9 @@
 #include "Character/States/BMPlayerState_Move.h"
 #include "Character/States/BMPlayerState_Jump.h"
 #include "Character/States/BMPlayerState_Attack.h"
+#include "Character/States/BMPlayerState_Hit.h"
+#include "Character/States/BMPlayerState_Death.h"
+#include "Character/States/BMPlayerState_Dodge.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/InputComponent.h"
@@ -18,11 +21,16 @@
 
 #include "Character/Components/BMHurtBoxComponent.h"
 #include "Character/Components/BMHitBoxComponent.h"
+#include "Character/Components/BMStatsComponent.h"
 
+<<<<<<< HEAD
+#include "UObject/ConstructorHelpers.h"
+=======
 #include "Character/Components/BMInventoryComponent.h"
 
 #include "Core/BMDataSubsystem.h"
 
+>>>>>>> dev
 #include "Animation/AnimSingleNodeInstance.h"
 
 
@@ -50,7 +58,13 @@ ABMPlayerCharacter::ABMPlayerCharacter()
     CameraBoom->bUsePawnControlRotation = true;   
     CameraBoom->bEnableCameraLag = true;
     CameraBoom->CameraLagSpeed = 12.f;
+    CameraBoom->bDoCollisionTest = true;
+    CameraBoom->ProbeChannel = ECC_GameTraceChannel1; // 只让墙/地形影响相机
+    CameraBoom->ProbeSize = 12.f;
 
+    CameraBoom->bEnableCameraLag = true;
+    CameraBoom->bUseCameraLagSubstepping = true;
+    CameraBoom->CameraLagMaxTimeStep = 1.f / 60.f;
     // === 跟随相机 ===
     FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
     FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
@@ -89,21 +103,69 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         static ConstructorHelpers::FObjectFinder<UAnimSequence> MoveFinder(
             TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Jog_Fwd.Jog_Fwd'")
         );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> AttackFinder(
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttack1Finder(
             TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_A_Slow_MSA.Primary_Melee_A_Slow_MSA'")
+		);
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttack2Finder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_B_Slow_MSA.Primary_Melee_B_Slow_MSA'")
         );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttack3Finder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_C_Slow_MSA.Primary_Melee_C_Slow_MSA'")
+        );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttack4Finder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_D_Slow_MSA.Primary_Melee_D_Slow_MSA'")
+        );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttackRecover1Finder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_A_Slow_Recovery.Primary_Melee_A_Slow_Recovery'")
+        );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttackRecover2Finder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_B_Slow_Recovery.Primary_Melee_B_Slow_Recovery'")
+        );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttackRecover3Finder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_C_Slow_Recovery.Primary_Melee_C_Slow_Recovery'")
+        );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttackRecover4Finder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_D_Slow_REcovery.Primary_Melee_D_Slow_REcovery'")
+        );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> Skill1Finder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/RMB_Hit.RMB_Hit'")
+		);
         static ConstructorHelpers::FObjectFinder<UAnimSequence> JumpStartFinder(
             TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Flip_Fwd.Q_Flip_Fwd'")
         );
         static ConstructorHelpers::FObjectFinder<UAnimSequence> FallLoopFinder(
             TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Fall_Loop.Q_Fall_Loop'")
         );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> HitLightFinder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/HitReact_Front.HitReact_Front'")
+        );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> HitHeavyFinder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/HitReact_Front.HitReact_Front'")
+        );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> DeathFinder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Death.Death'")
+        );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> DodgeFinder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Flip_Fwd.Q_Flip_Fwd'")
+        );
 
-        if (IdleFinder.Succeeded())   AnimIdle = IdleFinder.Object;
-        if (MoveFinder.Succeeded())   AnimMove = MoveFinder.Object;
-        if (AttackFinder.Succeeded()) AnimLightAttack = AttackFinder.Object;
-        if (JumpStartFinder.Succeeded()) AnimJumpStart = JumpStartFinder.Object;
-        if (FallLoopFinder.Succeeded())  AnimFallLoop = FallLoopFinder.Object;
+        if (IdleFinder.Succeeded())                     AnimIdle = IdleFinder.Object;
+        if (MoveFinder.Succeeded())                     AnimMove = MoveFinder.Object;
+		if (NormalAttack1Finder.Succeeded())            AnimNormalAttack1 = NormalAttack1Finder.Object;
+		if (NormalAttack2Finder.Succeeded())            AnimNormalAttack2 = NormalAttack2Finder.Object;
+		if (NormalAttack3Finder.Succeeded())            AnimNormalAttack3 = NormalAttack3Finder.Object;
+		if (NormalAttack4Finder.Succeeded())            AnimNormalAttack4 = NormalAttack4Finder.Object;
+		if (NormalAttackRecover1Finder.Succeeded())     AnimNormalAttackRecover1 = NormalAttackRecover1Finder.Object;
+		if (NormalAttackRecover2Finder.Succeeded())     AnimNormalAttackRecover2 = NormalAttackRecover2Finder.Object;
+		if (NormalAttackRecover3Finder.Succeeded())     AnimNormalAttackRecover3 = NormalAttackRecover3Finder.Object;
+		if (NormalAttackRecover4Finder.Succeeded())     AnimNormalAttackRecover4 = NormalAttackRecover4Finder.Object;
+		if (Skill1Finder.Succeeded())                   AnimSkill1 = Skill1Finder.Object;
+        if (JumpStartFinder.Succeeded())                AnimJumpStart = JumpStartFinder.Object;
+        if (FallLoopFinder.Succeeded())                 AnimFallLoop = FallLoopFinder.Object;
+        if (HitLightFinder.Succeeded())                 AnimHitLight = HitLightFinder.Object;
+        if (HitHeavyFinder.Succeeded())                 AnimHitHeavy = HitHeavyFinder.Object;
+        if (DeathFinder.Succeeded())                    AnimDeath = DeathFinder.Object;
+        if (DodgeFinder.Succeeded())                    AnimDodge = DodgeFinder.Object;
     }
 
     // === Mesh 位置/朝向 ===
@@ -116,12 +178,22 @@ ABMPlayerCharacter::ABMPlayerCharacter()
     // === HurtBoxes ===
     UBMHurtBoxComponent* Head = CreateDefaultSubobject<UBMHurtBoxComponent>(TEXT("HB_Head"));
     Head->AttachSocketOrBone = TEXT("head");
-    Head->BoxExtent = FVector(10, 10, 10);
+    Head->BoxExtent = FVector(16, 16, 16);
     Head->DamageMultiplier = 1.6f; // 头部更疼
+
+    UBMHurtBoxComponent* Abdomen = CreateDefaultSubobject<UBMHurtBoxComponent>(TEXT("HB_Abdomen"));
+    Abdomen->AttachSocketOrBone = TEXT("spine_01");
+    Abdomen->BoxExtent = FVector(20, 20, 20);
+    Abdomen->RelativeTransform = FTransform(
+        FRotator::ZeroRotator,
+        FVector(-20.f, 0.f, 0.f),   
+        FVector::OneVector
+    );
+    Abdomen->DamageMultiplier = 0.7f;
 
     UBMHurtBoxComponent* Body = CreateDefaultSubobject<UBMHurtBoxComponent>(TEXT("HB_Body"));
     Body->AttachSocketOrBone = TEXT("spine_03");
-    Body->BoxExtent = FVector(14, 18, 20);
+    Body->BoxExtent = FVector(20, 25, 30);
     Body->DamageMultiplier = 1.0f;
 
     // === HitBox 定义 ===
@@ -140,7 +212,28 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         Light.KnockbackStrength = 120.f;
 
         HB->RegisterDefinition(Light);
+
+        FBMHitBoxDefinition Heavy;
+        Heavy.Name = TEXT("HeavyAttack");
+        Heavy.Type = EBMHitBoxType::HeavyAttack;
+        Heavy.AttachSocketOrBone = TEXT("weapon_r");
+        Heavy.BoxExtent = FVector(8, 150, 8);
+        Heavy.RelativeTransform = FTransform(
+            FRotator::ZeroRotator,
+            FVector(0.f, -150.f, 0.f),
+            FVector::OneVector
+        );
+
+        Heavy.DamageType = EBMDamageType::Melee;
+        Heavy.ElementType = EBMElementType::Physical;
+        Heavy.DamageScale = 1.35f;
+        Heavy.AdditiveDamage = 0.f;
+        Heavy.DefaultReaction = EBMHitReaction::Heavy;
+        Heavy.KnockbackStrength = 180.f;
+
+        HB->RegisterDefinition(Heavy);
     }
+    BuildAttackSteps();
 }
 
 void ABMPlayerCharacter::BeginPlay()
@@ -152,7 +245,7 @@ void ABMPlayerCharacter::BeginPlay()
     // 绑定 Combat 事件：输入攻击只发请求，FSM 切 Attack 由这里统一处理
     if (UBMCombatComponent* C = GetCombat())
     {
-        C->OnLightAttackRequested.AddUObject(this, &ABMPlayerCharacter::OnLightAttackRequested);
+        C->OnActionRequested.AddUObject(this, &ABMPlayerCharacter::OnActionRequested);
     }
 
     // 初始动画
@@ -167,26 +260,146 @@ void ABMPlayerCharacter::BeginPlay()
     }
 }
 
+void ABMPlayerCharacter::BuildAttackSteps()
+{
+    NormalComboSteps.Reset();
+    
+    {
+        FBMPlayerComboStep Step;
+        Step.Id = TEXT("Normal_01");
+        Step.Anim = AnimNormalAttack1;
+        Step.PlayRate = 1.5f;
+        Step.LinkWindowSeconds = 0.30f;
+
+        Step.HitBoxNames = { TEXT("LightAttack") };
+        Step.HitBoxParams.bOverrideReaction = true;
+        Step.HitBoxParams.OverrideReaction = EBMHitReaction::Light;
+        Step.RecoverAnim = AnimNormalAttackRecover1;
+        Step.RecoverPlayRate = 2.5f;
+
+        Step.bUninterruptible = false;
+        Step.InterruptChance = 0.25f;
+        Step.InterruptChanceOnHeavyHit = 0.8f;
+
+        NormalComboSteps.Add(Step);
+    }
+    {
+        FBMPlayerComboStep Step;
+        Step.Id = TEXT("Normal_02");
+        Step.Anim = AnimNormalAttack2;
+        Step.PlayRate = 1.3f;
+        Step.LinkWindowSeconds = 0.30f;
+
+        Step.HitBoxNames = { TEXT("LightAttack") };
+        Step.HitBoxParams.bOverrideReaction = true;
+        Step.HitBoxParams.OverrideReaction = EBMHitReaction::Light;
+		Step.RecoverAnim = AnimNormalAttackRecover2;
+        Step.RecoverPlayRate = 2.5f;
+
+        Step.bUninterruptible = false;
+        Step.InterruptChance = 0.25f;
+        Step.InterruptChanceOnHeavyHit = 0.8f;
+
+        NormalComboSteps.Add(Step);
+    }
+    {
+        FBMPlayerComboStep Step;
+        Step.Id = TEXT("Normal_03");
+        Step.Anim = AnimNormalAttack3;
+        Step.PlayRate = 1.3f;
+        Step.LinkWindowSeconds = 0.30f;
+
+        Step.HitBoxNames = { TEXT("LightAttack") };
+        Step.HitBoxParams.bOverrideReaction = true;
+        Step.HitBoxParams.OverrideReaction = EBMHitReaction::Light;
+        Step.RecoverAnim = AnimNormalAttackRecover3;
+        Step.RecoverPlayRate = 2.5f;
+
+        Step.bUninterruptible = false;
+        Step.InterruptChance = 0.25f;
+        Step.InterruptChanceOnHeavyHit = 0.8f;
+
+        NormalComboSteps.Add(Step);
+    }
+    {
+        FBMPlayerComboStep Step;
+        Step.Id = TEXT("Normal_04");
+        Step.Anim = AnimNormalAttack4;
+        Step.PlayRate = 1.0f;
+        Step.LinkWindowSeconds = 0.30f;
+
+        Step.HitBoxNames = { TEXT("LightAttack") };
+        Step.HitBoxParams.bOverrideReaction = true;
+        Step.HitBoxParams.OverrideReaction = EBMHitReaction::Light;
+        Step.RecoverAnim = AnimNormalAttackRecover4;
+        Step.RecoverPlayRate = 2.5f;
+
+        Step.bUninterruptible = false;
+        Step.InterruptChance = 0.25f;
+        Step.InterruptChanceOnHeavyHit = 0.8f;
+
+        NormalComboSteps.Add(Step);
+    }
+
+    // 收招动画
+    AnimComboRecover = AnimIdle; 
+
+    SkillSlots.Reset();
+    {
+        FBMPlayerSkillSlot Slot;
+        Slot.Action = EBMCombatAction::Skill1;
+
+        Slot.Spec.Id = TEXT("Skill1");
+        Slot.Spec.Anim = AnimSkill1;
+        Slot.Spec.PlayRate = 1.0f;
+        Slot.Spec.StartTime = 0.0f;
+        Slot.Spec.MaxPlayTime = -1.0f;
+
+        Slot.Spec.HitBoxNames = { TEXT("HeavyAttack") };
+        Slot.Spec.HitBoxParams.bOverrideReaction = true;
+        Slot.Spec.HitBoxParams.OverrideReaction = EBMHitReaction::Heavy;
+        Slot.Spec.HitBoxParams.DamageMultiplier = 1.25f;
+
+        Slot.Spec.bUninterruptible = true;
+        Slot.Spec.InterruptChance = 0.f;
+        Slot.Spec.InterruptChanceOnHeavyHit = 0.f;
+
+        Slot.Spec.Cooldown = 2.0f;
+
+        SkillSlots.Add(Slot);
+    }
+
+}
+
 void ABMPlayerCharacter::InitFSMStates()
 {
     UBMStateMachineComponent* Machine = GetFSM();
     if (!Machine) return;
 
     // 创建并注册状态（Outer 用 FSM，确保生命周期跟随组件）
-    UBMPlayerState_Idle* SIdle = NewObject<UBMPlayerState_Idle>(Machine);
-    UBMPlayerState_Move* SMove = NewObject<UBMPlayerState_Move>(Machine);
-    UBMPlayerState_Jump* SJump = NewObject<UBMPlayerState_Jump>(Machine);
-    UBMPlayerState_Attack* SAtk = NewObject<UBMPlayerState_Attack>(Machine);
+    auto* SIdle = NewObject<UBMPlayerState_Idle>(Machine);
+    auto* SMove = NewObject<UBMPlayerState_Move>(Machine);
+    auto* SJump = NewObject<UBMPlayerState_Jump>(Machine);
+    auto* SAtk = NewObject<UBMPlayerState_Attack>(Machine);
+    auto* SHit = NewObject<UBMPlayerState_Hit>(Machine);
+    auto* SDeath = NewObject<UBMPlayerState_Death>(Machine);
+    auto* SDodge = NewObject<UBMPlayerState_Dodge>(Machine);
 
     SIdle->Init(this);
     SMove->Init(this);
     SJump->Init(this);
     SAtk->Init(this);
+    SHit->Init(this);
+    SDeath->Init(this);
+    SDodge->Init(this);
 
     Machine->RegisterState(BMStateNames::Idle, SIdle);
     Machine->RegisterState(BMStateNames::Move, SMove);
     Machine->RegisterState(BMStateNames::Jump, SJump);
     Machine->RegisterState(BMStateNames::Attack, SAtk);
+    Machine->RegisterState(BMStateNames::Hit, SHit);
+    Machine->RegisterState(BMStateNames::Death, SDeath);
+    Machine->RegisterState(BMStateNames::Dodge, SDodge);
 
     // 初始状态
     Machine->ChangeStateByName(BMStateNames::Idle);
@@ -203,7 +416,9 @@ void ABMPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
     // Action: Jump / Attack
     PlayerInputComponent->BindAction(TEXT("Jump"), IE_Pressed, this, &ABMPlayerCharacter::Input_JumpPressed);
-    PlayerInputComponent->BindAction(TEXT("Attack"), IE_Pressed, this, &ABMPlayerCharacter::Input_AttackPressed);
+    PlayerInputComponent->BindAction(TEXT("NormalAttack"), IE_Pressed, this, &ABMPlayerCharacter::Input_NormalAttackPressed);
+    PlayerInputComponent->BindAction(TEXT("Skill1"), IE_Pressed, this, &ABMPlayerCharacter::Input_Skill1Pressed);
+    PlayerInputComponent->BindAction(TEXT("Dodge"), IE_Pressed, this, &ABMPlayerCharacter::Input_DodgePressed);
 
     PlayerInputComponent->BindAxis(TEXT("Turn"), this, &ABMPlayerCharacter::Input_Turn);
     PlayerInputComponent->BindAxis(TEXT("LookUp"), this, &ABMPlayerCharacter::Input_LookUp);
@@ -364,11 +579,27 @@ void ABMPlayerCharacter::Input_JumpPressed()
     }
 }
 
-void ABMPlayerCharacter::Input_AttackPressed()
+void ABMPlayerCharacter::Input_NormalAttackPressed()
 {
     if (UBMCombatComponent* C = GetCombat())
     {
-        C->RequestLightAttack(); // 触发 OnLightAttackRequested -> 切 Attack
+        C->RequestAction(EBMCombatAction::NormalAttack);
+    }
+}
+
+void ABMPlayerCharacter::Input_Skill1Pressed()
+{
+    if (UBMCombatComponent* C = GetCombat())
+    {
+        C->RequestAction(EBMCombatAction::Skill1);
+    }
+}
+
+void ABMPlayerCharacter::Input_DodgePressed()
+{
+    if (UBMCombatComponent* C = GetCombat())
+    {
+        C->RequestAction(EBMCombatAction::Dodge);
     }
 }
 
@@ -382,12 +613,98 @@ void ABMPlayerCharacter::Input_LookUp(float Value)
     AddControllerPitchInput(Value);
 }
 
-void ABMPlayerCharacter::OnLightAttackRequested()
+void ABMPlayerCharacter::OnActionRequested(EBMCombatAction Action)
 {
-    if (UBMStateMachineComponent* Machine = GetFSM())
+    // 死亡不响应
+    if (UBMStatsComponent* S = GetStats())
     {
-        Machine->ChangeStateByName(BMStateNames::Attack);
+        if (S->IsDead()) return;
     }
+    UBMStateMachineComponent* Machine = GetFSM();
+    if (!Machine) return;
+    const FName CurState = Machine->GetCurrentStateName();
+    // 普通攻击
+    if (Action == EBMCombatAction::NormalAttack)
+    {
+        EnqueueAction(Action);
+        if (CurState != BMStateNames::Attack)
+        {
+            if (UCharacterMovementComponent* Move = GetCharacterMovement())
+            {
+                if (Move->IsFalling()) return;
+            }
+            Machine->ChangeStateByName(BMStateNames::Attack);
+        }
+        return;
+    }
+
+    // 技能：单段，要求冷却就绪
+    if (BMCombatUtils::IsSkillAction(Action))
+    {
+        if (CurState == BMStateNames::Attack || CurState == BMStateNames::Dodge)
+        {
+            return; // 不允许攻击中插技能
+        }
+
+        if (UCharacterMovementComponent* Move = GetCharacterMovement())
+        {
+            if (Move->IsFalling()) return;
+        }
+
+        FBMPlayerAttackSpec Spec;
+        if (!SelectSkillSpec(Action, Spec)) return;
+
+        if (UBMCombatComponent* C = GetCombat())
+        {
+            if (!C->IsCooldownReady(Spec.Id))
+                return;
+        }
+
+        EnqueueAction(Action);
+        Machine->ChangeStateByName(BMStateNames::Attack);
+        return;
+    }
+
+    // Dodge：不允许空中
+    if (Action == EBMCombatAction::Dodge)
+    {
+        if (UCharacterMovementComponent* Move = GetCharacterMovement())
+        {
+            if (Move->IsFalling()) return;
+        }
+
+        // 冷却检查
+        if (UBMCombatComponent* C = GetCombat())
+        {
+            if (!C->IsCooldownReady(DodgeCooldownKey))
+            {
+                return;
+            }
+        }
+
+        if (UBMStateMachineComponent* TempMachine = GetFSM())
+        {
+            TempMachine->ChangeStateByName(BMStateNames::Dodge);
+        }
+        return;
+    }
+
+}
+
+bool ABMPlayerCharacter::ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) const
+{
+    if (!bHasActiveAttackContext)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[%s] No ActiveAttackContext while attacking."), *GetName());
+        return true;
+    }
+
+
+    if (bActiveUninterruptible) return false;
+
+    float P = BMCombatUtils::IsHeavyIncoming(Incoming) ? ActiveInterruptChanceOnHeavyHit : ActiveInterruptChance;
+    P = FMath::Clamp(P, 0.f, 1.f);
+    return FMath::FRand() < P;
 }
 
 void ABMPlayerCharacter::Landed(const FHitResult& Hit)
@@ -468,7 +785,6 @@ float ABMPlayerCharacter::PlayOnce(UAnimSequence* Seq, float PlayRate, float Sta
     return EffectivePlayTime / SafePlayRate;
 }
 
-
 void ABMPlayerCharacter::PlayIdleLoop()
 {
     PlayLoop(AnimIdle);
@@ -479,17 +795,230 @@ void ABMPlayerCharacter::PlayMoveLoop()
     PlayLoop(AnimMove);
 }
 
-float ABMPlayerCharacter::PlayLightAttackOnce(float PlayRate)
-{
-    return PlayOnce(AnimLightAttack, PlayRate, 0.0, 0.3);
-}
-
 float ABMPlayerCharacter::PlayJumpStartOnce(float PlayRate)
 {
     return PlayOnce(AnimJumpStart, PlayRate);
+}
+
+float ABMPlayerCharacter::PlayAttackOnce(const FBMPlayerAttackSpec& Spec)
+{
+    return PlayOnce(Spec.Anim, Spec.PlayRate, Spec.StartTime, Spec.MaxPlayTime);
+}
+
+float ABMPlayerCharacter::PlayNormalAttackOnce(
+    UAnimSequence* Seq,
+    float PlayRate,
+    float StartTime,
+    float MaxPlayTime)
+{
+	return PlayOnce(Seq, PlayRate, StartTime, MaxPlayTime);
+}
+
+float ABMPlayerCharacter::PlayHitOnce(const FBMDamageInfo& Info)
+{
+    UAnimSequence* Seq = BMCombatUtils::IsHeavyIncoming(Info) ? (AnimHitHeavy ? AnimHitHeavy : AnimHitLight)
+        : (AnimHitLight ? AnimHitLight : AnimHitHeavy);
+    return PlayOnce(Seq, 1.0f);
+}
+
+float ABMPlayerCharacter::PlayDeathOnce()
+{
+    return PlayOnce(AnimDeath, 1.0f);
+}
+
+float ABMPlayerCharacter::PlayDodgeOnce()
+{
+    return PlayOnce(AnimDodge, DodgePlayRate, 0.0, 0.7);
+}
+
+float ABMPlayerCharacter::PlayComboRecoverOnce(const FBMPlayerComboStep& Step)
+{
+    if (!Step.RecoverAnim)
+    {
+        return 0.f;
+    }
+
+    return PlayOnce(
+        Step.RecoverAnim,
+        Step.RecoverPlayRate,
+        Step.RecoverStartTime,
+        Step.RecoverMaxPlayTime
+    );
+}
+
+FVector ABMPlayerCharacter::ComputeDodgeDirectionLocked() const
+{
+    // 优先按当前输入方向闪避
+    FVector Dir = GetActorForwardVector();
+
+    if (HasMoveIntent() && Controller)
+    {
+        const FRotator YawRot(0.f, Controller->GetControlRotation().Yaw, 0.f);
+        const FVector Forward = FRotationMatrix(YawRot).GetUnitAxis(EAxis::X);
+        const FVector Right = FRotationMatrix(YawRot).GetUnitAxis(EAxis::Y);
+
+        FVector Wish = Forward * MoveIntent.X + Right * MoveIntent.Y;
+        Wish.Z = 0.f;
+        if (!Wish.IsNearlyZero())
+        {
+            Dir = Wish.GetSafeNormal();
+        }
+    }
+
+    Dir.Z = 0.f;
+    return Dir.IsNearlyZero() ? GetActorForwardVector() : Dir.GetSafeNormal();
 }
 
 void ABMPlayerCharacter::PlayFallLoop()
 {
     PlayLoop(AnimFallLoop);
 }
+
+void ABMPlayerCharacter::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
+{
+    Super::HandleDamageTaken(FinalInfo);
+
+    LastDamageInfo = FinalInfo;
+
+    if (UBMStatsComponent* S = GetStats())
+    {
+        if (S->IsDead())
+        {
+            return;
+        }
+    }
+
+    UBMStateMachineComponent* Machine = GetFSM();
+    if (!Machine) return;
+
+    const FName Cur = Machine->GetCurrentStateName();
+
+    // 非攻击：必进 Hit
+    if (Cur != BMStateNames::Attack)
+    {
+        Machine->ChangeStateByName(BMStateNames::Hit);
+        return;
+    }
+
+    // 攻击中：按当前招式规则决定是否打断
+    if (ShouldInterruptCurrentAttack(FinalInfo))
+    {
+        Machine->ChangeStateByName(BMStateNames::Hit);
+    }
+    // 否则：只扣血，不切状态、不播受击
+}
+
+void ABMPlayerCharacter::HandleDeath(const FBMDamageInfo& LastHitInfo)
+{
+    LastDamageInfo = LastHitInfo;
+
+    if (UBMStateMachineComponent* Machine = GetFSM())
+    {
+        Machine->ChangeStateByName(BMStateNames::Death);
+    }
+
+    Super::HandleDeath(LastHitInfo);
+}
+
+bool ABMPlayerCharacter::ResolveHitBoxWindow(
+    FName WindowId,
+    TArray<FName>& OutHitBoxNames,
+    FBMHitBoxActivationParams& OutParams
+) const
+{
+    OutHitBoxNames.Reset();
+    OutParams = FBMHitBoxActivationParams();
+
+    if (!bHasActiveAttackContext)
+    {
+        return false;
+    }
+
+    // 默认窗口名就是 "HitWindow"
+    static const FName DefaultWindowId(TEXT("HitWindow"));
+
+    if (WindowId.IsNone() || WindowId == DefaultWindowId)
+    {
+        OutHitBoxNames = ActiveHitBoxNames;
+        OutParams = ActiveHitBoxParams;
+        return OutHitBoxNames.Num() > 0;
+    }
+
+    return false;
+}
+
+void ABMPlayerCharacter::EnqueueAction(EBMCombatAction Action)
+{
+    ActionQueue.Add(Action);
+}
+
+bool ABMPlayerCharacter::ConsumeNextQueuedAction(EBMCombatAction& OutAction)
+{
+    if (ActionQueue.Num() <= 0) return false;
+    OutAction = ActionQueue[0];
+    ActionQueue.RemoveAt(0);
+    return true;
+}
+
+bool ABMPlayerCharacter::ConsumeOneQueuedNormalAttack()
+{
+    for (int32 i = 0; i < ActionQueue.Num(); ++i)
+    {
+        if (ActionQueue[i] == EBMCombatAction::NormalAttack)
+        {
+            ActionQueue.RemoveAt(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool ABMPlayerCharacter::SelectSkillSpec(EBMCombatAction Action, FBMPlayerAttackSpec& OutSpec) const
+{
+    for (const FBMPlayerSkillSlot& S : SkillSlots)
+    {
+        if (S.Action == Action)
+        {
+            OutSpec = S.Spec;
+            return (OutSpec.Anim != nullptr);
+        }
+    }
+    return false;
+}
+
+bool ABMPlayerCharacter::GetComboStep(int32 Index, FBMPlayerComboStep& Out) const
+{
+    if (!NormalComboSteps.IsValidIndex(Index)) return false;
+    Out = NormalComboSteps[Index];
+    return Out.Anim != nullptr;
+}
+
+void ABMPlayerCharacter::SetActiveAttackContext(
+    const TArray<FName>& HitBoxNames,
+    const FBMHitBoxActivationParams& Params,
+    bool bUninterruptible,
+    float InterruptChance,
+    float InterruptChanceOnHeavyHit
+)
+{
+    ActiveHitBoxNames = HitBoxNames;
+    ActiveHitBoxParams = Params;
+
+    bActiveUninterruptible = bUninterruptible;
+    ActiveInterruptChance = InterruptChance;
+    ActiveInterruptChanceOnHeavyHit = InterruptChanceOnHeavyHit;
+
+    bHasActiveAttackContext = true;
+}
+
+void ABMPlayerCharacter::ClearActiveAttackContext()
+{
+    bHasActiveAttackContext = false;
+    ActiveHitBoxNames.Reset();
+    ActiveHitBoxParams = FBMHitBoxActivationParams();
+
+    bActiveUninterruptible = false;
+    ActiveInterruptChance = 0.f;
+    ActiveInterruptChanceOnHeavyHit = 0.f;
+}
+

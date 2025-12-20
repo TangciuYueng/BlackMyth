@@ -7,6 +7,9 @@
 #include "Character/Components/BMHitBoxComponent.h"
 #include "Character/Components/BMHurtBoxComponent.h"
 
+#include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+
 #include "Animation/AnimInstance.h"
 #include "Components/PrimitiveComponent.h"
 
@@ -32,6 +35,20 @@ void ABMCharacterBase::BeginPlay()
     if (ensure(Stats))
     {
         Stats->OnDeathNative.AddUObject(this, &ABMCharacterBase::HandleStatsDeath);
+    }
+
+    static const ECollisionChannel CameraBoomChannel = ECC_GameTraceChannel1; 
+
+    TArray<UActorComponent*> Comps;
+    GetComponents(UPrimitiveComponent::StaticClass(), Comps);
+
+    for (UActorComponent* C : Comps)
+    {
+        UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(C);
+        if (!Prim) continue;
+
+        // 只改 trace 响应
+        Prim->SetCollisionResponseToChannel(CameraBoomChannel, ECR_Ignore);
     }
 }
 
@@ -69,10 +86,7 @@ FVector ABMCharacterBase::GetForwardVector() const
 bool ABMCharacterBase::CanBeDamagedBy(const FBMDamageInfo& Info) const
 {
     // 默认：不吃自己打自己的伤害
-    if (Info.InstigatorActor.Get() == this)
-    {
-        return false;
-    }
+    if (Info.InstigatorActor.Get() == this) return false;
 
     // 默认不做阵营过滤
     return true;
@@ -92,7 +106,11 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
         InOutInfo.DamageValue = 0.f;
         return 0.f;
     }
-
+    if (TryEvadeIncomingHit(InOutInfo))
+    {
+        InOutInfo.DamageValue = 0.f;
+        return 0.f;
+    }
     // 确保 TargetActor 合理
     if (!InOutInfo.TargetActor)
     {
@@ -173,3 +191,58 @@ void ABMCharacterBase::HandleDeath(const FBMDamageInfo& LastHitInfo)
     (void)LastHitInfo;
     // 留给派生类：敌人掉落/玩家复活/切UI/禁用输入等
 }
+
+bool ABMCharacterBase::GetActiveHitWindow(TArray<FName>& OutHitBoxNames, FBMHitBoxActivationParams& OutParams) const
+{
+    if (!bHasActiveHitWindow || ActiveHitWindowHitBoxes.Num() == 0)
+    {
+        return false;
+    }
+    OutHitBoxNames = ActiveHitWindowHitBoxes;
+    OutParams = ActiveHitWindowParams;
+    return true;
+}
+
+void ABMCharacterBase::SetActiveHitWindow(const TArray<FName>& InHitBoxNames, const FBMHitBoxActivationParams& InParams)
+{
+    ActiveHitWindowHitBoxes = InHitBoxNames;
+    ActiveHitWindowParams = InParams;
+    bHasActiveHitWindow = (ActiveHitWindowHitBoxes.Num() > 0);
+}
+
+void ABMCharacterBase::ClearActiveHitWindow()
+{
+    ActiveHitWindowHitBoxes.Reset();
+    ActiveHitWindowParams = FBMHitBoxActivationParams();
+    bHasActiveHitWindow = false;
+}
+
+bool ABMCharacterBase::ResolveHitBoxWindow(
+    FName WindowId,
+    TArray<FName>& OutHitBoxNames,
+    FBMHitBoxActivationParams& OutParams
+) const
+{
+    (void)WindowId;
+    OutHitBoxNames.Reset();
+    OutParams = FBMHitBoxActivationParams();
+    return false;
+}
+
+void ABMCharacterBase::SetAllHurtBoxesEnabled(bool bEnabled)
+{
+	if (!HurtBoxes.Num()) CacheHurtBoxes();
+
+    for (UBMHurtBoxComponent* HB : HurtBoxes)
+    {
+        if (!HB) continue;
+        HB->SetHurtBoxEnabled(bEnabled);
+    }
+}
+
+bool ABMCharacterBase::TryEvadeIncomingHit(const FBMDamageInfo& InInfo)
+{
+    (void)InInfo;
+    return false; // 默认不闪避
+}
+

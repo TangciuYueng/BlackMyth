@@ -1,24 +1,29 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "AIController.h"
+#include "Navigation/PathFollowingComponent.h"
 #include "Perception/AIPerceptionTypes.h"
 #include "BMEnemyAIController.generated.h"
 
+
+
+
+
+class UBlackboardComponent;
+class UBehaviorTreeComponent;
 class UAISenseConfig_Sight;
 class UAIPerceptionComponent;
 
 UENUM(BlueprintType)
 enum class EEnemyAIState : uint8
 {
-    Patrol      UMETA(DisplayName = "Ñ²Âß"),
-    Combat      UMETA(DisplayName = "Õ½¶·"),
-    Chase       UMETA(DisplayName = "×·»÷"),
-    Attack      UMETA(DisplayName = "¹¥»÷"),
-    Flee        UMETA(DisplayName = "ÌÓÅÜ"),
-    Dodge       UMETA(DisplayName = "ÉÁ±Ü")
+    Patrol      UMETA(DisplayName = "Ñ²ï¿½ï¿½"),
+    Combat      UMETA(DisplayName = "Õ½ï¿½ï¿½"),
+    Chase       UMETA(DisplayName = "×·ï¿½ï¿½"),
+    Attack      UMETA(DisplayName = "ï¿½ï¿½ï¿½ï¿½"),
+    Flee        UMETA(DisplayName = "ï¿½ï¿½ï¿½ï¿½"),
+    Dodge       UMETA(DisplayName = "ï¿½ï¿½ï¿½ï¿½")
 };
 
 UCLASS()
@@ -29,6 +34,24 @@ class BLACKMYTH_API ABMEnemyAIController : public AAIController
 public:
     ABMEnemyAIController();
 
+<<<<<<< HEAD
+    virtual void Tick(float DeltaSeconds) override;
+    virtual void OnPossess(APawn* InPawn) override;
+
+    // ï¿½ï¿½ Enemy FSM State ï¿½ï¿½ï¿½ÃµÄ¡ï¿½Ö´ï¿½Ð²ã¡±
+    bool RequestMoveToActor(AActor* Target, float AcceptanceRadius);
+    bool RequestMoveToLocation(const FVector& Location, float AcceptanceRadius);
+    void RequestStopMovement();
+    bool IsMoveActive() const;
+
+public:
+    // ===== ï¿½ï¿½Í¼ï¿½Ö¶ï¿½ =====
+    UPROPERTY(VisibleAnywhere, Category = "BM|AI")
+    TObjectPtr<UBlackboardComponent> BlackboardComp;
+
+    UPROPERTY(VisibleAnywhere, Category = "BM|AI")
+    TObjectPtr<UBehaviorTreeComponent> BehaviorComp;
+=======
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
@@ -121,4 +144,5 @@ protected:
 private:
     bool bFirstTimeSpotPlayer = true;
     void ExecuteCurrentStateBehavior();
+>>>>>>> dev
 };

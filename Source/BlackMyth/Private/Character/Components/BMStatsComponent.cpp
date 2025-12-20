@@ -26,7 +26,6 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
         return 0.f;
     }
 
-    // TrueDamage ���Է���������Ĭ�ϳԷ����������ɸ�����/������
     float Mitigated = Input;
     if (InOutInfo.DamageType != EBMDamageType::TrueDamage)
     {
@@ -38,7 +37,6 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
 
     const float Applied = OldHP - Stats.HP;
 
-    // �������������Ѫ�������� UI/Ʈ��/EventBus��
     InOutInfo.DamageValue = Applied;
 
     // Emit HP change to UI
@@ -116,4 +114,12 @@ void UBMStatsComponent::RemoveGameplayTag(FName Tag)
 bool UBMStatsComponent::HasGameplayTag(FName Tag) const
 {
     return !Tag.IsNone() && Tags.Contains(Tag);
+}
+
+void UBMStatsComponent::InitializeFromBlock(const FBMStatBlock& In)
+{
+    Stats = In;
+    Stats.HP = FMath::Clamp(Stats.HP, 0.f, Stats.MaxHP);
+    Stats.MP = FMath::Clamp(Stats.MP, 0.f, Stats.MaxMP);
+    Stats.Stamina = FMath::Clamp(Stats.Stamina, 0.f, Stats.MaxStamina);
 }

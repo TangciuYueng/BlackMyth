@@ -124,6 +124,33 @@ enum class EBMHitReaction : uint8
 };
 
 /**
+ * 敌人攻击权重分类（用于 AI 攻击选择）
+ */ 
+UENUM(BlueprintType)
+enum class EBMEnemyAttackWeight : uint8
+{
+    Light   UMETA(DisplayName = "Light"),
+    Heavy   UMETA(DisplayName = "Heavy"),
+    Skill   UMETA(DisplayName = "Skill")
+};
+
+/**
+ * 玩家攻击请求类型
+ */ 
+
+UENUM(BlueprintType)
+enum class EBMCombatAction : uint8
+{
+    None        UMETA(DisplayName = "None"),
+    NormalAttack UMETA(DisplayName = "NormalAttack"), 
+    Dodge       UMETA(DisplayName = "Dodge"),
+    Skill1      UMETA(DisplayName = "Skill 1"),
+    Skill2      UMETA(DisplayName = "Skill 2"),
+    Skill3      UMETA(DisplayName = "Skill 3"),
+};
+
+
+/**
  * 角色逻辑状态 ID（FSM 使用的“状态枚举”）
  */
 UENUM(BlueprintType)
@@ -133,7 +160,7 @@ enum class EBMCharacterStateId : uint8
     Idle        UMETA(DisplayName = "Idle"),
     Move        UMETA(DisplayName = "Move"),
     Jump        UMETA(DisplayName = "Jump"),
-    Roll        UMETA(DisplayName = "Roll"),
+    Dodge       UMETA(DisplayName = "Dodge"),
     Attack      UMETA(DisplayName = "Attack"),
     SkillCast   UMETA(DisplayName = "Skill Cast"),
     Hit         UMETA(DisplayName = "Hit"),
@@ -150,6 +177,14 @@ enum class EBMHitBoxType : uint8
     LightAttack UMETA(DisplayName = "Light Attack"),
     HeavyAttack UMETA(DisplayName = "Heavy Attack"),
     Skill       UMETA(DisplayName = "Skill")
+};
+
+UENUM(BlueprintType)
+enum class EBMHitDedupPolicy : uint8
+{
+    PerWindow,      // 默认：一次攻击窗口内，每个目标最多结算 MaxHitsPerTarget 次（通常=1）
+    PerHitBox,      // 每个目标对每个 HitBoxName 分开计数
+    Unlimited       // 不去重（不建议默认用）
 };
 
 /**
@@ -240,8 +275,254 @@ struct FBMStatBlock
     float MoveSpeed = 600.f;
 };
 
+USTRUCT(BlueprintType)
+struct FBMHitBoxActivationParams
+{
+    GENERATED_BODY()
+
+    // 这次窗口是谁触发的（可用于调试/回放/技能系统）
+    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Window")
+    FName AttackId = NAME_None;
+
+    // 这次窗口的额外倍率（用于同一套 HitBox 定义在不同招式里复用）
+    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Window", meta = (ClampMin = "0.0"))
+    float DamageMultiplier = 1.0f;
+
+    // 是否在窗口开始时清空命中记录
+    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Window")
+    bool bResetHitRecords = true;
+
+    // 去重策略
+    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Window")
+    EBMHitDedupPolicy DedupPolicy = EBMHitDedupPolicy::PerWindow;
+
+    // 每个目标允许命中次数（PerWindow 下通常=1；做多段斩可以调大）
+    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Window", meta = (ClampMin = "1"))
+    int32 MaxHitsPerTarget = 1;
+
+    // 可选：覆写受击类型（某些技能想强制 KnockDown 等）
+    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Window")
+    bool bOverrideReaction = false;
+
+    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Window")
+    EBMHitReaction OverrideReaction = EBMHitReaction::None;
+};
+
 /**
- * 存档：背包物品条目（你类图里用到的 FMBInventoryItemSaveData）
+ * 敌人攻击规格
+ */ 
+USTRUCT(BlueprintType)
+struct FBMEnemyAttackSpec
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack")
+    TObjectPtr<UAnimSequence> Anim = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Attack")
+    FName Id = NAME_None;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack", meta = (ClampMin = "0.01"))
+    float Weight = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack", meta = (ClampMin = "0"))
+    float MinRange = 0.f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack", meta = (ClampMin = "0"))
+    float MaxRange = 220.f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack", meta = (ClampMin = "0.05"))
+    float Cooldown = 1.2f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack", meta = (ClampMin = "0.1"))
+    float PlayRate = 1.0f;
+
+    // ===== 关键：打断规则 =====
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|Interrupt")
+    bool bUninterruptible = false; // 重攻击：不可打断（霸体）
+
+    // 轻攻击：可按概率被打断（0=永不，1=必定）
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|Interrupt", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float InterruptChance = 0.6f;
+
+    // 遭遇“重受击”时的打断概率（可让重受击更容易打断轻攻击）
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|Interrupt", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float InterruptChanceOnHeavyHit = 1.0f;
+
+    // ===== 攻击轻重（用于技能/霸体/受击反馈扩展）=====
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack")
+    EBMEnemyAttackWeight AttackWeight = EBMEnemyAttackWeight::Light;
+
+    // ===== 工程参数：出手时的移动/转向策略（可按招式定制）=====
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|Motion")
+    bool bStopPathFollowingOnEnter = true; // StopMovement（保留惯性）
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|Motion")
+    bool bFaceTargetOnEnter = true;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|HitBox")
+    TArray<FName> HitBoxNames;
+
+    // 这个攻击窗口的参数（倍率/去重/反馈覆写等）
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack|HitBox")
+    FBMHitBoxActivationParams HitBoxParams;
+};
+
+USTRUCT(BlueprintType)
+struct FBMPlayerComboStep
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere)
+    FName Id = NAME_None;
+
+    UPROPERTY(EditAnywhere)
+    TObjectPtr<UAnimSequence> Anim = nullptr;
+
+    UPROPERTY(EditAnywhere)
+    float PlayRate = 1.0f;
+
+    UPROPERTY(EditAnywhere)
+    float StartTime = 0.0f;
+
+    UPROPERTY(EditAnywhere)
+    float MaxPlayTime = -1.0f;
+
+    // 连击窗口 = 本段结束前最后 LinkWindowSeconds 秒内按键有效
+    UPROPERTY(EditAnywhere)
+    float LinkWindowSeconds = 0.20f;
+
+    
+    UPROPERTY(EditAnywhere)
+    float LinkWindowEndOffset = 0.02f;
+
+    // 命中窗口
+    UPROPERTY(EditAnywhere)
+    TArray<FName> HitBoxNames;
+
+    UPROPERTY(EditAnywhere)
+    FBMHitBoxActivationParams HitBoxParams;
+
+    // 打断属性
+    UPROPERTY(EditAnywhere)
+    bool bUninterruptible = false;
+
+    UPROPERTY(EditAnywhere)
+    float InterruptChance = 0.65f;
+
+    UPROPERTY(EditAnywhere)
+    float InterruptChanceOnHeavyHit = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Combo|Recover")
+    TObjectPtr<UAnimSequence> RecoverAnim = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Combo|Recover")
+    float RecoverPlayRate = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Combo|Recover")
+    float RecoverStartTime = 0.0f;
+
+    // <=0 表示播到结尾
+    UPROPERTY(EditAnywhere, Category = "BM|Combo|Recover")
+    float RecoverMaxPlayTime = -1.0f;
+};
+
+USTRUCT(BlueprintType)
+struct FBMPlayerAttackSpec
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
+    FName Id = NAME_None;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
+    TObjectPtr<UAnimSequence> Anim = nullptr;
+
+    // 用于“同类招式多段随机”
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack", meta = (ClampMin = "0.01"))
+    float Weight = 1.0f;
+
+    // 动画播放控制
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack", meta = (ClampMin = "0.01"))
+    float PlayRate = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack", meta = (ClampMin = "0.0"))
+    float StartTime = 0.0f;
+
+    // <=0 表示播完整（从 StartTime 到结尾）
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
+    float MaxPlayTime = -1.0f;
+
+    // 这段招式应打开哪个 HitBox（由动画 Notify/AnimEvent 调用 ActivateHitBox）
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
+    EBMHitBoxType HitBoxType = EBMHitBoxType::LightAttack;
+
+    // 冷却
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack", meta = (ClampMin = "0.0"))
+    float Cooldown = 0.0f;
+
+    // ===== 打断规则 =====
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack|Interrupt")
+    bool bUninterruptible = false;
+
+    // 被“轻受击”打断概率（0=永不，1=必定）
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack|Interrupt", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float InterruptChance = 0.6f;
+
+    // 被“重受击”打断概率
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack|Interrupt", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float InterruptChanceOnHeavyHit = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack|HitBox")
+    TArray<FName> HitBoxNames;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack|HitBox")
+    FBMHitBoxActivationParams HitBoxParams;
+
+};
+
+USTRUCT(BlueprintType)
+struct FBMPlayerSkillSlot
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere)
+    EBMCombatAction Action = EBMCombatAction::Skill1;
+
+    UPROPERTY(EditAnywhere)
+    FBMPlayerAttackSpec Spec;
+};
+
+
+USTRUCT(BlueprintType)
+struct FBMDodgeSpec
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    FName Id = TEXT("Dodge");          // 冷却 Key（每个角色自己一份 CombatComponent，所以不会互相影响）
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    TObjectPtr<UAnimSequence> Anim = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float PlayRate = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float StartTime = 0.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float MaxPlayTime = -1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float Cooldown = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float MoveSpeed = 900.f;           // 进入时沿锁定方向推一个速度
+};
+
+/**
+ * 存档：背包物品条目
  */
 USTRUCT(BlueprintType)
 struct FMBInventoryItemSaveData
@@ -537,25 +818,45 @@ namespace BMStateNames
     static const FName Idle = TEXT("Idle");
     static const FName Move = TEXT("Move");
     static const FName Jump = TEXT("Jump");
-    static const FName Roll = TEXT("Roll");
+    static const FName Dodge = TEXT("Dodge"); 
     static const FName Attack = TEXT("Attack");
     static const FName SkillCast = TEXT("SkillCast");
     static const FName Hit = TEXT("Hit");
     static const FName Death = TEXT("Death");
 
-    FORCEINLINE FName ToName(EBMCharacterStateId Id)
+}
+
+
+namespace BMEnemyStateNames
+{
+    static const FName Idle = TEXT("Enemy.Idle");
+    static const FName Patrol = TEXT("Enemy.Patrol");
+    static const FName Chase = TEXT("Enemy.Chase");
+    static const FName Dodge = TEXT("Dodge");
+    static const FName Attack = TEXT("Enemy.Attack");
+    static const FName Hit = TEXT("Enemy.Hit");
+    static const FName Death = TEXT("Enemy.Death");
+}
+
+namespace BMCombatUtils
+{
+    inline bool IsHeavyIncoming(const FBMDamageInfo& Info)
     {
-        switch (Id)
+        switch (Info.HitReaction)
         {
-            case EBMCharacterStateId::Idle:      return Idle;
-            case EBMCharacterStateId::Move:      return Move;
-            case EBMCharacterStateId::Jump:      return Jump;
-            case EBMCharacterStateId::Roll:      return Roll;
-            case EBMCharacterStateId::Attack:    return Attack;
-            case EBMCharacterStateId::SkillCast: return SkillCast;
-            case EBMCharacterStateId::Hit:       return Hit;
-            case EBMCharacterStateId::Death:     return Death;
-            default:                             return None;
+            case EBMHitReaction::Heavy:
+            case EBMHitReaction::KnockDown:
+            case EBMHitReaction::Airborne:
+                return true;
+            default:
+                return false;
         }
+    }
+
+    inline bool IsSkillAction(EBMCombatAction A)
+    {
+        return A == EBMCombatAction::Skill1
+            || A == EBMCombatAction::Skill2
+            || A == EBMCombatAction::Skill3;
     }
 }

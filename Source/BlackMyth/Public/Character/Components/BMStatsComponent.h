@@ -7,7 +7,7 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogBMStats, Log, All);
 
-// ��C++�����¼���������ͼ��
+
 DECLARE_MULTICAST_DELEGATE_OneParam(FBMOnDeathNative, AActor* /*Killer*/);
 
 UCLASS(ClassGroup = (BM), meta = (BlueprintSpawnableComponent))
@@ -18,7 +18,6 @@ class BLACKMYTH_API UBMStatsComponent : public UActorComponent
 public:
     UBMStatsComponent();
 
-    // ͳһʹ�� FBMDamageInfo ��Ϊ�˺����壨����� DamageValue = ������Ч�˺���
     float ApplyDamage(FBMDamageInfo& InOutInfo);
 
     bool IsDead() const { return Stats.HP <= 0.f; }
@@ -37,11 +36,10 @@ public:
     void RemoveGameplayTag(FName Tag);
     bool HasGameplayTag(FName Tag) const;
 
-    // ���ڽ�ɫ/ϵͳ��ȡ
     const FBMStatBlock& GetStatBlock() const { return Stats; }
     FBMStatBlock& GetStatBlockMutable() { return Stats; }
 
-
+    void InitializeFromBlock(const FBMStatBlock& In);
 
 public:
     UPROPERTY(EditAnywhere, Category = "BM|Stats")
