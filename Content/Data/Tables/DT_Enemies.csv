@@ -1,4 +1,4 @@
-Name,MaxHP,AttackPower,MeshPath,AnimPath,BehaviorTreePath
+Name,MaxHP,AttackPower,MeshPath,AnimBPPath,BehaviorTreePath
 Enemy_DemonWolf,350,25,,,
 Enemy_FireToad,220,15,,,
 Enemy_StoneGeneral,800,40,,,
@@ -9,3 +9,4 @@ Enemy_FlyingImp,150,10,,,
 Enemy_WaterSerpent,900,30,,,
 Enemy_GhostMonk,500,20,,,
 Enemy_Boss_BullKing,5000,120,,,
+
