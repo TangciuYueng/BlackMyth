@@ -126,6 +126,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory|UI")
 	void RefreshInventoryUI();
 
+	UFUNCTION(BlueprintCallable, Category = "Inventory|UI")
+	void SetInventoryWidgetClass(TSubclassOf<UUserWidget> InWidgetClass);
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Test")
+	void ToggleTestAutoAddCurrency();
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Test")
+	bool IsTestAutoAddCurrencyEnabled() const { return bTestAutoAddCurrency; }
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Test")
+	void ToggleTestForceItemPrice10();
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Test")
+	bool IsTestForceItemPriceEnabled() const { return bTestForceItemPrice; }
+
 protected:
 	/**
 	 * 游戏开始时调用
@@ -141,7 +156,7 @@ protected:
 	float TestAutoAddCurrencyIntervalSeconds = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Test", meta = (ClampMin = "1"))
-	int32 TestAutoAddCurrencyAmount = 1;
+	int32 TestAutoAddCurrencyAmount = 100;
 
 	// 临时：强制所有道具价格（用于购买逻辑测试，后续可关闭或移除）
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Test")
@@ -388,12 +403,12 @@ public:
 	const FBMItemData* GetItemData(FName ItemID) const;
 
 	// ==================== 存档系统接口 ====================
-	
+
 	/**
 	 * 获取所有物品（用于存档系统）
 	 * @return 所有物品的只读引用
 	 */
-	const TMap<FName, int32>& GetAllItems() const { return Items; }
+	const TMap<FName, int32>& GetAllItemsRef() const { return Items; }
 
 	/**
 	 * 设置货币（用于存档系统）

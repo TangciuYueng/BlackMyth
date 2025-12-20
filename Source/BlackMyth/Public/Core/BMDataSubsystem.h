@@ -29,6 +29,8 @@ public:
 
     const FBMItemData* GetItemData(FName ItemID) const;
 
+	FString GetItemTablePathDebug() const;
+
     float GetElementalMultiplier(FName AttackElement, FName DefendElement) const;
 
 protected:
