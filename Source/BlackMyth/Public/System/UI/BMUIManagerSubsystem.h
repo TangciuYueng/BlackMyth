@@ -55,10 +55,17 @@ public:
     UFUNCTION(BlueprintCallable)
     void HideAllMenus();
 
+    UFUNCTION(BlueprintCallable)
+    void ShowDeath(TSubclassOf<class UBMDeathWidget> DeathClass);
+    
+    UFUNCTION(BlueprintCallable)
+    void HideDeath();
+
 private:
     TWeakObjectPtr<class UBMHUDWidget> HUD;
     TWeakObjectPtr<class UBMBossBarBase> BossBar;
     TWeakObjectPtr<class UBMNotificationWidget> Notification;
     TWeakObjectPtr<class UBMPauseMenuWidget> PauseMenu;
     TWeakObjectPtr<class UBMMainWidget> MainMenu;
+    TWeakObjectPtr<class UBMDeathWidget> DeathWidget;
 };

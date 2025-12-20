@@ -8,6 +8,9 @@
 #include "UI/BMPauseMenuWidget.h"
 #include "InputCoreTypes.h"
 #include "Kismet/GameplayStatics.h"
+#include "Character/Components/BMStatsComponent.h"
+#include "Core/BMTypes.h"
+#include "System/Event/BMEventBusSubsystem.h"
 
 void ABMPlayerController::BeginPlay()
 {
@@ -75,6 +78,117 @@ void ABMPlayerController::SetupInputComponent()
         // 直接绑定 Tab 键以打开暂停菜单
         InputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &ABMPlayerController::TogglePauseMenu);
         UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound Tab to TogglePauseMenu via C++"));
+
+        // [TEST] Bind K to apply 50% actual damage to the player
+        InputComponent->BindKey(EKeys::K, IE_Pressed, this, &ABMPlayerController::ApplyHalfHPDamage);
+        UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound K to ApplyHalfHPDamage via C++"));
+
+        // Bind 1/2 to trigger skill cooldown timers
+        InputComponent->BindKey(EKeys::One, IE_Pressed, this, &ABMPlayerController::StartSkill1Cooldown);
+        InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ABMPlayerController::StartSkill2Cooldown);
+        UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound 1/2 keys to trigger skill cooldown timers"));
+    }
+}
+
+// [TEST] Apply 50% of current MaxHP as actual damage via BMStatsComponent
+void ABMPlayerController::ApplyHalfHPDamage()
+{
+    APawn* MyPawn = GetPawn();
+    if (!MyPawn)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ApplyHalfHPDamage: No pawn possessed."));
+        return;
+    }
+    UBMStatsComponent* Stats = MyPawn->FindComponentByClass<UBMStatsComponent>();
+    if (!Stats)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ApplyHalfHPDamage: BMStatsComponent not found on pawn %s."), *MyPawn->GetName());
+        return;
+    }
+    FBMStatBlock& Block = Stats->GetStatBlockMutable();
+    const float DamageAmount = Block.MaxHP * 0.5f;
+    FBMDamageInfo Info;
+    Info.TargetActor = MyPawn;
+    Info.InstigatorActor = this;
+    Info.DamageValue = DamageAmount;
+    Info.RawDamageValue = DamageAmount;
+    Info.DamageType = EBMDamageType::TrueDamage; // ensure exact 50% HP taken, bypass Defense
+    const float Applied = Stats->ApplyDamage(Info);
+    UE_LOG(LogTemp, Log, TEXT("ApplyHalfHPDamage: Applied=%.2f, NewHP=%.2f/%.2f"), Applied, Block.HP, Block.MaxHP);
+}
+void ABMPlayerController::StartSkill1Cooldown()
+{
+    TriggerSkillCooldown(TEXT("Skill1"), 10.f);
+}
+
+void ABMPlayerController::StartSkill2Cooldown()
+{
+    TriggerSkillCooldown(TEXT("Skill2"), 8.f);
+}
+void ABMPlayerController::TriggerSkillCooldown(FName SkillId, float TotalSeconds)
+{
+    UBMEventBusSubsystem* Bus = GetGameInstance() ? GetGameInstance()->GetSubsystem<UBMEventBusSubsystem>() : nullptr;
+    if (!Bus)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("TriggerSkillCooldown: EventBus not found."));
+        return;
+    }
+
+    if (SkillId == TEXT("Skill1"))
+    {
+        // Do not restart if cooldown already running
+        if (GetWorldTimerManager().IsTimerActive(Skill1CooldownTimer))
+        {
+            UE_LOG(LogTemp, Log, TEXT("Skill1 cooldown already running (%fs remaining)."), Skill1Remaining);
+            return;
+        }
+        Skill1Remaining = TotalSeconds;
+        Bus->EmitSkillCooldown(SkillId, Skill1Remaining);
+        GetWorldTimerManager().SetTimer(Skill1CooldownTimer, this, &ABMPlayerController::OnSkillCooldownTick_Skill1, 1.0f, true);
+    }
+    else if (SkillId == TEXT("Skill2"))
+    {
+        // Do not restart if cooldown already running
+        if (GetWorldTimerManager().IsTimerActive(Skill2CooldownTimer))
+        {
+            UE_LOG(LogTemp, Log, TEXT("Skill2 cooldown already running (%fs remaining)."), Skill2Remaining);
+            return;
+        }
+        Skill2Remaining = TotalSeconds;
+        Bus->EmitSkillCooldown(SkillId, Skill2Remaining);
+        GetWorldTimerManager().SetTimer(Skill2CooldownTimer, this, &ABMPlayerController::OnSkillCooldownTick_Skill2, 1.0f, true);
+    }
+}
+
+void ABMPlayerController::OnSkillCooldownTick_Skill1()
+{
+    UBMEventBusSubsystem* Bus = GetGameInstance() ? GetGameInstance()->GetSubsystem<UBMEventBusSubsystem>() : nullptr;
+    if (!Bus)
+    {
+        GetWorldTimerManager().ClearTimer(Skill1CooldownTimer);
+        return;
+    }
+    Skill1Remaining = FMath::Max(0.f, Skill1Remaining - 1.f);
+    Bus->EmitSkillCooldown(TEXT("Skill1"), Skill1Remaining);
+    if (Skill1Remaining <= 0.f)
+    {
+        GetWorldTimerManager().ClearTimer(Skill1CooldownTimer);
+    }
+}
+
+void ABMPlayerController::OnSkillCooldownTick_Skill2()
+{
+    UBMEventBusSubsystem* Bus = GetGameInstance() ? GetGameInstance()->GetSubsystem<UBMEventBusSubsystem>() : nullptr;
+    if (!Bus)
+    {
+        GetWorldTimerManager().ClearTimer(Skill2CooldownTimer);
+        return;
+    }
+    Skill2Remaining = FMath::Max(0.f, Skill2Remaining - 1.f);
+    Bus->EmitSkillCooldown(TEXT("Skill2"), Skill2Remaining);
+    if (Skill2Remaining <= 0.f)
+    {
+        GetWorldTimerManager().ClearTimer(Skill2CooldownTimer);
     }
 }
 

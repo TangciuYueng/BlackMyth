@@ -28,6 +28,8 @@ public:
     // Notifications
     DECLARE_MULTICAST_DELEGATE_OneParam(FOnNotifyMessage, FText /*Message*/);
 
+    // Lifecycle
+    DECLARE_MULTICAST_DELEGATE(FOnPlayerDied);
     // Experience/Level events
     DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPlayerLevelUp, int32 /*OldLevel*/, int32 /*NewLevel*/);
     DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnPlayerXPChanged, float /*CurrentXP*/, float /*MaxXP*/, float /*Percent*/);
@@ -44,6 +46,7 @@ public:
     FOnBossHealthChanged OnBossHealthChanged;
 
     FOnNotifyMessage OnNotifyMessage;
+    FOnPlayerDied OnPlayerDied;
 
     FOnPlayerLevelUp OnPlayerLevelUp;
     FOnPlayerXPChanged OnPlayerXPChanged;
@@ -58,6 +61,7 @@ public:
     void EmitBossPhase(int32 Phase, const FText& Hint) { OnBossPhaseChanged.Broadcast(Phase, Hint); }
     void EmitBossHealth(float Normalized) { OnBossHealthChanged.Broadcast(Normalized); }
     void EmitNotify(const FText& Msg) { OnNotifyMessage.Broadcast(Msg); }
+    void EmitPlayerDied() { OnPlayerDied.Broadcast(); }
     
     void EmitPlayerLevelUp(int32 OldLevel, int32 NewLevel) { OnPlayerLevelUp.Broadcast(OldLevel, NewLevel); }
     void EmitPlayerXPChanged(float CurrentXP, float MaxXP, float Percent) { OnPlayerXPChanged.Broadcast(CurrentXP, MaxXP, Percent); }

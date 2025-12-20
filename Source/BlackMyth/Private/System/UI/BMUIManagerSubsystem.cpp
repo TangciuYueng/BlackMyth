@@ -7,6 +7,7 @@
 #include "UI/BMNotificationWidget.h"
 #include "UI/BMPauseMenuWidget.h"
 #include "UI/BMMainWidget.h"
+#include "UI/BMDeathWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "System/Event/BMEventBusSubsystem.h"
 
@@ -120,6 +121,7 @@ void UBMUIManagerSubsystem::HideAllMenus()
 
     RemoveIfValid(reinterpret_cast<TWeakObjectPtr<UUserWidget>&>(PauseMenu));
     RemoveIfValid(reinterpret_cast<TWeakObjectPtr<UUserWidget>&>(MainMenu));
+    RemoveIfValid(reinterpret_cast<TWeakObjectPtr<UUserWidget>&>(DeathWidget));
 }
 
 void UBMUIManagerSubsystem::HidePauseMenu()
@@ -129,6 +131,34 @@ void UBMUIManagerSubsystem::HidePauseMenu()
         W->RemoveFromParent();
     }
     PauseMenu = nullptr;
+}
+
+void UBMUIManagerSubsystem::ShowDeath(TSubclassOf<UBMDeathWidget> DeathClass)
+{
+    UWorld* World = GetWorld();
+    if (!World) return;
+    if (DeathWidget.IsValid())
+    {
+        UUserWidget* W = DeathWidget.Get();
+        if (W && !W->IsInViewport())
+        {
+            W->AddToViewport();
+        }
+        return;
+    }
+    if (UUserWidget* W = CreateAndAdd(DeathClass, World))
+    {
+        DeathWidget = Cast<UBMDeathWidget>(W);
+    }
+}
+
+void UBMUIManagerSubsystem::HideDeath()
+{
+    if (UUserWidget* W = DeathWidget.Get())
+    {
+        W->RemoveFromParent();
+    }
+    DeathWidget = nullptr;
 }
 
 bool UBMUIManagerSubsystem::IsPauseMenuVisible() const
