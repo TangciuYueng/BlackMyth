@@ -15,6 +15,8 @@
 #include "TimerManager.h"
 #include "Engine/LocalPlayer.h"
 #include "CombatPlayerController.h"
+#include "Character/Components/BMInventoryComponent.h"
+#include "GameFramework/PlayerInput.h"
 
 ACombatCharacter::ACombatCharacter()
 {
@@ -531,6 +533,85 @@ void ACombatCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		// Camera Side Toggle
 		EnhancedInputComponent->BindAction(ToggleCameraAction, ETriggerEvent::Triggered, this, &ACombatCharacter::ToggleCamera);
+	}
+
+	// Legacy key binding (no InputAction asset required)
+	if (PlayerInputComponent)
+	{
+		PlayerInputComponent->BindKey(EKeys::I, IE_Pressed, this, &ACombatCharacter::ToggleInventory);
+		PlayerInputComponent->BindKey(EKeys::One, IE_Pressed, this, &ACombatCharacter::HotbarSlot1);
+		PlayerInputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ACombatCharacter::HotbarSlot2);
+		PlayerInputComponent->BindKey(EKeys::Three, IE_Pressed, this, &ACombatCharacter::HotbarSlot3);
+		PlayerInputComponent->BindKey(EKeys::Four, IE_Pressed, this, &ACombatCharacter::HotbarSlot4);
+		PlayerInputComponent->BindKey(EKeys::Five, IE_Pressed, this, &ACombatCharacter::HotbarSlot5);
+		PlayerInputComponent->BindKey(EKeys::Six, IE_Pressed, this, &ACombatCharacter::HotbarSlot6);
+		PlayerInputComponent->BindKey(EKeys::Seven, IE_Pressed, this, &ACombatCharacter::HotbarSlot7);
+		PlayerInputComponent->BindKey(EKeys::Eight, IE_Pressed, this, &ACombatCharacter::HotbarSlot8);
+		PlayerInputComponent->BindKey(EKeys::Nine, IE_Pressed, this, &ACombatCharacter::HotbarSlot9);
+	}
+}
+
+void ACombatCharacter::ToggleInventory()
+{
+	if (UBMInventoryComponent* Inv = FindComponentByClass<UBMInventoryComponent>())
+	{
+		Inv->ToggleInventoryUI();
+	}
+}
+
+void ACombatCharacter::HotbarSlot1() { TriggerHotbarSlot(1); }
+void ACombatCharacter::HotbarSlot2() { TriggerHotbarSlot(2); }
+void ACombatCharacter::HotbarSlot3() { TriggerHotbarSlot(3); }
+void ACombatCharacter::HotbarSlot4() { TriggerHotbarSlot(4); }
+void ACombatCharacter::HotbarSlot5() { TriggerHotbarSlot(5); }
+void ACombatCharacter::HotbarSlot6() { TriggerHotbarSlot(6); }
+void ACombatCharacter::HotbarSlot7() { TriggerHotbarSlot(7); }
+void ACombatCharacter::HotbarSlot8() { TriggerHotbarSlot(8); }
+void ACombatCharacter::HotbarSlot9() { TriggerHotbarSlot(9); }
+
+void ACombatCharacter::TriggerHotbarSlot(int32 SlotIndex)
+{
+	UBMInventoryComponent* Inv = FindComponentByClass<UBMInventoryComponent>();
+	if (!Inv)
+	{
+		return;
+	}
+
+	// Always use the same hotbar mapping as the inventory widget (1-9).
+	static const FName HotbarItemIDs[9] = {
+		TEXT("Item_JiuZhuanJinDan"),
+		TEXT("Item_TaiYiZiJinDan"),
+		TEXT("Item_CheDianWei"),
+		TEXT("Item_TieShiXin"),
+		TEXT("Item_ChuBaiQiangTou"),
+		TEXT("Item_JinChenXin"),
+		TEXT("Item_JinGuangYanMou"),
+		TEXT("Item_YinXingWuJiao"),
+		TEXT("Item_YaoShengJiao")
+	};
+
+	if (SlotIndex < 1 || SlotIndex > 9)
+	{
+		return;
+	}
+
+	const FName ItemID = HotbarItemIDs[SlotIndex - 1];
+	UE_LOG(LogTemp, Log, TEXT("Hotbar slot %d -> %s"), SlotIndex, *ItemID.ToString());
+
+	if (Inv->IsInventoryUIVisible())
+	{
+		// UI mode -> buy
+		const float UnitPrice = Inv->GetItemPrice(ItemID);
+		const int32 UnitCost = FMath::Max(0, FMath::RoundToInt(UnitPrice));
+		if (UnitCost == 0 || Inv->SpendCurrency(UnitCost))
+		{
+			Inv->AddItem(ItemID, 1);
+		}
+	}
+	else
+	{
+		// Gameplay -> use
+		Inv->UseItem(ItemID, 1);
 	}
 }
 

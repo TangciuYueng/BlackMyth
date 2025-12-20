@@ -4,9 +4,35 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Blueprint/UserWidget.h"
 #include "BMInventoryComponent.generated.h"
 
+/**
+ * 动态多播委托，用于在背包内容或货币发生变化时通知UI立刻刷新
+ * 这样玩家在游戏内进行操作后，界面层可以第一时间展示数量变化或属性提升
+ */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
+
+/**
+ * 当物品被选中时触发的委托
+ * @param ItemID 被选中的物品ID
+ * @param Count 被选中物品的数量
+ */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInventoryItemSelected, FName, ItemID, int32, Count);
+
+/**
+ * 当物品被使用时触发的委托
+ * @param ItemID 使用的物品ID
+ * @param Count 使用的数量
+ */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInventoryItemUsed, FName, ItemID, int32, Count);
+
 // 前向声明
+class UUserWidget;
+class UVerticalBox;
+class UScrollBox;
+class UTextBlock;
+class UButton;
 class UBMDataSubsystem;
 struct FBMItemData;
 
@@ -26,11 +52,103 @@ public:
 	 */
 	UBMInventoryComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
+	/** 背包内容变化时触发，UI可以绑定该事件实现即时反馈 */
+	UPROPERTY(BlueprintAssignable, Category = "Inventory|Events")
+	FOnInventoryChanged OnInventoryChanged;
+
+	/** 物品被选中时触发，UI可以绑定此事件显示物品详情 */
+	UPROPERTY(BlueprintAssignable, Category = "Inventory|Events")
+	FOnInventoryItemSelected OnItemSelected;
+
+	/** 物品被使用时触发，Gameplay/UI 都可以绑定此事件做属性变更或表现 */
+	UPROPERTY(BlueprintAssignable, Category = "Inventory|Events")
+	FOnInventoryItemUsed OnItemUsed;
+
+	// ==================== UI 相关方法 ====================
+
+	/**
+	 * 获取所有物品列表（用于UI遍历显示）
+	 * @return 返回物品ID到数量的映射
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|UI")
+	TMap<FName, int32> GetAllItems() const { return Items; }
+
+	/**
+	 * 获取所有物品ID数组（用于UI遍历）
+	 * @param OutItemIDs 输出的物品ID数组
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|UI")
+	void GetAllItemIDs(TArray<FName>& OutItemIDs) const;
+
+	/**
+	 * 选中某个物品（触发OnItemSelected委托）
+	 * @param ItemID 要选中的物品ID
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|UI")
+	void SelectItem(FName ItemID);
+
+	/**
+	 * 获取当前选中的物品ID
+	 * @return 当前选中的物品ID，如果没有选中则返回NAME_None
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|UI")
+	FName GetSelectedItemID() const { return SelectedItemID; }
+
+	/**
+	 * 打开背包UI
+	 * @return 如果成功打开返回true
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|UI")
+	bool OpenInventoryUI();
+
+	/**
+	 * 关闭背包UI
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|UI")
+	void CloseInventoryUI();
+
+	/**
+	 * 切换背包UI显示状态
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|UI")
+	void ToggleInventoryUI();
+
+	/**
+	 * 检查背包UI是否正在显示
+	 * @return 如果正在显示返回true
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|UI")
+	bool IsInventoryUIVisible() const;
+
+	/**
+	 * 刷新背包UI显示
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|UI")
+	void RefreshInventoryUI();
+
 protected:
 	/**
 	 * 游戏开始时调用
 	 */
 	virtual void BeginPlay() override;
+
+	// ==================== 临时测试功能 ====================
+	// 每秒自动增加金币（用于UI/逻辑测试，后续可移除或关闭）
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Test")
+	bool bTestAutoAddCurrency = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Test", meta = (ClampMin = "0.01"))
+	float TestAutoAddCurrencyIntervalSeconds = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Test", meta = (ClampMin = "1"))
+	int32 TestAutoAddCurrencyAmount = 1;
+
+	// 临时：强制所有道具价格（用于购买逻辑测试，后续可关闭或移除）
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Test")
+	bool bTestForceItemPrice = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Test", meta = (ClampMin = "0"))
+	float TestForcedItemPrice = 10.0f;
 
 	/**
 	 * 背包容量
@@ -53,6 +171,31 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (ClampMin = "0"))
 	int32 Currency = 0;
+
+	/**
+	 * 背包UI Widget类
+	 * 在编辑器中指定要使用的Widget蓝图类
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|UI")
+	TSubclassOf<UUserWidget> InventoryWidgetClass;
+
+	/**
+	 * 当前背包UI Widget实例
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory|UI")
+	UUserWidget* InventoryWidgetInstance = nullptr;
+
+	/**
+	 * 当前选中的物品ID
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory|UI")
+	FName SelectedItemID = NAME_None;
+
+	/**
+	 * 背包每行显示的格子数量
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|UI", meta = (ClampMin = "1", ClampMax = "10"))
+	int32 SlotsPerRow = 5;
 
 public:	
 	/**
@@ -87,6 +230,24 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	bool RemoveItem(FName ItemID, int32 Count);
+
+	/**
+	 * 使用物品（例如药品），用于在消耗后立即刷新UI与角色属性
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool UseItem(FName ItemID, int32 Count = 1);
+
+	/**
+	 * 装备物品（例如武器/护甲），让角色与UI同步展示装备状态
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool EquipItem(FName ItemID);
+
+	/**
+	 * 丢弃/生成掉落物，物品离开背包时通知UI减少数量
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool DropItem(FName ItemID, int32 Count = 1);
 
 	/**
 	 * 检查背包中是否拥有某物品
@@ -232,4 +393,27 @@ private:
 	 * @return 数据子系统指针
 	 */
 	UBMDataSubsystem* GetDataSubsystem() const;
+
+	/**
+	 * 获取玩家控制器
+	 * @return 玩家控制器指针
+	 */
+	APlayerController* GetPlayerController() const;
+
+	/**
+	 * 绑定UI事件
+	 */
+	void BindUIEvents();
+
+	/**
+	 * 解绑UI事件
+	 */
+	void UnbindUIEvents();
+
+	void StartTestAutoAddCurrency();
+
+	UFUNCTION()
+	void HandleTestAutoAddCurrencyTick();
+
+	FTimerHandle TestAutoAddCurrencyTimer;
 };
