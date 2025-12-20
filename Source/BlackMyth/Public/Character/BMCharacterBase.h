@@ -190,6 +190,7 @@ public:
         TArray<FName>& OutHitBoxNames,
         FBMHitBoxActivationParams& OutParams
     ) const;
+    void SetAllHurtBoxesEnabled(bool bEnabled);
 
 protected:
 
@@ -215,7 +216,7 @@ protected:
      */
     virtual void HandleDeath(const FBMDamageInfo& LastHitInfo);
 
-
+    virtual bool TryEvadeIncomingHit(const FBMDamageInfo& InInfo);
 protected:
     /**
      * 数值组件（Stats）

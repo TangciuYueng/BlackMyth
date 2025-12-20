@@ -115,7 +115,8 @@ public:
     float PlayAttackOnce(const FBMPlayerAttackSpec& Spec);   // 新增：通用
     float PlayHitOnce(const FBMDamageInfo& Info);            // 新增
     float PlayDeathOnce();                                   // 新增
-
+    float PlayDodgeOnce();
+    FVector ComputeDodgeDirectionLocked() const;
     // === 跳跃更新 ===
     /**
      * 播放一次性的起跳动画
@@ -148,6 +149,23 @@ public:
 
 	FBMDamageInfo GetLastDamageInfo() const { return LastDamageInfo; }
 
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Dodge")
+    float DodgeCooldown = 1.2f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Dodge")
+    float DodgeSpeed = 900.f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float DodgeDistance = 420.f;   
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Dodge")
+    float DodgePlayRate = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Dodge")
+    FName DodgeCooldownKey = TEXT("Player_Dodge");
+
+    UPROPERTY(Transient)
+    FVector DodgeLockedDir = FVector::ForwardVector;
 protected:
     // 伤害链路：与 EnemyBase 同逻辑
     virtual void HandleDamageTaken(const FBMDamageInfo& FinalInfo) override;
@@ -193,6 +211,7 @@ private:
     // 输入
     void Input_AttackLightPressed();
     void Input_AttackHeavyPressed();
+    void Input_DodgePressed();
 
     /**
      * 水平视角旋转输入回调
@@ -325,6 +344,9 @@ private:
     UPROPERTY(EditAnywhere, Category = "BM|Assets")
     TObjectPtr<UAnimSequence> AnimHeavyAttack;
 
+    UPROPERTY(EditAnywhere, Category = "BM|Assets")
+    TObjectPtr<UAnimSequence> AnimDodge;
+
     // 轻/重攻击规格
     UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
     TArray<FBMPlayerAttackSpec> LightAttackSpecs;
@@ -349,13 +371,7 @@ private:
     bool bHasActiveAttackSpec = false;
     FBMPlayerAttackSpec ActiveAttackSpec;
 
-    FBMDamageInfo LastDamageInfo; // Hit/Death 状态会用
-
-    // 简单冷却（可选）
-    float NextLightAllowedTime = 0.f;
-    float NextHeavyAllowedTime = 0.f;
-
-
+    FBMDamageInfo LastDamageInfo; 
 
     /**
      * 待起跳标记

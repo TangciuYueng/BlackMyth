@@ -27,6 +27,7 @@ protected:
     void BuildAttackSpecs();
     void BuildHitBoxes();
     void BuildHurtBoxes();
+    virtual float PlayDodgeOnce() override;
 
 protected:
     // ===== 资产：你自己改路径 =====
@@ -50,6 +51,9 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, Category = "BM|Dummy|Assets")
     TSoftObjectPtr<UAnimSequence> AnimDeathAsset;
+
+    UPROPERTY(EditDefaultsOnly, Category = "BM|Dummy|Assets")
+    TSoftObjectPtr<UAnimSequence> AnimDodgeAsset;
 
     // ===== 攻击动画：1轻2重 =====
     UPROPERTY(EditDefaultsOnly, Category = "BM|Dummy|Assets|Attack")
@@ -84,4 +88,16 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, Category = "BM|Dummy|Tuning")
     float DummyBaseDamage = 12.f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dummy|Dodge")
+    float DummyDodgeDistance = 420.f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dummy|Dodge")
+    float DummyDodgeOnHitChance = 0.3f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dummy|Dodge")
+    float DummyDodgeCooldown = 2.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dummy|Dodge")
+    FName DummyDodgeCooldownKey = TEXT("Dummy_Dodge");
 };

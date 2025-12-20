@@ -11,6 +11,7 @@
 #include "Character/Enemy/States/BMEnemyState_Attack.h"
 #include "Character/Enemy/States/BMEnemyState_Hit.h"
 #include "Character/Enemy/States/BMEnemyState_Death.h"
+#include "Character/Enemy/States/BMEnemyState_Dodge.h"
 
 #include "Animation/AnimSingleNodeInstance.h"
 #include "Animation/AnimSequence.h"
@@ -27,7 +28,6 @@ ABMEnemyBase::ABMEnemyBase()
     AIControllerClass = ABMEnemyAIController::StaticClass();
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
-    // 与 Player 一致：先用 SingleNode（你后续换 AnimInstance 也不影响 FSM 结构）
     GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
 
     if (UCharacterMovementComponent* Move = GetCharacterMovement())
@@ -70,13 +70,15 @@ void ABMEnemyBase::InitEnemyStates()
     auto* SAtk = NewObject<UBMEnemyState_Attack>(Machine);
     auto* SHit = NewObject<UBMEnemyState_Hit>(Machine);
     auto* SDeath = NewObject<UBMEnemyState_Death>(Machine);
-
+    auto* SDodge = NewObject<UBMEnemyState_Dodge>(Machine);
+    
     SIdle->Init(this);
     SPatrol->Init(this);
     SChase->Init(this);
     SAtk->Init(this);
     SHit->Init(this);
     SDeath->Init(this);
+    SDodge->Init(this);
 
     Machine->RegisterState(BMEnemyStateNames::Idle, SIdle);
     Machine->RegisterState(BMEnemyStateNames::Patrol, SPatrol);
@@ -84,6 +86,7 @@ void ABMEnemyBase::InitEnemyStates()
     Machine->RegisterState(BMEnemyStateNames::Attack, SAtk);
     Machine->RegisterState(BMEnemyStateNames::Hit, SHit);
     Machine->RegisterState(BMEnemyStateNames::Death, SDeath);
+    Machine->RegisterState(BMEnemyStateNames::Dodge, SDodge);
 
     Machine->ChangeStateByName(BMEnemyStateNames::Idle);
 }
@@ -137,6 +140,12 @@ bool ABMEnemyBase::DetectPlayer() const
     }
     if (!PlayerPawn || AggroRange <= 0.f) return false;
 
+    // 玩家死亡
+    if (const ABMCharacterBase* PlayerChar = Cast<ABMCharacterBase>(PlayerPawn))
+    {
+        if (PlayerChar->GetStats()->IsDead()) return false;   
+    }
+
     const float DistSq = FVector::DistSquared(PlayerPawn->GetActorLocation(), GetActorLocation());
     return DistSq <= FMath::Square(AggroRange);
 }
@@ -169,8 +178,8 @@ bool ABMEnemyBase::IsInAttackRange() const
     APawn* T = CurrentTarget.Get();
     if (!T) return false;
 
-    const float Dist2D = FVector::Dist2D(T->GetActorLocation(), GetActorLocation());
-
+    float Dist2D = FVector::Dist2D(T->GetActorLocation(), GetActorLocation());
+	Dist2D += 5.0f; // 容差
     if (AttackRangeOverride >= 0.f)
     {
         return Dist2D <= AttackRangeOverride;
@@ -180,6 +189,7 @@ bool ABMEnemyBase::IsInAttackRange() const
     for (const FBMEnemyAttackSpec& S : AttackSpecs)
     {
         if (!S.Anim) continue;
+        if (Combat && !Combat->IsCooldownReady(S.Id)) continue;
         if (Dist2D >= S.MinRange && Dist2D <= S.MaxRange)
         {
             return true;
@@ -192,14 +202,27 @@ bool ABMEnemyBase::CanStartAttack() const
 {
     if (!HasValidTarget()) return false;
 
-    // 不允许空中出手（即便敌人被击退到空中）
     if (UCharacterMovementComponent* Move = GetCharacterMovement())
     {
         if (Move->IsFalling()) return false;
     }
 
-    const float Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
-    return Now >= NextAttackAllowedTime && IsInAttackRange();
+    APawn* T = CurrentTarget.Get();
+    if (!T) return false;
+
+    const float Dist2D = FVector::Dist2D(T->GetActorLocation(), GetActorLocation());
+
+    for (const FBMEnemyAttackSpec& S : AttackSpecs)
+    {
+        if (!S.Anim) continue;
+        if (Dist2D < S.MinRange || Dist2D > S.MaxRange) continue;
+
+        // 冷却过滤
+        if (Combat && !Combat->IsCooldownReady(S.Id)) continue;
+        return true;
+    }
+
+    return false;
 }
 
 void ABMEnemyBase::CommitAttackCooldown(float CooldownSeconds)
@@ -223,7 +246,8 @@ bool ABMEnemyBase::SelectRandomAttackForCurrentTarget(FBMEnemyAttackSpec& OutSpe
     {
         if (!S.Anim) continue;
         if (Dist2D < S.MinRange || Dist2D > S.MaxRange) continue;
-
+        if (Combat && !Combat->IsCooldownReady(S.Id)) continue;
+        
         const float W = FMath::Max(0.01f, S.Weight);
         Candidates.Add(&S);
         TotalW += W;
@@ -281,21 +305,53 @@ void ABMEnemyBase::PlayLoop(UAnimSequence* Seq, float PlayRate)
     SetSingleNodePlayRate(PlayRate);
 }
 
-float ABMEnemyBase::PlayOnce(UAnimSequence* Seq, float PlayRate)
+float ABMEnemyBase::PlayOnce(UAnimSequence* Seq, float PlayRate, float StartTime, float MaxPlayTime)
 {
-    if (!Seq || !GetMesh()) return 0.f;
+    if (!Seq || !GetMesh())
+    {
+        return 0.f;
+    }
 
-    PlayRate = FMath::Max(0.01f, PlayRate);
-
-    // OneShot 会打断 loop：必须清空 loop 缓存，避免后续 PlayIdleLoop 被错误短路
     CurrentLoopAnim = nullptr;
-    CurrentLoopRate = 1.0f;
 
+    // 确保是单节点模式
     GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
-    GetMesh()->PlayAnimation(Seq, false);
-    SetSingleNodePlayRate(PlayRate);
 
-    return Seq->GetPlayLength() / PlayRate;
+    // 用 SingleNodeInstance 控制起始时间/播放率
+    UAnimSingleNodeInstance* Inst = GetMesh()->GetSingleNodeInstance();
+
+    // 第一次没创建 Instance，先 PlayAnimation 一次
+    if (!Inst)
+    {
+        GetMesh()->PlayAnimation(Seq, false);
+        Inst = GetMesh()->GetSingleNodeInstance();
+    }
+
+    const float Len = Seq->GetPlayLength();
+    const float SafePlayRate = (PlayRate > 0.f) ? PlayRate : 1.0f;
+
+    const float ClampedStart = FMath::Clamp(StartTime, 0.f, Len);
+    const float Remaining = FMath::Max(0.f, Len - ClampedStart);
+
+    // MaxPlayTime <= 0 表示播完整剩余段，否则裁剪
+    const float EffectivePlayTime = (MaxPlayTime > 0.f) ? FMath::Min(Remaining, MaxPlayTime) : Remaining;
+
+    if (Inst)
+    {
+        Inst->SetAnimationAsset(Seq, /*bIsLooping=*/false);
+        Inst->SetPosition(ClampedStart, /*bFireNotifies=*/true);
+        Inst->SetPlayRate(SafePlayRate);
+        Inst->SetPlaying(true);
+    }
+    else
+    {
+        // 若无法控制起始时间/裁剪
+        GetMesh()->PlayAnimation(Seq, false);
+        return Len / SafePlayRate;
+    }
+
+    // 返回时长
+    return EffectivePlayTime / SafePlayRate;
 }
 
 void ABMEnemyBase::PlayIdleLoop()
@@ -333,6 +389,11 @@ float ABMEnemyBase::PlayHitOnce(const FBMDamageInfo& Info)
 float ABMEnemyBase::PlayDeathOnce()
 {
     return PlayOnce(AnimDeath, 1.0f);
+}
+
+float ABMEnemyBase::PlayDodgeOnce()
+{
+    return PlayOnce(AnimDodge, DodgePlayRate);
 }
 
 bool ABMEnemyBase::RequestMoveToTarget(float AcceptanceRadius)
@@ -469,8 +530,6 @@ void ABMEnemyBase::RequestDeathState(const FBMDamageInfo& LastHitInfo)
     Machine->ChangeStateByName(BMEnemyStateNames::Death);
 }
 
-// ===== 动画播放（SingleNode）=====
-
 static void ApplySingleNodePlayRate(USkeletalMeshComponent* Mesh, float Rate)
 {
     if (!Mesh) return;
@@ -480,7 +539,6 @@ static void ApplySingleNodePlayRate(USkeletalMeshComponent* Mesh, float Rate)
     }
 }
 
-// ===== 在伤害链路里触发 Hit/Death 状态 =====
 void ABMEnemyBase::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
 {
     Super::HandleDamageTaken(FinalInfo);
@@ -530,3 +588,59 @@ bool ABMEnemyBase::ResolveHitBoxWindow(
     // 后续如果做多窗口（ActiveAttackSpec.Windows），在这里补 WindowId 查找即可
     return false;
 }
+
+bool ABMEnemyBase::TryEvadeIncomingHit(const FBMDamageInfo& InInfo)
+{
+    UE_LOG(LogTemp, Log, TEXT("[%s] TryEvadeIncomingHit: ENTER"), *GetName());
+    UBMStatsComponent* S = GetStats();
+    if (S && S->IsDead()) return false;
+
+    UBMStateMachineComponent* M = GetFSM();
+    if (!M) return false;
+
+    if (!Combat) return false;
+
+    // 冷却检查
+    if (!Combat->IsCooldownReady(DodgeCooldownKey))
+    {
+        return false;
+    }
+
+    // 概率判定
+    const float P = FMath::Clamp(DodgeOnHitChance, 0.f, 1.f);
+    if (FMath::FRand() > P)
+    {
+        return false;
+    }
+
+    // 触发闪避：本次命中不受伤害（直接返回 true）
+    Combat->CommitCooldown(DodgeCooldownKey, DodgeCooldown);
+
+    // 锁定闪避方向：向“远离攻击者”的方向后撤
+    DodgeLockedDir = ComputeBackwardDodgeDirFromHit(InInfo);
+
+    // 切 Dodge 状态
+    M->ChangeStateByName(BMEnemyStateNames::Dodge);
+
+    return true; // 不结算伤害
+}
+
+FVector ABMEnemyBase::ComputeBackwardDodgeDirFromHit(const FBMDamageInfo& InInfo) const
+{
+    FVector Dir = -GetActorForwardVector();
+
+    if (AActor* Inst = InInfo.InstigatorActor.Get())
+    {
+        FVector Away = GetActorLocation() - Inst->GetActorLocation();
+        Away.Z = 0.f;
+        if (!Away.IsNearlyZero())
+        {
+            Dir = Away.GetSafeNormal();
+        }
+    }
+
+    Dir.Z = 0.f;
+    return Dir.IsNearlyZero() ? -GetActorForwardVector() : Dir.GetSafeNormal();
+}
+
+

@@ -8,6 +8,7 @@
 #include "Character/States/BMPlayerState_Attack.h"
 #include "Character/States/BMPlayerState_Hit.h"
 #include "Character/States/BMPlayerState_Death.h"
+#include "Character/States/BMPlayerState_Dodge.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/InputComponent.h"
@@ -36,7 +37,13 @@ ABMPlayerCharacter::ABMPlayerCharacter()
     CameraBoom->bUsePawnControlRotation = true;   
     CameraBoom->bEnableCameraLag = true;
     CameraBoom->CameraLagSpeed = 12.f;
+    CameraBoom->bDoCollisionTest = true;
+    CameraBoom->ProbeChannel = ECC_GameTraceChannel1; // 只让墙/地形影响相机
+    CameraBoom->ProbeSize = 12.f;
 
+    CameraBoom->bEnableCameraLag = true;
+    CameraBoom->bUseCameraLagSubstepping = true;
+    CameraBoom->CameraLagMaxTimeStep = 1.f / 60.f;
     // === 跟随相机 ===
     FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
     FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
@@ -79,7 +86,7 @@ ABMPlayerCharacter::ABMPlayerCharacter()
             TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_A_Slow_MSA.Primary_Melee_A_Slow_MSA'")
         );
         static ConstructorHelpers::FObjectFinder<UAnimSequence> HeavyAttackFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_A_Slow_MSA.Primary_Melee_A_Slow_MSA'")
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/RMB_Hit.RMB_Hit'")
         );
         static ConstructorHelpers::FObjectFinder<UAnimSequence> JumpStartFinder(
             TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Flip_Fwd.Q_Flip_Fwd'")
@@ -96,6 +103,9 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         static ConstructorHelpers::FObjectFinder<UAnimSequence> DeathFinder(
             TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Death.Death'")
         );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> DodgeFinder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Flip_Fwd.Q_Flip_Fwd'")
+        );
         if (IdleFinder.Succeeded())            AnimIdle = IdleFinder.Object;
         if (MoveFinder.Succeeded())            AnimMove = MoveFinder.Object;
         if (LightAttackFinder.Succeeded())     AnimLightAttack = LightAttackFinder.Object;
@@ -105,6 +115,7 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         if (HitLightFinder.Succeeded())        AnimHitLight = HitLightFinder.Object;
         if (HitHeavyFinder.Succeeded())        AnimHitHeavy = HitHeavyFinder.Object;
         if (DeathFinder.Succeeded())           AnimDeath = DeathFinder.Object;
+        if (DodgeFinder.Succeeded())           AnimDodge = DodgeFinder.Object;
     }
 
     // === Mesh 位置/朝向 ===
@@ -117,12 +128,12 @@ ABMPlayerCharacter::ABMPlayerCharacter()
     // === HurtBoxes ===
     UBMHurtBoxComponent* Head = CreateDefaultSubobject<UBMHurtBoxComponent>(TEXT("HB_Head"));
     Head->AttachSocketOrBone = TEXT("head");
-    Head->BoxExtent = FVector(10, 10, 10);
+    Head->BoxExtent = FVector(16, 16, 16);
     Head->DamageMultiplier = 1.6f; // 头部更疼
 
     UBMHurtBoxComponent* Body = CreateDefaultSubobject<UBMHurtBoxComponent>(TEXT("HB_Body"));
     Body->AttachSocketOrBone = TEXT("spine_03");
-    Body->BoxExtent = FVector(14, 18, 20);
+    Body->BoxExtent = FVector(20, 25, 30);
     Body->DamageMultiplier = 1.0f;
 
     // === HitBox 定义 ===
@@ -146,7 +157,13 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         Heavy.Name = TEXT("HeavyAttack");
         Heavy.Type = EBMHitBoxType::HeavyAttack;
         Heavy.AttachSocketOrBone = TEXT("weapon_r");
-        Heavy.BoxExtent = FVector(12, 120, 12);
+        Heavy.BoxExtent = FVector(8, 150, 8);
+        Heavy.RelativeTransform = FTransform(
+            FRotator::ZeroRotator,
+            FVector(0.f, -150.f, 0.f),
+            FVector::OneVector
+        );
+
         Heavy.DamageType = EBMDamageType::Melee;
         Heavy.ElementType = EBMElementType::Physical;
         Heavy.DamageScale = 1.35f;
@@ -172,7 +189,7 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         S.InterruptChance = 0.65f;
         S.InterruptChanceOnHeavyHit = 1.0f;
 
-        S.Cooldown = 2.0f;
+        S.Cooldown = 1.0f;
         LightAttackSpecs.Add(S);
     }
 
@@ -193,7 +210,7 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         S.InterruptChance = 0.1f;
         S.InterruptChanceOnHeavyHit = 0.3f;
 
-        S.Cooldown = 3.0f;
+        S.Cooldown = 2.0f;
         HeavyAttackSpecs.Add(S);
     }
 }
@@ -234,6 +251,7 @@ void ABMPlayerCharacter::InitFSMStates()
     auto* SAtk = NewObject<UBMPlayerState_Attack>(Machine);
     auto* SHit = NewObject<UBMPlayerState_Hit>(Machine);
     auto* SDeath = NewObject<UBMPlayerState_Death>(Machine);
+    auto* SDodge = NewObject<UBMPlayerState_Dodge>(Machine);
 
     SIdle->Init(this);
     SMove->Init(this);
@@ -241,6 +259,7 @@ void ABMPlayerCharacter::InitFSMStates()
     SAtk->Init(this);
     SHit->Init(this);
     SDeath->Init(this);
+    SDodge->Init(this);
 
     Machine->RegisterState(BMStateNames::Idle, SIdle);
     Machine->RegisterState(BMStateNames::Move, SMove);
@@ -248,6 +267,7 @@ void ABMPlayerCharacter::InitFSMStates()
     Machine->RegisterState(BMStateNames::Attack, SAtk);
     Machine->RegisterState(BMStateNames::Hit, SHit);
     Machine->RegisterState(BMStateNames::Death, SDeath);
+    Machine->RegisterState(BMStateNames::Dodge, SDodge);
 
     // 初始状态
     Machine->ChangeStateByName(BMStateNames::Idle);
@@ -266,6 +286,7 @@ void ABMPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
     PlayerInputComponent->BindAction(TEXT("Jump"), IE_Pressed, this, &ABMPlayerCharacter::Input_JumpPressed);
     PlayerInputComponent->BindAction(TEXT("LightAttack"), IE_Pressed, this, &ABMPlayerCharacter::Input_AttackLightPressed);
     PlayerInputComponent->BindAction(TEXT("HeavyAttack"), IE_Pressed, this, &ABMPlayerCharacter::Input_AttackHeavyPressed);
+    PlayerInputComponent->BindAction(TEXT("Dodge"), IE_Pressed, this, &ABMPlayerCharacter::Input_DodgePressed);
 
     PlayerInputComponent->BindAxis(TEXT("Turn"), this, &ABMPlayerCharacter::Input_Turn);
     PlayerInputComponent->BindAxis(TEXT("LookUp"), this, &ABMPlayerCharacter::Input_LookUp);
@@ -340,6 +361,14 @@ void ABMPlayerCharacter::Input_AttackHeavyPressed()
     }
 }
 
+void ABMPlayerCharacter::Input_DodgePressed()
+{
+    if (UBMCombatComponent* C = GetCombat())
+    {
+        C->RequestAction(EBMCombatAction::Dodge);
+    }
+}
+
 void ABMPlayerCharacter::Input_Turn(float Value)
 {
     AddControllerYawInput(Value);
@@ -369,6 +398,31 @@ void ABMPlayerCharacter::OnActionRequested(EBMCombatAction Action)
         }
     }
 
+    // Dodge：不允许空中
+    if (Action == EBMCombatAction::Dodge)
+    {
+        if (UCharacterMovementComponent* Move = GetCharacterMovement())
+        {
+            if (Move->IsFalling()) return;
+        }
+
+        // 冷却检查
+        if (UBMCombatComponent* C = GetCombat())
+        {
+            if (!C->IsCooldownReady(DodgeCooldownKey))
+            {
+                return;
+            }
+        }
+
+        if (UBMStateMachineComponent* Machine = GetFSM())
+        {
+            Machine->ChangeStateByName(BMStateNames::Dodge);
+        }
+        return;
+    }
+
+
     PendingAction = Action;
 
     if (UBMStateMachineComponent* Machine = GetFSM())
@@ -379,7 +433,7 @@ void ABMPlayerCharacter::OnActionRequested(EBMCombatAction Action)
         }
         else
         {
-            // 先留接口：你后续实现 SkillCast 再切 BMStateNames::SkillCast
+            // 
             UE_LOG(LogTemp, Log, TEXT("Skill action requested (not implemented): %d"), (int32)Action);
         }
     }
@@ -393,13 +447,18 @@ bool ABMPlayerCharacter::ConsumePendingAction(EBMCombatAction& OutAction)
     return true;
 }
 
-static bool SelectWeighted(const TArray<FBMPlayerAttackSpec>& Specs, FBMPlayerAttackSpec& Out)
+
+static bool SelectWeighted(const TArray<FBMPlayerAttackSpec>& Specs, const UBMCombatComponent* Combat, FBMPlayerAttackSpec& Out)
 {
     float TotalW = 0.f;
     TArray<const FBMPlayerAttackSpec*> Cands;
 
     for (const FBMPlayerAttackSpec& S : Specs)
     {
+        if (Combat && !Combat->IsCooldownReady(S.Id))
+        {
+            continue;
+        }
         if (!S.Anim) continue;
         const float W = FMath::Max(0.01f, S.Weight);
         TotalW += W;
@@ -423,13 +482,14 @@ static bool SelectWeighted(const TArray<FBMPlayerAttackSpec>& Specs, FBMPlayerAt
 
 bool ABMPlayerCharacter::SelectAttackSpec(EBMCombatAction Action, FBMPlayerAttackSpec& OutSpec) const
 {
+    
     if (Action == EBMCombatAction::LightAttack)
     {
-        return SelectWeighted(LightAttackSpecs, OutSpec);
+        return SelectWeighted(LightAttackSpecs, Combat, OutSpec);
     }
     if (Action == EBMCombatAction::HeavyAttack)
     {
-        return SelectWeighted(HeavyAttackSpecs, OutSpec);
+        return SelectWeighted(HeavyAttackSpecs, Combat, OutSpec);
     }
     return false;
 }
@@ -574,6 +634,35 @@ float ABMPlayerCharacter::PlayHitOnce(const FBMDamageInfo& Info)
 float ABMPlayerCharacter::PlayDeathOnce()
 {
     return PlayOnce(AnimDeath, 1.0f);
+}
+
+float ABMPlayerCharacter::PlayDodgeOnce()
+{
+    return PlayOnce(AnimDodge, DodgePlayRate, 0.0, 0.7);
+}
+
+
+FVector ABMPlayerCharacter::ComputeDodgeDirectionLocked() const
+{
+    // 优先按当前输入方向闪避
+    FVector Dir = GetActorForwardVector();
+
+    if (HasMoveIntent() && Controller)
+    {
+        const FRotator YawRot(0.f, Controller->GetControlRotation().Yaw, 0.f);
+        const FVector Forward = FRotationMatrix(YawRot).GetUnitAxis(EAxis::X);
+        const FVector Right = FRotationMatrix(YawRot).GetUnitAxis(EAxis::Y);
+
+        FVector Wish = Forward * MoveIntent.X + Right * MoveIntent.Y;
+        Wish.Z = 0.f;
+        if (!Wish.IsNearlyZero())
+        {
+            Dir = Wish.GetSafeNormal();
+        }
+    }
+
+    Dir.Z = 0.f;
+    return Dir.IsNearlyZero() ? GetActorForwardVector() : Dir.GetSafeNormal();
 }
 
 void ABMPlayerCharacter::PlayFallLoop()

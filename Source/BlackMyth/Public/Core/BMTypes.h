@@ -144,7 +144,7 @@ enum class EBMCombatAction : uint8
     None        UMETA(DisplayName = "None"),
     LightAttack UMETA(DisplayName = "Light Attack"),
     HeavyAttack UMETA(DisplayName = "Heavy Attack"),
-
+    Dodge       UMETA(DisplayName = "Dodge"),
     // 先留接口：后续 SkillCast 状态会用
     Skill1      UMETA(DisplayName = "Skill 1"),
     Skill2      UMETA(DisplayName = "Skill 2"),
@@ -163,7 +163,7 @@ enum class EBMCharacterStateId : uint8
     Idle        UMETA(DisplayName = "Idle"),
     Move        UMETA(DisplayName = "Move"),
     Jump        UMETA(DisplayName = "Jump"),
-    Roll        UMETA(DisplayName = "Roll"),
+    Dodge       UMETA(DisplayName = "Dodge"),
     Attack      UMETA(DisplayName = "Attack"),
     SkillCast   UMETA(DisplayName = "Skill Cast"),
     Hit         UMETA(DisplayName = "Hit"),
@@ -322,6 +322,9 @@ struct FBMEnemyAttackSpec
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack")
     TObjectPtr<UAnimSequence> Anim = nullptr;
 
+    UPROPERTY(EditAnywhere, Category = "BM|Attack")
+    FName Id = NAME_None;
+
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack", meta = (ClampMin = "0.01"))
     float Weight = 1.0f;
 
@@ -373,7 +376,6 @@ struct FBMPlayerAttackSpec
 {
     GENERATED_BODY()
 
-    // 识别用（日志/调试/数据驱动时方便）
     UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
     FName Id = NAME_None;
 
@@ -421,6 +423,33 @@ struct FBMPlayerAttackSpec
     UPROPERTY(EditAnywhere, Category = "BM|Player|Attack|HitBox")
     FBMHitBoxActivationParams HitBoxParams;
 
+};
+
+USTRUCT(BlueprintType)
+struct FBMDodgeSpec
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    FName Id = TEXT("Dodge");          // 冷却 Key（每个角色自己一份 CombatComponent，所以不会互相影响）
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    TObjectPtr<UAnimSequence> Anim = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float PlayRate = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float StartTime = 0.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float MaxPlayTime = -1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float Cooldown = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float MoveSpeed = 900.f;           // 进入时沿锁定方向推一个速度
 };
 
 /**
@@ -699,27 +728,12 @@ namespace BMStateNames
     static const FName Idle = TEXT("Idle");
     static const FName Move = TEXT("Move");
     static const FName Jump = TEXT("Jump");
-    static const FName Roll = TEXT("Roll");
+    static const FName Dodge = TEXT("Dodge"); 
     static const FName Attack = TEXT("Attack");
     static const FName SkillCast = TEXT("SkillCast");
     static const FName Hit = TEXT("Hit");
     static const FName Death = TEXT("Death");
 
-    FORCEINLINE FName ToName(EBMCharacterStateId Id)
-    {
-        switch (Id)
-        {
-            case EBMCharacterStateId::Idle:      return Idle;
-            case EBMCharacterStateId::Move:      return Move;
-            case EBMCharacterStateId::Jump:      return Jump;
-            case EBMCharacterStateId::Roll:      return Roll;
-            case EBMCharacterStateId::Attack:    return Attack;
-            case EBMCharacterStateId::SkillCast: return SkillCast;
-            case EBMCharacterStateId::Hit:       return Hit;
-            case EBMCharacterStateId::Death:     return Death;
-            default:                             return None;
-        }
-    }
 }
 
 
@@ -728,6 +742,7 @@ namespace BMEnemyStateNames
     static const FName Idle = TEXT("Enemy.Idle");
     static const FName Patrol = TEXT("Enemy.Patrol");
     static const FName Chase = TEXT("Enemy.Chase");
+    static const FName Dodge = TEXT("Dodge");
     static const FName Attack = TEXT("Enemy.Attack");
     static const FName Hit = TEXT("Enemy.Hit");
     static const FName Death = TEXT("Enemy.Death");

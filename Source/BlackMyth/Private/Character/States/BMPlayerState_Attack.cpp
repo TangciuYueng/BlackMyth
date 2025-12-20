@@ -38,7 +38,7 @@ void UBMPlayerState_Attack::OnEnter(float)
         return;
     }
 
-    // 关键：锁定当前招式，供“被打断判定”使用
+    // 锁定当前招式，供“被打断判定”使用
     PC->SetActiveAttackSpec(Spec);
 
     // 惯性参数
@@ -51,6 +51,12 @@ void UBMPlayerState_Attack::OnEnter(float)
     {
         FinishAttack(false);
         return;
+    }
+
+    // 提交该招式冷却（以 Spec.Id 为 Key）
+    if (UBMCombatComponent* Combat = PC->GetCombat())
+    {
+        Combat->CommitCooldown(Spec.Id, Spec.Cooldown);
     }
 
     FTimerDelegate D = FTimerDelegate::CreateWeakLambda(this, [this]()
@@ -101,7 +107,7 @@ void UBMPlayerState_Attack::ApplyAttackInertiaSettings(UCharacterMovementCompone
     Move->BrakingDecelerationWalking = 350.f; // 默认可能很大，降低 -> 不会瞬停
     Move->BrakingFrictionFactor = 0.6f;       // <1 更滑，>1 更刹
 
-    //单独的刹车摩擦，手感更可控
+    //单独的刹车摩擦
     Move->bUseSeparateBrakingFriction = true;
     Move->BrakingFriction = 2.0f;
 }

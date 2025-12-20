@@ -8,11 +8,16 @@
 
 ABMEnemyDummy::ABMEnemyDummy()
 {
-    // ===== 基类字段（类图字段）=====
+    
     AggroRange = DummyAggroRange;
     PatrolRadius = DummyPatrolRadius;
     PatrolSpeed = DummyPatrolSpeed;
     ChaseSpeed = DummyChaseSpeed;
+	DodgeDistance = DummyDodgeDistance;
+	DodgeOnHitChance = DummyDodgeOnHitChance;
+	DodgeCooldown = DummyDodgeCooldown;
+	DodgeCooldownKey = DummyDodgeCooldownKey;
+
 
     // 网格偏移（按你项目习惯）
     GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -90.f));
@@ -21,8 +26,7 @@ ABMEnemyDummy::ABMEnemyDummy()
     BuildHurtBoxes();
     BuildHitBoxes();
 
-    // ===== 资产路径占位：你改这里即可 =====
-    // 注意：这是“软引用”，不依赖蓝图；BeginPlay 里同步加载一次（Dummy 用于测试足够）
+    // ===== 资产路径占位 =====
     MeshAsset = TSoftObjectPtr<USkeletalMesh>(FSoftObjectPath(TEXT("/Script/Engine.SkeletalMesh'/Game/Monster/Mesh/SK_Monster.SK_Monster'")));
     AnimIdleAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Monster/Animations/Demo/ThirdPersonIdle.ThirdPersonIdle'")));
     AnimWalkAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Monster/Animations/Demo/ThirdPersonWalk.ThirdPersonWalk'")));
@@ -30,6 +34,7 @@ ABMEnemyDummy::ABMEnemyDummy()
     AnimHitLightAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/HitReact_Front.HitReact_Front'")));
     AnimHitHeavyAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/HitReact_Front.HitReact_Front'")));
     AnimDeathAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Characters/Mannequins/Anims/Death/MM_Death_Front_01.MM_Death_Front_01'")));
+	AnimDodgeAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Flip_Bwd.Q_Flip_Bwd'")));
 
     AttackLightAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01.MM_Attack_01'")));
     AttackHeavy1Asset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_02.MM_Attack_02'")));
@@ -71,6 +76,7 @@ void ABMEnemyDummy::ApplyConfiguredAssets()
     AnimHitLight = AnimHitLightAsset.IsNull() ? nullptr : AnimHitLightAsset.LoadSynchronous();
     AnimHitHeavy = AnimHitHeavyAsset.IsNull() ? nullptr : AnimHitHeavyAsset.LoadSynchronous();
     AnimDeath = AnimDeathAsset.IsNull() ? nullptr : AnimDeathAsset.LoadSynchronous();
+	AnimDodge = AnimDodgeAsset.IsNull() ? nullptr : AnimDodgeAsset.LoadSynchronous();
 }
 
 void ABMEnemyDummy::BuildAttackSpecs()
@@ -92,10 +98,11 @@ void ABMEnemyDummy::BuildAttackSpecs()
     // 轻攻击（可被打断）
     {
         FBMEnemyAttackSpec S;
+        S.Id = TEXT("Dummy_Light_01");
         S.Anim = AttackLightAsset.IsNull() ? nullptr : AttackLightAsset.LoadSynchronous();
         S.AttackWeight = EBMEnemyAttackWeight::Light;
         S.Weight = 2.0f;
-        S.MinRange = 0.f;  S.MaxRange = 180.f;
+        S.MinRange = 0.f;  S.MaxRange = 100.f;
         S.Cooldown = 1.0f; S.PlayRate = 1.0f;
 
         S.bUninterruptible = false;
@@ -115,11 +122,12 @@ void ABMEnemyDummy::BuildAttackSpecs()
     // 重攻击1（霸体：不可打断）
     {
         FBMEnemyAttackSpec S;
+        S.Id = TEXT("Dummy_Heavy_01");
         S.Anim = AttackHeavy1Asset.IsNull() ? nullptr : AttackHeavy1Asset.LoadSynchronous();
         S.AttackWeight = EBMEnemyAttackWeight::Heavy;
         S.Weight = 1.0f;
-        S.MinRange = 0.f;  S.MaxRange = 220.f;
-        S.Cooldown = 1.6f; S.PlayRate = 1.0f;
+        S.MinRange = 0.f;  S.MaxRange = 100.f;
+        S.Cooldown = 2.0f; S.PlayRate = 1.0f;
 
         S.bUninterruptible = true;
         S.InterruptChance = 0.0f;
@@ -137,11 +145,12 @@ void ABMEnemyDummy::BuildAttackSpecs()
     // 重攻击2（“重但可打断”：轻受击小概率打断，重受击大概率打断）
     {
         FBMEnemyAttackSpec S;
+        S.Id = TEXT("Dummy_Heavy_02");
         S.Anim = AttackHeavy2Asset.IsNull() ? nullptr : AttackHeavy2Asset.LoadSynchronous();
         S.AttackWeight = EBMEnemyAttackWeight::Heavy;
         S.Weight = 1.0f;
-        S.MinRange = 120.f; S.MaxRange = 260.f;
-        S.Cooldown = 1.8f;  S.PlayRate = 1.0f;
+        S.MinRange = 100.f; S.MaxRange = 160.f;
+        S.Cooldown = 3.0f;  S.PlayRate = 1.0f;
 
         S.bUninterruptible = false;
         S.InterruptChance = 0.15f;
@@ -156,7 +165,7 @@ void ABMEnemyDummy::BuildAttackSpecs()
         if (S.Anim) AttackSpecs.Add(S);
     }
 
-    // 伤害基值（交给 HitBoxComponent 再结合倍率/元素等）
+    // 伤害基值
     if (UBMHitBoxComponent* HB = GetHitBox())
     {
         HB->SetDamage(DummyBaseDamage);
@@ -165,13 +174,12 @@ void ABMEnemyDummy::BuildAttackSpecs()
 
 void ABMEnemyDummy::BuildHurtBoxes()
 {
-    // 说明：你的 UBMHurtBoxComponent 之前是“配置式组件”（AttachSocketOrBone/BoxExtent 等字段）
-    // 这里沿用同样写法，避免与现有实现冲突。
+
     if (!HurtBody)
     {
         HurtBody = CreateDefaultSubobject<UBMHurtBoxComponent>(TEXT("HB_Body"));
         HurtBody->AttachSocketOrBone = TEXT("spine_03");
-        HurtBody->BoxExtent = FVector(16.f, 20.f, 30.f);
+        HurtBody->BoxExtent = FVector(20.f, 25.f, 40.f);
         HurtBody->DamageMultiplier = 1.0f;
 
         HurtBoxes.Add(HurtBody);
@@ -181,7 +189,7 @@ void ABMEnemyDummy::BuildHurtBoxes()
     {
         HurtHead = CreateDefaultSubobject<UBMHurtBoxComponent>(TEXT("HB_Head"));
         HurtHead->AttachSocketOrBone = TEXT("head");
-        HurtHead->BoxExtent = FVector(12.f, 12.f, 12.f);
+        HurtHead->BoxExtent = FVector(16.f, 16.f, 16.f);
         HurtHead->DamageMultiplier = 1.4f;
 
         HurtBoxes.Add(HurtHead);
@@ -242,4 +250,9 @@ void ABMEnemyDummy::BuildHitBoxes()
     }
 
 
+}
+
+float ABMEnemyDummy::PlayDodgeOnce()
+{
+    return PlayOnce(AnimDodge, DodgePlayRate, 0.0, 0.7);
 }

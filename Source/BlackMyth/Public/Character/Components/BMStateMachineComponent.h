@@ -67,20 +67,6 @@ public:
     bool ChangeStateByName(FName Name);
 
     /**
-     * 通过状态枚举 ID 切换状态
-     *
-     * 该方法会将枚举 ID 映射为统一的状态名（BMStateNames::ToName）
-     * 然后复用 ChangeStateByName 执行状态切换
-     *
-     * @param Id 目标状态枚举 ID
-     * @return 切换成功返回 true；否则返回 false
-     */
-    bool ChangeStateById(EBMCharacterStateId Id)
-    {
-        return ChangeStateByName(BMStateNames::ToName(Id));
-    }
-
-    /**
      * 驱动当前状态更新
      *
      * 通常在 Owner 的 Tick 中调用，用于执行当前状态的 OnUpdate

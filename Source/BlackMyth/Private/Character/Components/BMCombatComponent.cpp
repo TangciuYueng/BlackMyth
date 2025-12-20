@@ -12,11 +12,17 @@ bool UBMCombatComponent::CanPerformAction() const
     return !bActionLocked;
 }
 
+float UBMCombatComponent::GetWorldTimeSecondsSafe() const
+{
+    const UWorld* W = GetWorld();
+    return W ? W->GetTimeSeconds() : 0.f;
+}
+
 bool UBMCombatComponent::RequestAction(EBMCombatAction Action)
 {
     if (!CanPerformAction())
     {
-        UE_LOG(LogBMCombat, Verbose, TEXT("RequestAction rejected: locked"));
+        UE_LOG(LogBMCombat, Verbose, TEXT("[%s] RequestAction rejected: ActionLocked."), *GetOwner()->GetName());
         return false;
     }
 
@@ -30,15 +36,65 @@ bool UBMCombatComponent::RequestAction(EBMCombatAction Action)
     return true;
 }
 
-void UBMCombatComponent::RequestSkill(int32 Slot)
+bool UBMCombatComponent::IsCooldownReady(FName Key) const
 {
-    if (!CanPerformAction())
-    {
-        UE_LOG(LogBMCombat, Verbose, TEXT("RequestSkill rejected: locked"));
-        return;
-    }
+    if (Key.IsNone()) return true;
 
-    OnSkillRequested.Broadcast(Slot);
+    const float Now = GetWorldTimeSecondsSafe();
+    if (const float* End = CooldownEndTimes.Find(Key))
+    {
+        return Now >= *End;
+    }
+    return true;
+}
+
+float UBMCombatComponent::GetCooldownRemaining(FName Key) const
+{
+    if (Key.IsNone()) return 0.f;
+
+    const float Now = GetWorldTimeSecondsSafe();
+    if (const float* End = CooldownEndTimes.Find(Key))
+    {
+        return FMath::Max(0.f, *End - Now);
+    }
+    return 0.f;
+}
+
+void UBMCombatComponent::CommitCooldown(FName Key, float CooldownSeconds)
+{
+    if (Key.IsNone()) return;
+
+    const float Cd = FMath::Max(0.f, CooldownSeconds);
+    if (Cd <= 0.f) return;
+
+    const float Now = GetWorldTimeSecondsSafe();
+    CooldownEndTimes.FindOrAdd(Key) = Now + Cd;
+
+    UE_LOG(LogBMCombat, Verbose, TEXT("[%s] CommitCooldown: %s = %.2fs"),
+        *GetOwner()->GetName(), *Key.ToString(), Cd);
+}
+
+bool UBMCombatComponent::TryCommitCooldown(FName Key, float CooldownSeconds)
+{
+    if (!IsCooldownReady(Key))
+    {
+        return false;
+    }
+    CommitCooldown(Key, CooldownSeconds);
+    return true;
+}
+
+void UBMCombatComponent::ClearCooldown(FName Key)
+{
+    if (!Key.IsNone())
+    {
+        CooldownEndTimes.Remove(Key);
+    }
+}
+
+void UBMCombatComponent::ResetAllCooldowns()
+{
+    CooldownEndTimes.Reset();
 }
 
 void UBMCombatComponent::ResetHitList()

@@ -42,14 +42,14 @@ public:
     bool CanStartAttack() const;
 
     // 动画播放（与 Player 风格一致：Loop/Once）
-    void PlayIdleLoop();
-    void PlayWalkLoop();
-    void PlayRunLoop();
-    float PlayHitOnce(const FBMDamageInfo& Info);
-    float PlayDeathOnce();
-    float PlayAttackOnce(const FBMEnemyAttackSpec& Spec);
-
-    void UpdateLocomotionLoop(); // 防止“状态是移动但速度为0仍播移动动画”
+    virtual void PlayIdleLoop();
+    virtual void PlayWalkLoop();
+    virtual void PlayRunLoop();
+    virtual float PlayHitOnce(const FBMDamageInfo& Info);
+    virtual float PlayDeathOnce();
+    virtual float PlayAttackOnce(const FBMEnemyAttackSpec& Spec);
+    virtual float PlayDodgeOnce();
+    FVector ComputeBackwardDodgeDirFromHit(const FBMDamageInfo& InInfo) const;
 
     void SetSingleNodePlayRate(float Rate);
     // 出手选择
@@ -84,14 +84,42 @@ public:
     // 朝向（攻击前/追击时可用）
     void FaceTarget(float DeltaSeconds, float TurnSpeedDeg = 720.f);
 
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float DodgeDistance = 420.f;               
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float DodgeOnHitChance = 0.3f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float DodgeCooldown = 2.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float DodgeSpeed = 850.f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    float DodgePlayRate = 1.0f;
+
+    UPROPERTY(Transient)
+    FVector DodgeLockedDir = FVector::BackwardVector;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    FName DodgeCooldownKey = TEXT("Enemy_Dodge");
 protected:
     // 伤害链路：仍走 ABMCharacterBase（HitBox->TakeDamageFromHit->Stats）
     virtual void HandleDamageTaken(const FBMDamageInfo& FinalInfo) override;
     virtual void HandleDeath(const FBMDamageInfo& LastHitInfo) override;
     virtual bool CanBeDamagedBy(const FBMDamageInfo& Info) const override;
+    virtual bool TryEvadeIncomingHit(const FBMDamageInfo& InInfo) override;
 
+    // 内部动画工具
+    void PlayLoop(UAnimSequence* Seq, float PlayRate = 1.0f);
+    float PlayOnce(
+        UAnimSequence* Seq,
+        float PlayRate = 1.0f,
+        float StartTime = 0.0f,
+        float MaxPlayTime = -1.0f
+    );
 protected:
-    // ===== 类图字段 =====
     UPROPERTY(EditAnywhere, Category = "BM|Enemy")
     float AggroRange = 800.f;
 
@@ -124,6 +152,8 @@ protected:
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Assets")
     TObjectPtr<UAnimSequence> AnimDeath = nullptr;
 
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Assets")
+    TObjectPtr<UAnimSequence> AnimDodge = nullptr;
     // 受击信息：给 HitState 选择动画用
     UPROPERTY(Transient)
     FBMDamageInfo LastDamageInfo;
@@ -161,9 +191,7 @@ private:
     void StartPerceptionTimer();
     void UpdatePerception();
 
-    // 内部动画工具（与 Player 一致）
-    void PlayLoop(UAnimSequence* Seq, float PlayRate = 1.0f);
-    float PlayOnce(UAnimSequence* Seq, float PlayRate = 1.0f);
+
 
 private:
     TWeakObjectPtr<APawn> CachedPlayer;
