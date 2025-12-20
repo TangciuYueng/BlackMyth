@@ -4,6 +4,11 @@
 #include "Core/BMDataSubsystem.h"
 #include "Data/BMItemData.h"
 #include "Engine/Engine.h"
+#include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerController.h"
+#include "UI/UBMInventoryWidget.h"
 
 UBMInventoryComponent::UBMInventoryComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -20,6 +25,46 @@ UBMInventoryComponent::UBMInventoryComponent(const FObjectInitializer& ObjectIni
 void UBMInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	StartTestAutoAddCurrency();
+}
+
+void UBMInventoryComponent::StartTestAutoAddCurrency()
+{
+	if (!bTestAutoAddCurrency)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	const float Interval = FMath::Max(0.01f, TestAutoAddCurrencyIntervalSeconds);
+	World->GetTimerManager().SetTimer(
+		TestAutoAddCurrencyTimer,
+		this,
+		&UBMInventoryComponent::HandleTestAutoAddCurrencyTick,
+		Interval,
+		true);
+
+	HandleTestAutoAddCurrencyTick();
+}
+
+void UBMInventoryComponent::HandleTestAutoAddCurrencyTick()
+{
+	if (!bTestAutoAddCurrency)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().ClearTimer(TestAutoAddCurrencyTimer);
+		}
+		return;
+	}
+
+	const int32 Amount = FMath::Max(1, TestAutoAddCurrencyAmount);
+	AddCurrency(Amount);
 }
 
 bool UBMInventoryComponent::AddItem(FName ItemID, int32 Count)
@@ -46,6 +91,8 @@ bool UBMInventoryComponent::AddItem(FName ItemID, int32 Count)
 		return false;
 	}
 
+	bool bChanged = false;
+
 	// 检查物品是否已存在
 	if (Items.Contains(ItemID))
 	{
@@ -69,14 +116,15 @@ bool UBMInventoryComponent::AddItem(FName ItemID, int32 Count)
 			Items[ItemID] = MaxStack;
 			UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::AddItem - 物品 %s 已达到最大堆叠数，只添加了 %d 个（请求 %d 个）"), 
 				*ItemID.ToString(), CanAdd, Count);
-			return true;
 		}
-		
-		// 可以正常堆叠，直接增加数量
-		Items[ItemID] += Count;
-		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::AddItem - 物品 %s 数量增加 %d，当前数量: %d"), 
-			*ItemID.ToString(), Count, Items[ItemID]);
-		return true;
+		else
+		{
+			// 可以正常堆叠，直接增加数量
+			Items[ItemID] += Count;
+			UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::AddItem - 物品 %s 数量增加 %d，当前数量: %d"), 
+				*ItemID.ToString(), Count, Items[ItemID]);
+		}
+		bChanged = true;
 	}
 	else
 	{
@@ -101,8 +149,15 @@ bool UBMInventoryComponent::AddItem(FName ItemID, int32 Count)
 		Items.Add(ItemID, ActualCount);
 		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::AddItem - 添加新物品 %s，数量: %d"), 
 			*ItemID.ToString(), ActualCount);
-		return true;
+		bChanged = true;
 	}
+
+	if (bChanged)
+	{
+		// 玩家背包发生变化后即刻通知UI层刷新
+		OnInventoryChanged.Broadcast();
+	}
+	return bChanged;
 }
 
 bool UBMInventoryComponent::RemoveItem(FName ItemID, int32 Count)
@@ -153,7 +208,75 @@ bool UBMInventoryComponent::RemoveItem(FName ItemID, int32 Count)
 			*ItemID.ToString(), Count, CurrentCount);
 	}
 
+	// 物品数量变化后广播，促使UI减少显示数量
+	OnInventoryChanged.Broadcast();
 	return true;
+}
+
+bool UBMInventoryComponent::UseItem(FName ItemID, int32 Count)
+{
+	if (Count <= 0)
+	{
+		return false;
+	}
+
+	if (GetItemCount(ItemID) < Count)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::UseItem - 物品 %s 数量不足"), *ItemID.ToString());
+		return false;
+	}
+
+	const FBMItemData* ItemData = GetItemData(ItemID);
+	if (!ItemData)
+	{
+		return false;
+	}
+
+	// TODO: 根据物品类型执行具体效果，例如回复生命、增加属性等
+	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - 使用物品 %s x%d"), *ItemID.ToString(), Count);
+
+	OnItemUsed.Broadcast(ItemID, Count);
+	return RemoveItem(ItemID, Count);
+}
+
+bool UBMInventoryComponent::EquipItem(FName ItemID)
+{
+	if (!HasItem(ItemID))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::EquipItem - 物品 %s 不存在"), *ItemID.ToString());
+		return false;
+	}
+
+	const FBMItemData* ItemData = GetItemData(ItemID);
+	if (!ItemData)
+	{
+		return false;
+	}
+
+	// TODO: 将装备信息同步到角色（例如武器、护甲组件）
+	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::EquipItem - 装备物品 %s"), *ItemID.ToString());
+
+	OnInventoryChanged.Broadcast();
+	return true;
+}
+
+bool UBMInventoryComponent::DropItem(FName ItemID, int32 Count)
+{
+	if (Count <= 0)
+	{
+		return false;
+	}
+
+	if (GetItemCount(ItemID) < Count)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::DropItem - 物品 %s 数量不足"), *ItemID.ToString());
+		return false;
+	}
+
+	// TODO: 在角色位置生成掉落物Actor
+	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::DropItem - 丢弃物品 %s x%d"), *ItemID.ToString(), Count);
+
+	return RemoveItem(ItemID, Count);
 }
 
 bool UBMInventoryComponent::HasItem(FName ItemID) const
@@ -206,6 +329,8 @@ bool UBMInventoryComponent::AddCurrency(int32 Amount)
 	// 添加货币（注意：这里不检查溢出，因为int32最大值很大）
 	Currency += Amount;
 	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::AddCurrency - 添加货币 %d，当前货币: %d"), Amount, Currency);
+
+	OnInventoryChanged.Broadcast();
 	return true;
 }
 
@@ -228,6 +353,8 @@ bool UBMInventoryComponent::SpendCurrency(int32 Amount)
 	// 消费货币
 	Currency -= Amount;
 	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::SpendCurrency - 消费货币 %d，剩余货币: %d"), Amount, Currency);
+
+	OnInventoryChanged.Broadcast();
 	return true;
 }
 
@@ -272,14 +399,21 @@ void UBMInventoryComponent::SetCapacity(int32 NewCapacity)
 
 	Capacity = NewCapacity;
 	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::SetCapacity - 设置新容量: %d"), Capacity);
+	OnInventoryChanged.Broadcast();
 }
 
 void UBMInventoryComponent::ClearInventory()
 {
 	// 清空所有物品
 	int32 ItemCount = Items.Num();
+	if (ItemCount == 0)
+	{
+		return;
+	}
+
 	Items.Empty();
 	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::ClearInventory - 已清空背包，移除了 %d 种物品"), ItemCount);
+	OnInventoryChanged.Broadcast();
 }
 
 // ==================== 物品信息查询方法实现 ====================
@@ -306,6 +440,11 @@ FSoftObjectPath UBMInventoryComponent::GetItemIcon(FName ItemID) const
 
 float UBMInventoryComponent::GetItemPrice(FName ItemID) const
 {
+	if (bTestForceItemPrice)
+	{
+		return TestForcedItemPrice;
+	}
+
 	const FBMItemData* ItemData = GetItemData(ItemID);
 	if (ItemData)
 	{
@@ -393,3 +532,178 @@ UBMDataSubsystem* UBMInventoryComponent::GetDataSubsystem() const
 	return nullptr;
 }
 
+// ==================== UI 相关方法实现 ====================
+
+void UBMInventoryComponent::GetAllItemIDs(TArray<FName>& OutItemIDs) const
+{
+	Items.GetKeys(OutItemIDs);
+}
+
+void UBMInventoryComponent::SelectItem(FName ItemID)
+{
+	// 检查物品是否存在
+	if (ItemID != NAME_None && !Items.Contains(ItemID))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::SelectItem - 物品 %s 不存在于背包中"), *ItemID.ToString());
+		return;
+	}
+
+	// 更新选中的物品ID
+	SelectedItemID = ItemID;
+
+	// 获取物品数量
+	int32 Count = GetItemCount(ItemID);
+
+	// 广播物品选中事件
+	OnItemSelected.Broadcast(ItemID, Count);
+
+	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::SelectItem - 选中物品 %s，数量: %d"), *ItemID.ToString(), Count);
+}
+
+bool UBMInventoryComponent::OpenInventoryUI()
+{
+	// 检查是否已设置Widget类
+	if (!InventoryWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::OpenInventoryUI - InventoryWidgetClass未设置"));
+		return false;
+	}
+
+	// 如果已经打开，直接返回
+	if (InventoryWidgetInstance && InventoryWidgetInstance->IsInViewport())
+	{
+		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::OpenInventoryUI - 背包UI已经打开"));
+		return true;
+	}
+
+	// 获取玩家控制器
+	APlayerController* PC = GetPlayerController();
+	if (!PC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::OpenInventoryUI - 无法获取玩家控制器"));
+		return false;
+	}
+
+	// 创建Widget实例
+	InventoryWidgetInstance = CreateWidget<UUserWidget>(PC, InventoryWidgetClass);
+	if (!InventoryWidgetInstance)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::OpenInventoryUI - 创建Widget失败"));
+		return false;
+	}
+
+	if (UUBMInventoryWidget* InventoryWidget = Cast<UUBMInventoryWidget>(InventoryWidgetInstance))
+	{
+		InventoryWidget->SetInventoryComponent(this);
+	}
+
+	// 添加到视口
+	InventoryWidgetInstance->AddToViewport(100);
+
+	// 绑定UI事件
+	BindUIEvents();
+
+	// 设置输入模式为UI模式，并显示鼠标
+	PC->SetShowMouseCursor(true);
+	FInputModeGameAndUI InputMode;
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	InputMode.SetWidgetToFocus(InventoryWidgetInstance->TakeWidget());
+	PC->SetInputMode(InputMode);
+
+	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::OpenInventoryUI - 背包UI已打开"));
+	return true;
+}
+
+void UBMInventoryComponent::CloseInventoryUI()
+{
+	if (!InventoryWidgetInstance)
+	{
+		return;
+	}
+
+	// 解绑UI事件
+	UnbindUIEvents();
+
+	// 从视口移除
+	InventoryWidgetInstance->RemoveFromParent();
+	InventoryWidgetInstance = nullptr;
+
+	// 清除选中状态
+	SelectedItemID = NAME_None;
+
+	// 恢复输入模式
+	APlayerController* PC = GetPlayerController();
+	if (PC)
+	{
+		PC->SetShowMouseCursor(false);
+		FInputModeGameOnly InputMode;
+		PC->SetInputMode(InputMode);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::CloseInventoryUI - 背包UI已关闭"));
+}
+
+void UBMInventoryComponent::ToggleInventoryUI()
+{
+	if (IsInventoryUIVisible())
+	{
+		CloseInventoryUI();
+	}
+	else
+	{
+		OpenInventoryUI();
+	}
+}
+
+bool UBMInventoryComponent::IsInventoryUIVisible() const
+{
+	return InventoryWidgetInstance && InventoryWidgetInstance->IsInViewport();
+}
+
+void UBMInventoryComponent::RefreshInventoryUI()
+{
+	// 广播背包变化事件，让UI自行刷新
+	OnInventoryChanged.Broadcast();
+
+	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::RefreshInventoryUI - 已请求UI刷新"));
+}
+
+APlayerController* UBMInventoryComponent::GetPlayerController() const
+{
+	// 尝试从Owner获取
+	if (AActor* Owner = GetOwner())
+	{
+		// 如果Owner是Pawn，获取其Controller
+		if (APawn* Pawn = Cast<APawn>(Owner))
+		{
+			return Cast<APlayerController>(Pawn->GetController());
+		}
+		// 如果Owner是PlayerController
+		if (APlayerController* PC = Cast<APlayerController>(Owner))
+		{
+			return PC;
+		}
+	}
+
+	// 回退：获取第一个本地玩家控制器
+	if (UWorld* World = GetWorld())
+	{
+		return UGameplayStatics::GetPlayerController(World, 0);
+	}
+
+	return nullptr;
+}
+
+void UBMInventoryComponent::BindUIEvents()
+{
+	// 这里可以绑定额外的UI事件
+	// 例如：当背包变化时自动刷新UI
+	// 由于OnInventoryChanged已经是公开的委托，UI可以直接绑定
+	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::BindUIEvents - UI事件已绑定"));
+}
+
+void UBMInventoryComponent::UnbindUIEvents()
+{
+	// 解绑UI事件
+	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UnbindUIEvents - UI事件已解绑"));
+}

@@ -15,6 +15,7 @@ class UInputAction;
 struct FInputActionValue;
 class UCombatLifeBar;
 class UWidgetComponent;
+class UBMInventoryComponent;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCombatCharacter, Log, All);
 
@@ -320,6 +321,20 @@ protected:
 
 	/** Handles input bindings */
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	void ToggleInventory();
+
+	void HotbarSlot1();
+	void HotbarSlot2();
+	void HotbarSlot3();
+	void HotbarSlot4();
+	void HotbarSlot5();
+	void HotbarSlot6();
+	void HotbarSlot7();
+	void HotbarSlot8();
+	void HotbarSlot9();
+
+	void TriggerHotbarSlot(int32 SlotIndex);
 
 	/** Handles possessed initialization */
 	virtual void NotifyControllerChanged() override;

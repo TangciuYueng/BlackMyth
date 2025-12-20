@@ -4,6 +4,8 @@
 #include "Components/ActorComponent.h"
 #include "BMExperienceComponent.generated.h"
 
+class UBMEventBusSubsystem;
+
 DECLARE_LOG_CATEGORY_EXTERN(LogBMExperience, Log, All);
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FBMOnLevelUpNative, int32 /*OldLevel*/, int32 /*NewLevel*/);
@@ -149,6 +151,34 @@ public:
 
 protected:
     virtual void BeginPlay() override;
+
+private:
+    /**
+     * 获取事件总线子系统（用于发送事件到UI）
+     * 
+     * @return 事件总线子系统指针
+     */
+    UBMEventBusSubsystem* GetEventBusSubsystem() const;
+
+    /**
+     * 发送升级事件到 EventBus
+     */
+    void EmitLevelUpToEventBus(int32 OldLevel, int32 NewLevel);
+
+    /**
+     * 发送经验值变化事件到 EventBus
+     */
+    void EmitXPChangedToEventBus(float InCurrentXP, float InMaxXP, float InPercent);
+
+    /**
+     * 发送技能点变化事件到 EventBus
+     */
+    void EmitSkillPointsChangedToEventBus(int32 NewSkillPoints);
+
+    /**
+     * 发送属性点变化事件到 EventBus
+     */
+    void EmitAttributePointsChangedToEventBus(int32 NewAttributePoints);
 
 private:
     /**
