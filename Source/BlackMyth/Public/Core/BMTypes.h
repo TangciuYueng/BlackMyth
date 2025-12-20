@@ -537,7 +537,7 @@ struct FMBInventoryItemSaveData
 };
 
 /**
- * 存档：基础元信息（可用于“读取存档列表”UI展示）
+ * 存档：基础元信息（可用于"读取存档列表"UI展示）
  */
 USTRUCT(BlueprintType)
 struct FBMSaveMeta
@@ -555,6 +555,27 @@ struct FBMSaveMeta
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Save")
     FRotator PlayerRotation = FRotator::ZeroRotator;
+};
+
+/**
+ * 存档槽位信息（用于UI显示存档列表）
+ */
+USTRUCT(BlueprintType)
+struct FBMSaveSlotInfo
+{
+    GENERATED_BODY()
+
+    /** 槽位编号 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Save")
+    int32 SlotNumber = -1;
+
+    /** 存档是否存在 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Save")
+    bool bExists = false;
+
+    /** 存档元信息（仅在存档存在时有效） */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Save")
+    FBMSaveMeta Meta;
 };
 
 /**

@@ -1,4 +1,8 @@
 #include "Character/Components/BMStatsComponent.h"
+#include "System/Event/BMEventBusSubsystem.h"
+#include "System/UI/BMUIManagerSubsystem.h"
+#include "Engine/GameInstance.h"
+#include "UI/BMDeathWidget.h"
 
 DEFINE_LOG_CATEGORY(LogBMStats);
 
@@ -35,10 +39,47 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
 
     InOutInfo.DamageValue = Applied;
 
+    // Emit HP change to UI
+    if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+    {
+        if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+        {
+            const float Normalized = Stats.MaxHP > 0.f ? Stats.HP / Stats.MaxHP : 0.f;
+            Bus->EmitPlayerHealth(Normalized);
+        }
+    }
+
     if (IsDead() && !bDeathBroadcasted)
     {
         bDeathBroadcasted = true;
         OnDeathNative.Broadcast(InOutInfo.InstigatorActor.Get());
+
+        if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+        {
+            if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+            {
+                Bus->EmitPlayerDied();
+            }
+            if (auto* UI = GI->GetSubsystem<UBMUIManagerSubsystem>())
+            {
+                // Try to load a default death widget if available. You can also expose in GI if preferred.
+                if (UClass* DeathClass = LoadClass<UBMDeathWidget>(nullptr, TEXT("/Game/UI/WBP_Death.WBP_Death_C")))
+                {
+                    UI->ShowDeath(DeathClass);
+                    // Switch to UI-only input so player cannot control character and can use mouse to click
+                    if (UWorld* World = GetWorld())
+                    {
+                        if (APlayerController* PC = World->GetFirstPlayerController())
+                        {
+                            FInputModeUIOnly InputMode;
+                            InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+                            PC->SetInputMode(InputMode);
+                            PC->bShowMouseCursor = true;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     return Applied;

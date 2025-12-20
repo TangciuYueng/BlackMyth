@@ -9,6 +9,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "BMGameInstance.h"
 #include "UI/BMMainWidget.h"
+#include "Character/Components/BMStatsComponent.h"
+
+#define LOCTEXT_NAMESPACE "BMPauseMenu"
 
 void UBMPauseMenuWidget::NativeConstruct()
 {
@@ -32,6 +35,22 @@ void UBMPauseMenuWidget::NativeConstruct()
     if (ReturnToMainButton)
     {
         ReturnToMainButton->OnClicked.AddDynamic(this, &UBMPauseMenuWidget::OnReturnToMainClicked);
+    }
+
+    // Proactive refresh: read current player HP/MaxHP and update text immediately
+    if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+    {
+        APawn* Pawn = PC->GetPawn();
+        if (Pawn)
+        {
+            if (UBMStatsComponent* Stats = Pawn->FindComponentByClass<UBMStatsComponent>())
+            {
+                const float MaxHP = FMath::Max(1.f, Stats->GetStatBlockMutable().MaxHP);
+                const float HP = FMath::Clamp(Stats->GetStatBlockMutable().HP, 0.f, MaxHP);
+                const float Normalized = HP / MaxHP;
+                UpdateHealthText(Normalized);
+            }
+        }
     }
 }
 
@@ -64,7 +83,7 @@ void UBMPauseMenuWidget::OnResumeClicked()
 {
     if (UBMEventBusSubsystem* Bus = GetEventBus())
     {
-        Bus->EmitNotify(NSLOCTEXT("BM", "Resume", "Resuming game"));
+        Bus->EmitNotify(LOCTEXT("Resume", "Resuming game"));
     }
 
     // Restore game input and hide pause menu
@@ -84,7 +103,7 @@ void UBMPauseMenuWidget::OnSettingsClicked()
 {
     if (UBMEventBusSubsystem* Bus = GetEventBus())
     {
-        Bus->EmitNotify(NSLOCTEXT("BM", "Settings", "Open Settings"));
+        Bus->EmitNotify(LOCTEXT("Settings", "Open Settings"));
     }
 }
 
@@ -92,7 +111,7 @@ void UBMPauseMenuWidget::OnReturnToMainClicked()
 {
     if (UBMEventBusSubsystem* Bus = GetEventBus())
     {
-        Bus->EmitNotify(NSLOCTEXT("BM", "ReturnMain", "Return to main menu"));
+        Bus->EmitNotify(LOCTEXT("ReturnMain", "Return to main menu"));
     }
     // Hide pause and show main menu
     UWorld* World = GetWorld();
@@ -136,7 +155,7 @@ void UBMPauseMenuWidget::OnSkillTreeClicked()
 {
     if (UBMEventBusSubsystem* Bus = GetEventBus())
     {
-        Bus->EmitNotify(NSLOCTEXT("BM", "SkillTree", "Open Skill Tree"));
+        Bus->EmitNotify(LOCTEXT("SkillTree", "Open Skill Tree"));
     }
 }
 
@@ -144,7 +163,7 @@ void UBMPauseMenuWidget::OnEquipmentUpgradeClicked()
 {
     if (UBMEventBusSubsystem* Bus = GetEventBus())
     {
-        Bus->EmitNotify(NSLOCTEXT("BM", "EquipmentUpgrade", "Open Equipment Upgrade"));
+        Bus->EmitNotify(LOCTEXT("EquipmentUpgrade", "Open Equipment Upgrade"));
     }
 }
 
@@ -158,15 +177,7 @@ void UBMPauseMenuWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
             UpdateHealthText(Normalized);
         });
     }
-    if (!ManaChangedHandle.IsValid())
-    {
-        ManaChangedHandle = EventBus->OnPlayerManaChanged.AddLambda([this](float Normalized)
-        {
-            UpdateManaText(Normalized);
-        });
-    }
-    // Initial refresh if needed
-    RefreshResourceText();
+    // Initial refresh if needed (status texts can be filled by future events)
 }
 
 void UBMPauseMenuWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
@@ -177,11 +188,6 @@ void UBMPauseMenuWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
         EventBus->OnPlayerHealthChanged.Remove(HealthChangedHandle);
         HealthChangedHandle.Reset();
     }
-    if (ManaChangedHandle.IsValid())
-    {
-        EventBus->OnPlayerManaChanged.Remove(ManaChangedHandle);
-        ManaChangedHandle.Reset();
-    }
 }
 
 void UBMPauseMenuWidget::UpdateHealthText(float Normalized)
@@ -190,26 +196,10 @@ void UBMPauseMenuWidget::UpdateHealthText(float Normalized)
     // Assume max 500 for demo; in real case bind to player state/attributes
     const int32 MaxHealth = 500;
     const int32 CurHealth = FMath::RoundToInt(Normalized * MaxHealth);
-    const FText Txt = FText::Format(NSLOCTEXT("BM", "PauseHealthFmt", "生命值：{0}/{1}"), CurHealth, MaxHealth);
+    const FText Txt = FText::Format(LOCTEXT("PauseHealthFmt", "{0}/{1}"), CurHealth, MaxHealth);
     HealthText->SetText(Txt);
 }
 
-void UBMPauseMenuWidget::UpdateManaText(float Normalized)
-{
-    if (!ManaText) return;
-    const int32 MaxMana = 100;
-    const int32 CurMana = FMath::RoundToInt(Normalized * MaxMana);
-    const FText Txt = FText::Format(NSLOCTEXT("BM", "PauseManaFmt", "法力值：{0}/{1}"), CurMana, MaxMana);
-    ManaText->SetText(Txt);
-}
-
-void UBMPauseMenuWidget::RefreshResourceText()
-{
-    if (!ResourceText) return;
-    // Placeholder static values; should be replaced with real inventory/skill points
-    const int32 Iron = 25;
-    const int32 SkillPoints = 3;
-    const FText Txt = FText::Format(NSLOCTEXT("BM", "PauseResFmt", "精铁：{0} 技能点：{1}"), Iron, SkillPoints);
-    ResourceText->SetText(Txt);
-}
+#undef LOCTEXT_NAMESPACE
+ 
 

@@ -29,6 +29,12 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
     float StaminaRegen = 5.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+    float MaxMP = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+    float MoveSpeed = 600.0f;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Growth")
     float ExpToNext = 100.0f;
 

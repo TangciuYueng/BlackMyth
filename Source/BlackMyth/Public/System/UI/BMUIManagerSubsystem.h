@@ -19,10 +19,26 @@ public:
     void ShowHUD(TSubclassOf<class UBMHUDWidget> HUDClass);
 
     UFUNCTION(BlueprintCallable)
+    void HideHUD();
+
+    UFUNCTION(BlueprintCallable)
+    bool IsHUDVisible() const;
+
+    UFUNCTION(BlueprintCallable)
     void ShowBossBar(TSubclassOf<class UBMBossBarBase> BossBarClass);
 
     UFUNCTION(BlueprintCallable)
     void ShowNotification(TSubclassOf<class UBMNotificationWidget> NotificationClass);
+
+    UFUNCTION(BlueprintCallable)
+    void HideNotification();
+
+    UFUNCTION(BlueprintCallable)
+    bool IsNotificationVisible() const;
+
+    // Convenience to push a notification via EventBus
+    UFUNCTION(BlueprintCallable)
+    void PushNotificationMessage(const FText& Message);
 
     UFUNCTION(BlueprintCallable)
     void ShowPauseMenu(TSubclassOf<class UBMPauseMenuWidget> PauseClass);
@@ -39,10 +55,17 @@ public:
     UFUNCTION(BlueprintCallable)
     void HideAllMenus();
 
+    UFUNCTION(BlueprintCallable)
+    void ShowDeath(TSubclassOf<class UBMDeathWidget> DeathClass);
+    
+    UFUNCTION(BlueprintCallable)
+    void HideDeath();
+
 private:
     TWeakObjectPtr<class UBMHUDWidget> HUD;
     TWeakObjectPtr<class UBMBossBarBase> BossBar;
     TWeakObjectPtr<class UBMNotificationWidget> Notification;
     TWeakObjectPtr<class UBMPauseMenuWidget> PauseMenu;
     TWeakObjectPtr<class UBMMainWidget> MainMenu;
+    TWeakObjectPtr<class UBMDeathWidget> DeathWidget;
 };

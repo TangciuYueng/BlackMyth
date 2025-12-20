@@ -14,6 +14,8 @@
 #include "Components/InputComponent.h"
 #include "Core/BMTypes.h"
 
+#include "InputCoreTypes.h"
+
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
@@ -21,7 +23,14 @@
 #include "Character/Components/BMHitBoxComponent.h"
 #include "Character/Components/BMStatsComponent.h"
 
+<<<<<<< HEAD
 #include "UObject/ConstructorHelpers.h"
+=======
+#include "Character/Components/BMInventoryComponent.h"
+
+#include "Core/BMDataSubsystem.h"
+
+>>>>>>> dev
 #include "Animation/AnimSingleNodeInstance.h"
 
 
@@ -29,6 +38,18 @@ ABMPlayerCharacter::ABMPlayerCharacter()
 {
     CharacterType = EBMCharacterType::Player;
     Team = EBMTeam::Player;
+
+    Inventory = CreateDefaultSubobject<UBMInventoryComponent>(TEXT("Inventory"));
+
+	// Scheme B: set a default inventory UI widget class in pure C++.
+	// Note: update this path to match your widget blueprint asset if different.
+	static ConstructorHelpers::FClassFinder<UUserWidget> InventoryWidgetClassFinder(
+		TEXT("/Game/UI/WBP_Inventory")
+	);
+	if (InventoryWidgetClassFinder.Succeeded() && Inventory)
+	{
+		Inventory->SetInventoryWidgetClass(InventoryWidgetClassFinder.Class);
+	}
 
     // === 相机臂（跟随旋转来自 Controller） ===
     CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -401,6 +422,108 @@ void ABMPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
     PlayerInputComponent->BindAxis(TEXT("Turn"), this, &ABMPlayerCharacter::Input_Turn);
     PlayerInputComponent->BindAxis(TEXT("LookUp"), this, &ABMPlayerCharacter::Input_LookUp);
+
+    PlayerInputComponent->BindKey(EKeys::I, IE_Pressed, this, &ABMPlayerCharacter::Input_ToggleInventory);
+	PlayerInputComponent->BindKey(EKeys::One, IE_Pressed, this, &ABMPlayerCharacter::HotbarSlot1);
+	PlayerInputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ABMPlayerCharacter::HotbarSlot2);
+	PlayerInputComponent->BindKey(EKeys::Three, IE_Pressed, this, &ABMPlayerCharacter::HotbarSlot3);
+	PlayerInputComponent->BindKey(EKeys::Four, IE_Pressed, this, &ABMPlayerCharacter::HotbarSlot4);
+	PlayerInputComponent->BindKey(EKeys::Five, IE_Pressed, this, &ABMPlayerCharacter::HotbarSlot5);
+	PlayerInputComponent->BindKey(EKeys::Six, IE_Pressed, this, &ABMPlayerCharacter::HotbarSlot6);
+	PlayerInputComponent->BindKey(EKeys::Seven, IE_Pressed, this, &ABMPlayerCharacter::HotbarSlot7);
+	PlayerInputComponent->BindKey(EKeys::Eight, IE_Pressed, this, &ABMPlayerCharacter::HotbarSlot8);
+	PlayerInputComponent->BindKey(EKeys::Nine, IE_Pressed, this, &ABMPlayerCharacter::HotbarSlot9);
+	PlayerInputComponent->BindKey(EKeys::M, IE_Pressed, this, &ABMPlayerCharacter::Input_ToggleAutoAddCurrencyTest);
+	PlayerInputComponent->BindKey(EKeys::N, IE_Pressed, this, &ABMPlayerCharacter::Input_ToggleForcePrice10Test);
+}
+
+void ABMPlayerCharacter::Input_ToggleInventory()
+{
+    if (Inventory)
+    {
+        Inventory->ToggleInventoryUI();
+    }
+}
+
+void ABMPlayerCharacter::Input_ToggleAutoAddCurrencyTest()
+{
+	if (Inventory)
+	{
+		Inventory->ToggleTestAutoAddCurrency();
+	}
+}
+
+void ABMPlayerCharacter::Input_ToggleForcePrice10Test()
+{
+	if (Inventory)
+	{
+		Inventory->ToggleTestForceItemPrice10();
+	}
+}
+
+void ABMPlayerCharacter::HotbarSlot1() { TriggerHotbarSlot(1); }
+void ABMPlayerCharacter::HotbarSlot2() { TriggerHotbarSlot(2); }
+void ABMPlayerCharacter::HotbarSlot3() { TriggerHotbarSlot(3); }
+void ABMPlayerCharacter::HotbarSlot4() { TriggerHotbarSlot(4); }
+void ABMPlayerCharacter::HotbarSlot5() { TriggerHotbarSlot(5); }
+void ABMPlayerCharacter::HotbarSlot6() { TriggerHotbarSlot(6); }
+void ABMPlayerCharacter::HotbarSlot7() { TriggerHotbarSlot(7); }
+void ABMPlayerCharacter::HotbarSlot8() { TriggerHotbarSlot(8); }
+void ABMPlayerCharacter::HotbarSlot9() { TriggerHotbarSlot(9); }
+
+void ABMPlayerCharacter::TriggerHotbarSlot(int32 SlotIndex)
+{
+	if (!Inventory)
+	{
+		return;
+	}
+
+	static const FName HotbarItemIDs[9] = {
+		TEXT("Item_CheDianWei"),
+		TEXT("Item_ChuBaiQiangTou"),
+		TEXT("Item_JinChenXin"),
+		TEXT("Item_JinGuangYanMou"),
+		TEXT("Item_JiuZhuanJinDan"),
+		TEXT("Item_TaiYiZiJinDan"),
+		TEXT("Item_TieShiXin"),
+		TEXT("Item_YaoShengJiao"),
+		TEXT("Item_YinXingWuJiao")
+	};
+
+	if (SlotIndex < 1 || SlotIndex > 9)
+	{
+		return;
+	}
+
+	const FName ItemID = HotbarItemIDs[SlotIndex - 1];
+	UE_LOG(LogTemp, Log, TEXT("Hotbar slot %d -> %s"), SlotIndex, *ItemID.ToString());
+
+	if (Inventory->IsInventoryUIVisible())
+	{
+		const float UnitPrice = Inventory->GetItemPrice(ItemID);
+		const int32 UnitCost = FMath::Max(0, FMath::RoundToInt(UnitPrice));
+		const bool bCanAfford = (UnitCost == 0) || Inventory->CanAfford(UnitCost);
+		if (!bCanAfford)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Hotbar slot %d purchase blocked: need %d, have %d"), SlotIndex, UnitCost, Inventory->GetCurrency());
+			return;
+		}
+
+		if (!Inventory->AddItem(ItemID, 1))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Hotbar slot %d purchase failed: AddItem(%s) returned false (check ItemDataTable row exists and capacity)"), SlotIndex, *ItemID.ToString());
+			return;
+		}
+
+		if (UnitCost > 0)
+		{
+			Inventory->SpendCurrency(UnitCost);
+		}
+	}
+	else
+	{
+		Inventory->UseItem(ItemID, 1);
+	}
 }
 
 void ABMPlayerCharacter::Input_MoveForward(float Value)

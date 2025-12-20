@@ -28,8 +28,6 @@ public:
     UPROPERTY(meta=(BindWidget)) class UTextBlock* TitleText = nullptr;               // "暂停"
     UPROPERTY(meta=(BindWidget)) class UTextBlock* CurrentStatusText = nullptr;       // "当前状态："
     UPROPERTY(meta=(BindWidget)) class UTextBlock* HealthText = nullptr;              // "生命值：350/500"
-    UPROPERTY(meta=(BindWidget)) class UTextBlock* ManaText = nullptr;                // "法力值：80/100"
-    UPROPERTY(meta=(BindWidget)) class UTextBlock* ResourceText = nullptr;            // "精铁：25 技能点：3"
 
 protected:
     virtual void NativeConstruct() override;
@@ -40,7 +38,6 @@ protected:
 private:
     // Cached bindings
     FDelegateHandle HealthChangedHandle;
-    FDelegateHandle ManaChangedHandle;
 
     UFUNCTION()
     void OnResumeClicked();
@@ -54,6 +51,4 @@ private:
     void OnReturnToMainClicked();
 
     void UpdateHealthText(float Normalized);
-    void UpdateManaText(float Normalized);
-    void RefreshResourceText();
 };

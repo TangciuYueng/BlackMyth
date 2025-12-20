@@ -5,6 +5,7 @@
 #include "Character/Components/BMStatsComponent.h"
 #include "Character/Components/BMInventoryComponent.h"
 #include "Character/Components/BMExperienceComponent.h"
+#include "System/Event/BMEventBusSubsystem.h"
 
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
@@ -73,14 +74,18 @@ bool UBMSaveGameSubsystem::DoesSaveExist(int32 Slot)
  */
 void UBMSaveGameSubsystem::AutoSave()
 {
-    SaveGame(AUTO_SAVE_SLOT);
-    UE_LOG(LogBMSave, Log, TEXT("Successfully saved game to slot %d"), AUTO_SAVE_SLOT);
-    // TODO: 在此处调用 UI Subsystem 显示 "Saving..." 通知
-    // UBMUIManager* UIManager = GetUIManager();
-    // if (UIManager)
-    // {
-    //     UIManager->ShowSavingNotification();
-    // }
+    // 发送保存开始通知
+    if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+    {
+        EventBus->EmitNotify(NSLOCTEXT("BMSave", "Saving", "Saving..."));
+    }
+
+    bool bSuccess = SaveGame(AUTO_SAVE_SLOT);
+    
+    if (bSuccess)
+    {
+        UE_LOG(LogBMSave, Log, TEXT("Successfully saved game to slot %d"), AUTO_SAVE_SLOT);
+    }
 }
 
 /**
@@ -131,29 +136,31 @@ bool UBMSaveGameSubsystem::SaveGame(int32 Slot)
         return false;
     }
 
+    // 发送保存开始通知（如果不是自动保存）
+    if (Slot != AUTO_SAVE_SLOT)
+    {
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "Saving", "Saving..."));
+        }
+    }
+
     // 保存存档数据到磁盘
     bool bSuccess = UGameplayStatics::SaveGameToSlot(SaveDataInstance, SaveDataInstance->SaveSlotName, 0);
 
-    // 检查保存是否成功
-    if (bSuccess)
+    // 检查保存是否成功并发送通知
+    if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
     {
-        UE_LOG(LogBMSave, Log, TEXT("Successfully saved game to slot %d"), Slot);
-        // TODO: 在此处调用 UI Subsystem 显示 "Saved" 通知
-        // UBMUIManager* UIManager = GetUIManager();
-        // if (UIManager)
-        // {
-        //     UIManager->ShowSavedNotification();
-        // }
-    }
-    else
-    {
-        UE_LOG(LogBMSave, Error, TEXT("Failed to save game to slot %d"), Slot);
-        // TODO: 在此处调用 UI Subsystem 显示 "Failed to save" 通知
-        // UBMUIManager* UIManager = GetUIManager();
-        // if (UIManager)
-        // {
-        //     UIManager->ShowFailedToSaveNotification();
-        // }
+        if (bSuccess)
+        {
+            UE_LOG(LogBMSave, Log, TEXT("Successfully saved game to slot %d"), Slot);
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "Saved", "Game saved successfully"));
+        }
+        else
+        {
+            UE_LOG(LogBMSave, Error, TEXT("Failed to save game to slot %d"), Slot);
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "SaveFailed", "Failed to save game"));
+        }
     }
 
     return bSuccess;
@@ -175,17 +182,17 @@ bool UBMSaveGameSubsystem::LoadGame(int32 Slot)
         return false;
     }
 
+    // 设置当前存档槽位索引
+    CurrentSlotIndex = Slot;
     FString SlotName = GetSlotName(Slot);
     
     if (!UGameplayStatics::DoesSaveGameExist(SlotName, 0))
     {
         UE_LOG(LogBMSave, Warning, TEXT("LoadGame Failed: Slot %d does not exist."), Slot);
-        // TODO: 在此处调用 UI Subsystem 显示 "Slot does not exist" 通知
-        // UBMUIManager* UIManager = GetUIManager();
-        // if (UIManager)
-        // {
-        //     UIManager->ShowSlotDoesNotExistNotification();
-        // }
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "SlotNotExist", "Save slot does not exist"));
+        }
         return false;
     }
 
@@ -197,12 +204,10 @@ bool UBMSaveGameSubsystem::LoadGame(int32 Slot)
     if (!LoadedData)
     {
         UE_LOG(LogBMSave, Error, TEXT("LoadGame Failed: Failed to load SaveData from slot %d"), Slot);
-        // TODO: 在此处调用 UI Subsystem 显示 "Failed to load" 通知
-        // UBMUIManager* UIManager = GetUIManager();
-        // if (UIManager)
-        // {
-        //     UIManager->ShowFailedToLoadNotification();
-        // }
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "LoadFailed", "Failed to load game"));
+        }
         return false;
     }
 
@@ -210,12 +215,10 @@ bool UBMSaveGameSubsystem::LoadGame(int32 Slot)
     if (!ValidateSaveData(LoadedData))
     {
         UE_LOG(LogBMSave, Error, TEXT("LoadGame Failed: Loaded SaveData validation failed."));
-        // TODO: 在此处调用 UI Subsystem 显示 "Validation failed" 通知
-        // UBMUIManager* UIManager = GetUIManager();
-        // if (UIManager)
-        // {
-        //     UIManager->ShowValidationFailedNotification();
-        // }
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "ValidationFailed", "Save data is corrupted"));
+        }
         return false;
     }
 
@@ -228,12 +231,13 @@ bool UBMSaveGameSubsystem::LoadGame(int32 Slot)
 
     // 应用数据
     ApplySaveData(LoadedData, Player);
-    // TODO: 在此处调用 UI Subsystem 显示 "Loaded" 通知
-    // UBMUIManager* UIManager = GetUIManager();
-    // if (UIManager)
-    // {
-    //     UIManager->ShowLoadedNotification();
-    // }
+    
+    // 发送加载成功通知
+    if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+    {
+        EventBus->EmitNotify(NSLOCTEXT("BMSave", "Loaded", "Game loaded successfully"));
+    }
+    
     UE_LOG(LogBMSave, Log, TEXT("Successfully loaded game from slot %d"), Slot);
     return true;
 }
@@ -281,12 +285,10 @@ bool UBMSaveGameSubsystem::DeleteSave(int32 Slot)
     if (Slot < 0)
     {
         UE_LOG(LogBMSave, Error, TEXT("DeleteSave Failed: Invalid slot number %d"), Slot);
-        // TODO: 在此处调用 UI Subsystem 显示 "Failed to delete save" 通知
-        // UBMUIManager* UIManager = GetUIManager();
-        // if (UIManager)
-        // {
-        //     UIManager->ShowFailedToDeleteSaveNotification();
-        // }
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "DeleteFailed", "Failed to delete save"));
+        }
         return false;
     }
 
@@ -300,16 +302,54 @@ bool UBMSaveGameSubsystem::DeleteSave(int32 Slot)
 
     bool bSuccess = UGameplayStatics::DeleteGameInSlot(SlotName, 0);
     
-    if (bSuccess)
+    // 发送删除结果通知
+    if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
     {
-        UE_LOG(LogBMSave, Log, TEXT("Successfully deleted save from slot %d"), Slot);
-    }
-    else
-    {
-        UE_LOG(LogBMSave, Error, TEXT("Failed to delete save from slot %d"), Slot);
+        if (bSuccess)
+        {
+            UE_LOG(LogBMSave, Log, TEXT("Successfully deleted save from slot %d"), Slot);
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "Deleted", "Save deleted successfully"));
+        }
+        else
+        {
+            UE_LOG(LogBMSave, Error, TEXT("Failed to delete save from slot %d"), Slot);
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "DeleteFailed", "Failed to delete save"));
+        }
     }
 
     return bSuccess;
+}
+
+TArray<FBMSaveSlotInfo> UBMSaveGameSubsystem::GetAllSaveSlots(int32 MaxSlots)
+{
+    TArray<FBMSaveSlotInfo> SaveSlots;
+    SaveSlots.Reserve(MaxSlots);
+
+    for (int32 Slot = 0; Slot < MaxSlots; ++Slot)
+    {
+        FBMSaveSlotInfo SlotInfo;
+        SlotInfo.SlotNumber = Slot;
+        SlotInfo.bExists = DoesSaveExist(Slot);
+
+        if (SlotInfo.bExists)
+        {
+            // 获取存档元信息
+            GetSaveMeta(Slot, SlotInfo.Meta);
+        }
+
+        SaveSlots.Add(SlotInfo);
+    }
+
+    return SaveSlots;
+}
+
+UBMEventBusSubsystem* UBMSaveGameSubsystem::GetEventBusSubsystem() const
+{
+    if (UGameInstance* GameInstance = GetGameInstance())
+    {
+        return GameInstance->GetSubsystem<UBMEventBusSubsystem>();
+    }
+    return nullptr;
 }
 
 /**
@@ -332,8 +372,6 @@ bool UBMSaveGameSubsystem::ValidateSaveData(const UBMSaveData* SaveData) const
 
 // === 数据收集逻辑 ===
 /**
- * 将游戏世界数据写入 SaveData 对象
- * 
  * 将游戏世界数据写入 SaveData 对象
  * 
  * @param SaveData 要写入的存档数据对象
@@ -362,7 +400,7 @@ void UBMSaveGameSubsystem::WriteSaveData(UBMSaveData* SaveData, ABMPlayerCharact
         }
     }
 
-    // 2. 收集完整 Stats（使用正确的访问器 GetStats()）
+    // 2. 收集完整 Stats
     if (UBMStatsComponent* Stats = Player->GetStats())
     {
         const FBMStatBlock& StatBlock = Stats->GetStatBlock();
@@ -382,7 +420,7 @@ void UBMSaveGameSubsystem::WriteSaveData(UBMSaveData* SaveData, ABMPlayerCharact
         UE_LOG(LogBMSave, Warning, TEXT("WriteSaveData: Stats component not found"));
     }
 
-    // 3. 收集 Experience（使用 GetComponentByClass 查找组件）
+    // 3. 收集 Experience
     if (UBMExperienceComponent* ExpComp = Player->GetComponentByClass<UBMExperienceComponent>())
     {
         SaveData->PlayerLevel = ExpComp->GetLevel();
@@ -397,24 +435,26 @@ void UBMSaveGameSubsystem::WriteSaveData(UBMSaveData* SaveData, ABMPlayerCharact
         UE_LOG(LogBMSave, Warning, TEXT("WriteSaveData: Experience component not found"));
     }
 
-    // 4. 收集 Inventory（使用 GetComponentByClass 查找组件）
+    // 4. 收集 Inventory
     if (UBMInventoryComponent* InvComp = Player->GetComponentByClass<UBMInventoryComponent>())
     {
         SaveData->InventoryItems.Empty();
         
-        // 注意：这里假设 InventoryComponent 有 Items 成员（TMap<FName, int32>）
-        // TODO: 需要根据组件实际接口调整
-        // 实际使用时需要根据组件实际接口调整
-        // 如果组件有 GetItems() 方法，应该使用它
-        // const TMap<FName, int32>& Items = InvComp->GetItems();
-        // for (const auto& Pair : Items)
-        // {
-        //     FMBInventoryItemSaveData NewItem;
-        //     NewItem.ItemID = Pair.Key;
-        //     NewItem.Quantity = Pair.Value;
-        //     SaveData->InventoryItems.Add(NewItem);
-        // }
-        UE_LOG(LogBMSave, Verbose, TEXT("WriteSaveData: Inventory component found (implementation pending)"));
+        // 使用公共接口获取所有物品，转换为 SaveData 格式
+        const TMap<FName, int32>& Items = InvComp->GetAllItems();
+        for (const auto& ItemPair : Items)
+        {
+            FMBInventoryItemSaveData ItemSaveData;
+            ItemSaveData.ItemID = ItemPair.Key;
+            ItemSaveData.Quantity = ItemPair.Value;
+            SaveData->InventoryItems.Add(ItemSaveData);
+        }
+        
+        // 保存货币
+        SaveData->Currency = InvComp->GetCurrency();
+        
+        UE_LOG(LogBMSave, Verbose, TEXT("WriteSaveData: Saved inventory - %d item types, Currency: %d"), 
+            SaveData->InventoryItems.Num(), SaveData->Currency);
     }
     else
     {
@@ -424,8 +464,6 @@ void UBMSaveGameSubsystem::WriteSaveData(UBMSaveData* SaveData, ABMPlayerCharact
 
 // === 数据恢复逻辑 ===
 /**
- * 将 SaveData 对象的数据应用回游戏世界
- * 
  * 将 SaveData 对象的数据应用回游戏世界
  * 
  * @param SaveData 要应用的存档数据对象
@@ -491,17 +529,71 @@ void UBMSaveGameSubsystem::ApplySaveData(UBMSaveData* SaveData, ABMPlayerCharact
     // 4. 恢复 Inventory
     if (UBMInventoryComponent* InvComp = Player->GetComponentByClass<UBMInventoryComponent>())
     {
-        // TODO: 这里假设 InventoryComponent 有 Items 成员（TMap<FName, int32>）
-        // TODO: 如果组件有 ClearItems() 和 AddItem() 方法，应该使用它们
-        // InvComp->ClearItems();
-        // for (const FMBInventoryItemSaveData& ItemData : SaveData->InventoryItems)
-        // {
-        //     InvComp->AddItem(ItemData.ItemID, ItemData.Quantity);
-        // }
-        UE_LOG(LogBMSave, Verbose, TEXT("ApplySaveData: Inventory component found (implementation pending)"));
+        // 清空当前背包
+        InvComp->ClearInventory();
+        
+        // 恢复所有物品
+        for (const FMBInventoryItemSaveData& ItemData : SaveData->InventoryItems)
+        {
+            // 验证 ItemID 和 Quantity 的有效性
+            if (ItemData.ItemID != NAME_None && ItemData.Quantity > 0)
+            {
+                // 使用 AddItem 方法添加物品（会自动处理堆叠限制等逻辑）
+                if (!InvComp->AddItem(ItemData.ItemID, ItemData.Quantity))
+                {
+                    UE_LOG(LogBMSave, Warning, TEXT("ApplySaveData: Failed to restore item %s (Quantity: %d)"), 
+                        *ItemData.ItemID.ToString(), ItemData.Quantity);
+                }
+            }
+            else
+            {
+                UE_LOG(LogBMSave, Warning, TEXT("ApplySaveData: Invalid inventory item data - ItemID: %s, Quantity: %d"), 
+                    *ItemData.ItemID.ToString(), ItemData.Quantity);
+            }
+        }
+        
+        // 恢复货币
+        // 使用存档系统专用接口直接设置货币值
+        InvComp->SetCurrencyDirect(SaveData->Currency);
+        
+        UE_LOG(LogBMSave, Log, TEXT("ApplySaveData: Restored inventory - %d item types, Currency: %d"), 
+            SaveData->InventoryItems.Num(), SaveData->Currency);
     }
     else
     {
-        UE_LOG(LogBMSave, Warning, TEXT("ApplySaveData: Inventory component not found"));
+        UE_LOG(LogBMSave, Warning, TEXT("ApplySaveData: Inventory component not found"));   
+    }
+}
+
+bool UBMSaveGameSubsystem::SaveCurrentGame()
+{
+    return SaveGame(CurrentSlotIndex);
+}
+
+int32 UBMSaveGameSubsystem::GetNextAvailableSlot(){
+    for (int32 Slot = 0; Slot < MAX_SAVE_SLOTS; ++Slot)
+    {
+        if (!DoesSaveExist(Slot))
+        {
+            return Slot;
+        }
+    }
+    return MAX_SAVE_SLOTS;
+}
+
+void UBMSaveGameSubsystem::StartNewGame()
+{
+    CurrentSlotIndex = GetNextAvailableSlot();
+    if (CurrentSlotIndex != MAX_SAVE_SLOTS)
+    {
+        SaveGame(CurrentSlotIndex);
+    }
+    else
+    {
+        UE_LOG(LogBMSave, Error, TEXT("StartNewGame Failed: No available slot found"));
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "StartNewGameFailed", "Failed to start new game"));
+        }
     }
 }

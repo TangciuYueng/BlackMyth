@@ -1,6 +1,8 @@
 #include "Core/BMDataSubsystem.h"
 #include "Config/BMGameSettings.h"
 
+#include "Engine/DataTable.h"
+
 void UBMDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
@@ -16,9 +18,23 @@ void UBMDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
         EnemyTableCache = Settings->EnemyDataTable.LoadSynchronous();
         ItemTableCache = Settings->ItemDataTable.LoadSynchronous();
     }
+
+	// C++ fallback: allow running without configuring Project Settings -> Black Myth Settings.
+	// Update path here if the asset moves.
+	if (!ItemTableCache)
+	{
+		static const TCHAR* DefaultItemTablePath = TEXT("/Game/Data/Tables/DT_Items.DT_Items");
+		ItemTableCache = LoadObject<UDataTable>(nullptr, DefaultItemTablePath);
+	}
     
     // Debug Log
     if(!SkillTableCache) UE_LOG(LogTemp, Error, TEXT("BMDataSubsystem: Failed to load Skill Table!"));
+	if(!ItemTableCache) UE_LOG(LogTemp, Error, TEXT("BMDataSubsystem: Failed to load Item Table! (Check Project Settings -> Black Myth Settings -> ItemDataTable)"));
+}
+
+FString UBMDataSubsystem::GetItemTablePathDebug() const
+{
+	return GetPathNameSafe(ItemTableCache);
 }
 
 template <typename T>

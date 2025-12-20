@@ -12,6 +12,7 @@ class UInputComponent;
 class UAnimSequence;
 class USpringArmComponent;
 class UCameraComponent;
+class UBMInventoryComponent;
 
 UCLASS()
 /**
@@ -47,6 +48,9 @@ public:
      * @param PlayerInputComponent 用于绑定轴映射和动作映射的输入组件
      */
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+
+    UFUNCTION(BlueprintCallable, Category = "BM|Inventory")
+    UBMInventoryComponent* GetInventory() const { return Inventory; }
 
     /**
      * 落地回调
@@ -235,6 +239,25 @@ private:
      * @param Value 轴输入值，通常来自鼠标 Y
      */
     void Input_LookUp(float Value);
+
+    void Input_ToggleInventory();
+
+    void Input_ToggleAutoAddCurrencyTest();
+
+	void Input_ToggleForcePrice10Test();
+
+    void HotbarSlot1();
+    void HotbarSlot2();
+    void HotbarSlot3();
+    void HotbarSlot4();
+    void HotbarSlot5();
+    void HotbarSlot6();
+    void HotbarSlot7();
+    void HotbarSlot8();
+    void HotbarSlot9();
+
+public:
+	void TriggerHotbarSlot(int32 SlotIndex);
 
     /**
      * 初始化并注册玩家相关的状态机状态
@@ -438,5 +461,8 @@ private:
      */
     UPROPERTY(Transient)
     TObjectPtr<UAnimSequence> CurrentLoopAnim = nullptr;
+
+    UPROPERTY(VisibleAnywhere, Category = "BM|Components")
+    TObjectPtr<UBMInventoryComponent> Inventory;
 };
 
