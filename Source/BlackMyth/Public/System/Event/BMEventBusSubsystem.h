@@ -30,6 +30,11 @@ public:
 
     // Lifecycle
     DECLARE_MULTICAST_DELEGATE(FOnPlayerDied);
+    // Experience/Level events
+    DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPlayerLevelUp, int32 /*OldLevel*/, int32 /*NewLevel*/);
+    DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnPlayerXPChanged, float /*CurrentXP*/, float /*MaxXP*/, float /*Percent*/);
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerSkillPointsChanged, int32 /*NewSkillPoints*/);
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerAttributePointsChanged, int32 /*NewAttributePoints*/);
 
 public:
     // Dispatchers
@@ -43,6 +48,11 @@ public:
     FOnNotifyMessage OnNotifyMessage;
     FOnPlayerDied OnPlayerDied;
 
+    FOnPlayerLevelUp OnPlayerLevelUp;
+    FOnPlayerXPChanged OnPlayerXPChanged;
+    FOnPlayerSkillPointsChanged OnPlayerSkillPointsChanged;
+    FOnPlayerAttributePointsChanged OnPlayerAttributePointsChanged;
+
 public:
     // Convenience emitters
     void EmitPlayerHealth(float Normalized) { OnPlayerHealthChanged.Broadcast(Normalized); }
@@ -52,4 +62,9 @@ public:
     void EmitBossHealth(float Normalized) { OnBossHealthChanged.Broadcast(Normalized); }
     void EmitNotify(const FText& Msg) { OnNotifyMessage.Broadcast(Msg); }
     void EmitPlayerDied() { OnPlayerDied.Broadcast(); }
+    
+    void EmitPlayerLevelUp(int32 OldLevel, int32 NewLevel) { OnPlayerLevelUp.Broadcast(OldLevel, NewLevel); }
+    void EmitPlayerXPChanged(float CurrentXP, float MaxXP, float Percent) { OnPlayerXPChanged.Broadcast(CurrentXP, MaxXP, Percent); }
+    void EmitPlayerSkillPointsChanged(int32 NewSkillPoints) { OnPlayerSkillPointsChanged.Broadcast(NewSkillPoints); }
+    void EmitPlayerAttributePointsChanged(int32 NewAttributePoints) { OnPlayerAttributePointsChanged.Broadcast(NewAttributePoints); }
 };

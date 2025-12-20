@@ -19,6 +19,7 @@ public class BlackMyth : ModuleRules
 			"GameplayStateTreeModule",
 			"UMG",
 			"Slate",
+			"SlateCore",
             "DeveloperSettings"
         });
 
