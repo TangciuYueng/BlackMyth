@@ -16,8 +16,6 @@ ABMGameModeBase::ABMGameModeBase()
     DefaultPawnClass = ABMPlayerCharacter::StaticClass();
     PlayerControllerClass = ABMPlayerController::StaticClass();
     HUDClass = ABMGameHUD::StaticClass();
-    // [TEST ONLY] default enable health drain test so HUD shows -10% HP per second
-    bEnableHealthDrainTest = true;
 }
 
 void ABMGameModeBase::BeginPlay()
@@ -104,40 +102,7 @@ void ABMGameModeBase::BeginPlay()
         }
     }
 
-    // [TEST ONLY] Per-second health drain to verify HUD health bar updates
-    if (bEnableHealthDrainTest)
-    {
-        // Emit initial value so HUD starts at current TestHealth01
-        if (UBMEventBusSubsystem* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
-        {
-            Bus->EmitPlayerHealth(TestHealth01);
-        }
-
-        GetWorldTimerManager().SetTimer(HealthDrainTestTimer, [this, GI]()
-        {
-            TestHealth01 = FMath::Max(0.f, TestHealth01 - 0.1f);
-
-            if (UBMEventBusSubsystem* InnerBus = GI->GetSubsystem<UBMEventBusSubsystem>())
-            {
-                InnerBus->EmitPlayerHealth(TestHealth01);
-            }
-
-            if (TestHealth01 <= 0.f)
-            {
-                GetWorldTimerManager().ClearTimer(HealthDrainTestTimer);
-                UE_LOG(LogTemp, Log, TEXT("BMGameModeBase[Test]: Health drain test finished."));
-            }
-        }, 1.0f, true);
-
-        UE_LOG(LogTemp, Log, TEXT("BMGameModeBase[Test]: Started per-second health drain (10%% per sec)."));
-    }
 }
 
-void ABMGameModeBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-    // Cleanup test timer if active
-    GetWorldTimerManager().ClearTimer(HealthDrainTestTimer);
-    Super::EndPlay(EndPlayReason);
-}
 
 

@@ -21,4 +21,17 @@ protected:
 private:
     void ShowMainMenu();
     void TogglePauseMenu();
+    void ApplyHalfHPDamage();
+
+    // Skill cooldown testing
+    void TriggerSkillCooldown(FName SkillId, float TotalSeconds);
+    void OnSkillCooldownTick_Skill1();
+    void OnSkillCooldownTick_Skill2();
+    void StartSkill1Cooldown();
+    void StartSkill2Cooldown();
+
+    FTimerHandle Skill1CooldownTimer;
+    FTimerHandle Skill2CooldownTimer;
+    float Skill1Remaining = 0.f;
+    float Skill2Remaining = 0.f;
 };

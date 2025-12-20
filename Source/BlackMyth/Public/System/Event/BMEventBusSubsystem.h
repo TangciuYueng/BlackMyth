@@ -28,6 +28,9 @@ public:
     // Notifications
     DECLARE_MULTICAST_DELEGATE_OneParam(FOnNotifyMessage, FText /*Message*/);
 
+    // Lifecycle
+    DECLARE_MULTICAST_DELEGATE(FOnPlayerDied);
+
 public:
     // Dispatchers
     FOnPlayerHealthChanged OnPlayerHealthChanged;
@@ -38,6 +41,7 @@ public:
     FOnBossHealthChanged OnBossHealthChanged;
 
     FOnNotifyMessage OnNotifyMessage;
+    FOnPlayerDied OnPlayerDied;
 
 public:
     // Convenience emitters
@@ -47,4 +51,5 @@ public:
     void EmitBossPhase(int32 Phase, const FText& Hint) { OnBossPhaseChanged.Broadcast(Phase, Hint); }
     void EmitBossHealth(float Normalized) { OnBossHealthChanged.Broadcast(Normalized); }
     void EmitNotify(const FText& Msg) { OnNotifyMessage.Broadcast(Msg); }
+    void EmitPlayerDied() { OnPlayerDied.Broadcast(); }
 };
