@@ -7,33 +7,33 @@ UBMCombatComponent::UBMCombatComponent()
     PrimaryComponentTick.bCanEverTick = false;
 }
 
-bool UBMCombatComponent::CanPerformAction() const
-{
-    return !bActionLocked;
-}
-
 float UBMCombatComponent::GetWorldTimeSecondsSafe() const
 {
     const UWorld* W = GetWorld();
     return W ? W->GetTimeSeconds() : 0.f;
 }
 
+bool UBMCombatComponent::CanPerformAction(EBMCombatAction Action) const
+{
+    if (bActionLocked)
+    {
+        if (bAllowBufferedNormalAttackWhileLocked && Action == EBMCombatAction::NormalAttack)
+        {
+            return true;
+        }
+        return false;
+    }
+    return true;
+}
+
 bool UBMCombatComponent::RequestAction(EBMCombatAction Action)
 {
-    if (!CanPerformAction())
+    if (CanPerformAction(Action))
     {
-        UE_LOG(LogBMCombat, Verbose, TEXT("[%s] RequestAction rejected: ActionLocked."), *GetOwner()->GetName());
-        return false;
-    }
-
-    if (Action == EBMCombatAction::None)
-    {
-        return false;
-    }
-
-    OnActionRequested.Broadcast(Action);
-
-    return true;
+        OnActionRequested.Broadcast(Action);
+        return true;
+	}
+    return false;
 }
 
 bool UBMCombatComponent::IsCooldownReady(FName Key) const

@@ -21,8 +21,6 @@ public:
     // 关键：就是这个“无参构造”
     UBMCombatComponent();
 
-    bool CanPerformAction() const;
-
     // 统一接口（推荐上层用它）
     bool RequestAction(EBMCombatAction Action);
 
@@ -36,7 +34,7 @@ public:
     FBMOnActionRequested OnActionRequested;
 
     void SetActionLock(bool bLocked) { bActionLocked = bLocked; }
-
+	bool CanPerformAction(EBMCombatAction Action = EBMCombatAction::None) const;
     // ===== 冷却系统（Per Key）=====
     bool IsCooldownReady(FName Key) const;
     float GetCooldownRemaining(FName Key) const;
@@ -66,6 +64,8 @@ private:
 
     UPROPERTY(Transient)
     bool bHasActiveHitBoxContext = false;
+
+    bool bAllowBufferedNormalAttackWhileLocked = true;
 
     float GetWorldTimeSecondsSafe() const;
 };

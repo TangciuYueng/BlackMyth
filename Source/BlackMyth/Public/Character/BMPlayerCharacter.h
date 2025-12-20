@@ -82,13 +82,6 @@ public:
         return b;
     }
 
-    // Pending action（供 Attack 状态读取）
-    bool ConsumePendingAction(EBMCombatAction& OutAction);
-
-    // 招式选择与打断判定
-    bool SelectAttackSpec(EBMCombatAction Action, FBMPlayerAttackSpec& OutSpec) const;
-
-    void SetActiveAttackSpec(const FBMPlayerAttackSpec& Spec);
     void ClearActiveAttackSpec();
     bool ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) const;
     virtual bool ResolveHitBoxWindow(
@@ -96,6 +89,26 @@ public:
         TArray<FName>& OutHitBoxNames,
         FBMHitBoxActivationParams& OutParams
     ) const override;
+
+    void SetActiveAttackContext(
+        const TArray<FName>& HitBoxNames,
+        const FBMHitBoxActivationParams& Params,
+        bool bUninterruptible,
+        float InterruptChance,
+        float InterruptChanceOnHeavyHit
+    );
+    void ClearActiveAttackContext();
+
+
+    // 技能选择
+    bool SelectSkillSpec(EBMCombatAction Action, FBMPlayerAttackSpec& OutSpec) const;
+
+    // 连段访问
+    int32 GetComboStepCount() const { return NormalComboSteps.Num(); }
+    bool GetComboStep(int32 Index, FBMPlayerComboStep& Out) const;
+
+    // 播放 Recover
+    float PlayComboRecoverOnce(const FBMPlayerComboStep& Step);
 
     // === 纯C++动画播放接口 ===
     /**
@@ -113,8 +126,12 @@ public:
     void PlayMoveLoop();
 
     float PlayAttackOnce(const FBMPlayerAttackSpec& Spec);   // 新增：通用
-    float PlayHitOnce(const FBMDamageInfo& Info);            // 新增
-    float PlayDeathOnce();                                   // 新增
+    float PlayNormalAttackOnce(UAnimSequence* Seq,
+        float PlayRate = 1.0f,
+        float StartTime = 0.0f,
+        float MaxPlayTime = -1.0f);
+    float PlayHitOnce(const FBMDamageInfo& Info);            
+    float PlayDeathOnce();                                   
     float PlayDodgeOnce();
     FVector ComputeDodgeDirectionLocked() const;
     // === 跳跃更新 ===
@@ -136,16 +153,9 @@ public:
      */
     void  PlayFallLoop();
 
-    /**
-     * 播放一次性的轻攻击动画
-     *
-     * 由攻击状态调用，使用 AnimationSingleNode 模式播放非循环动画，
-     * 播放结束后由状态通过计时器或逻辑回调切换回其他状态
-     *
-     * @param PlayRate 动画播放速率，默认为 1.0。
-     * @return 动画实际播放时长（秒），若动画不存在则返回 0
-     */
-    float PlayLightAttackOnce(float PlayRate = 1.0f);
+    void EnqueueAction(EBMCombatAction Action);
+    bool ConsumeNextQueuedAction(EBMCombatAction& OutAction);
+    bool ConsumeOneQueuedNormalAttack(); 
 
 	FBMDamageInfo GetLastDamageInfo() const { return LastDamageInfo; }
 
@@ -200,18 +210,11 @@ private:
      */
     void Input_JumpPressed();
 
-    /**
-     * 攻击按键按下回调
-     *
-     * 将轻攻击请求转交给 Combat 组件，由 Combat 统一校验
-     * 能否执行攻击并触发对应的事件
-     */
-    void Input_AttackPressed();
-
     // 输入
-    void Input_AttackLightPressed();
-    void Input_AttackHeavyPressed();
     void Input_DodgePressed();
+
+    void Input_NormalAttackPressed();
+    void Input_Skill1Pressed();
 
     /**
      * 水平视角旋转输入回调
@@ -232,15 +235,6 @@ private:
      * @param Value 轴输入值，通常来自鼠标 Y
      */
     void Input_LookUp(float Value);
-
-    // Combat 事件：由 Input_AttackPressed -> Combat->RequestLightAttack() 触发
-    /**
-     * Combat 组件发出的轻攻击请求回调
-     *
-     * 当玩家攻击输入被 Combat 认可后调用，用于驱动状态机
-     * 切换到 Attack 状态
-     */
-    void OnLightAttackRequested();
 
     /**
      * 初始化并注册玩家相关的状态机状态
@@ -292,6 +286,7 @@ private:
         float StartTime = 0.0f,
         float MaxPlayTime = -1.0f
     );
+	void BuildAttackSteps();
 
     /**
      * 相机臂组件
@@ -333,26 +328,49 @@ private:
     UPROPERTY(EditAnywhere, Category = "BM|Assets")
     TObjectPtr<UAnimSequence> AnimMove;
 
-    /**
-     * 轻攻击动画序列
-     *
-     * 用于基于 AnimationSingleNode 的一次性攻击动作播放
-     */
-    UPROPERTY(EditAnywhere, Category = "BM|Assets")
-    TObjectPtr<UAnimSequence> AnimLightAttack;
-    
-    UPROPERTY(EditAnywhere, Category = "BM|Assets")
-    TObjectPtr<UAnimSequence> AnimHeavyAttack;
+    // === 普通攻击连段 ===
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Combo")
+    TArray<FBMPlayerComboStep> NormalComboSteps;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Combo")
+    TObjectPtr<UAnimSequence> AnimComboRecover = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Combo")
+    float ComboRecoverPlayRate = 1.0f;
+
+    // === 技能列表 ===
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Skill")
+    TArray<FBMPlayerSkillSlot> SkillSlots;
 
     UPROPERTY(EditAnywhere, Category = "BM|Assets")
     TObjectPtr<UAnimSequence> AnimDodge;
 
-    // 轻/重攻击规格
-    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
-    TArray<FBMPlayerAttackSpec> LightAttackSpecs;
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimNormalAttack1 = nullptr;
 
-    UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
-    TArray<FBMPlayerAttackSpec> HeavyAttackSpecs;
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimNormalAttack2 = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimNormalAttack3 = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimNormalAttack4 = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimNormalAttackRecover1 = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimNormalAttackRecover2 = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimNormalAttackRecover3 = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimNormalAttackRecover4 = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimSkill1 = nullptr;
 
     // 受击/死亡动画
     UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
@@ -364,12 +382,19 @@ private:
     UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
     TObjectPtr<UAnimSequence> AnimDeath = nullptr;
 
-    // Pending / Active
-    EBMCombatAction PendingAction = EBMCombatAction::None;
+    // 输入缓冲：支持连段多次按键
+    UPROPERTY(Transient)
+    TArray<EBMCombatAction> ActionQueue;
 
+    // 当前攻击上下文
+    bool bHasActiveAttackContext = false;
 
-    bool bHasActiveAttackSpec = false;
-    FBMPlayerAttackSpec ActiveAttackSpec;
+    TArray<FName> ActiveHitBoxNames;
+    FBMHitBoxActivationParams ActiveHitBoxParams;
+
+    bool bActiveUninterruptible = false;
+    float ActiveInterruptChance = 0.f;
+    float ActiveInterruptChanceOnHeavyHit = 0.f;
 
     FBMDamageInfo LastDamageInfo; 
 

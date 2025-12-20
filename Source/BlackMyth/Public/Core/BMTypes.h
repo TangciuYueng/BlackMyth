@@ -142,14 +142,11 @@ UENUM(BlueprintType)
 enum class EBMCombatAction : uint8
 {
     None        UMETA(DisplayName = "None"),
-    LightAttack UMETA(DisplayName = "Light Attack"),
-    HeavyAttack UMETA(DisplayName = "Heavy Attack"),
+    NormalAttack UMETA(DisplayName = "NormalAttack"), 
     Dodge       UMETA(DisplayName = "Dodge"),
-    // 先留接口：后续 SkillCast 状态会用
     Skill1      UMETA(DisplayName = "Skill 1"),
     Skill2      UMETA(DisplayName = "Skill 2"),
     Skill3      UMETA(DisplayName = "Skill 3"),
-    Ultimate    UMETA(DisplayName = "Ultimate"),
 };
 
 
@@ -372,6 +369,65 @@ struct FBMEnemyAttackSpec
 };
 
 USTRUCT(BlueprintType)
+struct FBMPlayerComboStep
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere)
+    FName Id = NAME_None;
+
+    UPROPERTY(EditAnywhere)
+    TObjectPtr<UAnimSequence> Anim = nullptr;
+
+    UPROPERTY(EditAnywhere)
+    float PlayRate = 1.0f;
+
+    UPROPERTY(EditAnywhere)
+    float StartTime = 0.0f;
+
+    UPROPERTY(EditAnywhere)
+    float MaxPlayTime = -1.0f;
+
+    // 连击窗口 = 本段结束前最后 LinkWindowSeconds 秒内按键有效
+    UPROPERTY(EditAnywhere)
+    float LinkWindowSeconds = 0.20f;
+
+    
+    UPROPERTY(EditAnywhere)
+    float LinkWindowEndOffset = 0.02f;
+
+    // 命中窗口
+    UPROPERTY(EditAnywhere)
+    TArray<FName> HitBoxNames;
+
+    UPROPERTY(EditAnywhere)
+    FBMHitBoxActivationParams HitBoxParams;
+
+    // 打断属性
+    UPROPERTY(EditAnywhere)
+    bool bUninterruptible = false;
+
+    UPROPERTY(EditAnywhere)
+    float InterruptChance = 0.65f;
+
+    UPROPERTY(EditAnywhere)
+    float InterruptChanceOnHeavyHit = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Combo|Recover")
+    TObjectPtr<UAnimSequence> RecoverAnim = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Combo|Recover")
+    float RecoverPlayRate = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Combo|Recover")
+    float RecoverStartTime = 0.0f;
+
+    // <=0 表示播到结尾
+    UPROPERTY(EditAnywhere, Category = "BM|Combo|Recover")
+    float RecoverMaxPlayTime = -1.0f;
+};
+
+USTRUCT(BlueprintType)
 struct FBMPlayerAttackSpec
 {
     GENERATED_BODY()
@@ -424,6 +480,19 @@ struct FBMPlayerAttackSpec
     FBMHitBoxActivationParams HitBoxParams;
 
 };
+
+USTRUCT(BlueprintType)
+struct FBMPlayerSkillSlot
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere)
+    EBMCombatAction Action = EBMCombatAction::Skill1;
+
+    UPROPERTY(EditAnywhere)
+    FBMPlayerAttackSpec Spec;
+};
+
 
 USTRUCT(BlueprintType)
 struct FBMDodgeSpec
@@ -750,7 +819,7 @@ namespace BMEnemyStateNames
 
 namespace BMCombatUtils
 {
-    FORCEINLINE bool IsHeavyIncoming(const FBMDamageInfo& Info)
+    inline bool IsHeavyIncoming(const FBMDamageInfo& Info)
     {
         switch (Info.HitReaction)
         {
@@ -761,5 +830,12 @@ namespace BMCombatUtils
             default:
                 return false;
         }
+    }
+
+    inline bool IsSkillAction(EBMCombatAction A)
+    {
+        return A == EBMCombatAction::Skill1
+            || A == EBMCombatAction::Skill2
+            || A == EBMCombatAction::Skill3;
     }
 }
