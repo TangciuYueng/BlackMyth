@@ -2,9 +2,15 @@
 
 #include "Character/Components/BMHitBoxComponent.h"
 #include "Character/Components/BMHurtBoxComponent.h"
+#include "Character/Components/BMStatsComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Animation/AnimSequence.h"
+#include "Animation/AnimSingleNodeInstance.h"
 #include "Engine/SkeletalMesh.h"
+
+#include "Character/Enemy/States/BMEnemyBossState_PhaseChange.h"
+#include "Character/Components/BMStateMachineComponent.h"
+#include "Core/BMTypes.h"
 
 ABMEnemyBoss::ABMEnemyBoss()
 {
@@ -14,10 +20,15 @@ ABMEnemyBoss::ABMEnemyBoss()
     PatrolSpeed = BossPatrolSpeed;
     ChaseSpeed = BossChaseSpeed;
 
+	GlobalAttackInterval = BossGlobalAttackInterval;
+	GlobalAttackIntervalDeviation = BossGlobalAttackIntervalDeviation;
+
     DodgeDistance = BossDodgeDistance;
     DodgeOnHitChance = BossDodgeOnHitChance;
     DodgeCooldown = BossDodgeCooldown;
     DodgeCooldownKey = BossDodgeCooldownKey;
+
+
 
     // ===== 体型/碰撞 =====
     ApplyBossBodyTuning();
@@ -31,7 +42,7 @@ ABMEnemyBoss::ABMEnemyBoss()
         TEXT("/Script/Engine.SkeletalMesh'/Game/ParagonRampage/Characters/Heroes/Rampage/Meshes/Rampage.Rampage'")));
 
     AnimIdleAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/Idle.Idle'")));
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/Idle_Biped.Idle_Biped'")));
     AnimWalkAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
         TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/Jog_Biped_Fwd.Jog_Biped_Fwd'")));
     AnimRunAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
@@ -42,7 +53,7 @@ ABMEnemyBoss::ABMEnemyBoss()
     AnimHitHeavyAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
         TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/Stun_Start.Stun_Start'")));
     AnimDeathAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/Death_A.Death_A'")));
+        TEXT("/Script/Engine.AnimSequence'/Game/Whisper/Animations/Anim_Whisper_Death.Anim_Whisper_Death'")));
 
     AnimDodgeAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
         TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/TravelMode_Bwd_Downhill.TravelMode_Bwd_Downhill'")));
@@ -53,6 +64,14 @@ ABMEnemyBoss::ABMEnemyBoss()
         TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/Attack_Biped_Melee_B.Attack_Biped_Melee_B'")));
     AttackHeavy1Asset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
         TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/Ability_RMB_Smash.Ability_RMB_Smash'")));
+
+    AnimEnergizeAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/Ability_Energize.Ability_Energize'")));
+    AttackPhase2Heavy2Asset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/Ability_GroundSmash_End.Ability_GroundSmash_End'")));
+    AttackPhase2Light3Asset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/Attack_Melee_C.Attack_Melee_C'")));
+
     
 }
 
@@ -81,6 +100,14 @@ void ABMEnemyBoss::BeginPlay()
 {
     ApplyConfiguredAssets();
     BuildAttackSpecs();
+
+	// 注册二阶段转换状态
+    if (UBMStateMachineComponent* Machine = GetFSM())
+    {
+        auto* SPhase = NewObject<UBMEnemyBossState_PhaseChange>(Machine);
+        SPhase->Init(this);
+        Machine->RegisterState(BMEnemyStateNames::PhaseChange, SPhase);
+    }
 
     // 调试可视化
     if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
@@ -111,6 +138,8 @@ void ABMEnemyBoss::ApplyConfiguredAssets()
     AnimDeath = AnimDeathAsset.IsNull() ? nullptr : AnimDeathAsset.LoadSynchronous();
 
     AnimDodge = AnimDodgeAsset.IsNull() ? nullptr : AnimDodgeAsset.LoadSynchronous();
+
+    AnimEnergize = AnimEnergizeAsset.IsNull() ? nullptr : AnimEnergizeAsset.LoadSynchronous();
 }
 
 void ABMEnemyBoss::BuildHurtBoxes()
@@ -153,7 +182,7 @@ void ABMEnemyBoss::BuildHitBoxes()
         Def.Name = TEXT("boss_hand_r_light");
         Def.Type = EBMHitBoxType::LightAttack;
         Def.AttachSocketOrBone = TEXT("hand_r");
-        Def.BoxExtent = FVector(18.f, 18.f, 18.f);
+        Def.BoxExtent = FVector(45.f, 45.f, 45.f);
 
         Def.DamageType = EBMDamageType::Melee;
         Def.ElementType = EBMElementType::Physical;
@@ -185,7 +214,7 @@ void ABMEnemyBoss::BuildHitBoxes()
         Def.Name = TEXT("boss_hand_l_light");
         Def.Type = EBMHitBoxType::LightAttack;
         Def.AttachSocketOrBone = TEXT("hand_l");
-        Def.BoxExtent = FVector(24.f, 24.f, 24.f);
+        Def.BoxExtent = FVector(45.f, 45.f, 45.f);
 
         Def.DamageType = EBMDamageType::Melee;
         Def.ElementType = EBMElementType::Physical;
@@ -231,7 +260,7 @@ void ABMEnemyBoss::BuildAttackSpecs()
             return P;
         };
 
-    // 轻攻击：覆盖更近距离
+    // 轻攻击
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Boss_Light_01");
@@ -286,7 +315,7 @@ void ABMEnemyBoss::BuildAttackSpecs()
     // 重攻击2：脚踢/砸地，远一点
     {
         FBMEnemyAttackSpec S;
-        S.Id = TEXT("Boss_Heavy_02");
+        S.Id = TEXT("Boss_Heavy_01");
         S.Anim = AttackHeavy1Asset.IsNull() ? nullptr : AttackHeavy1Asset.LoadSynchronous();
         S.AttackWeight = EBMEnemyAttackWeight::Heavy;
         S.Weight = 0.9f;
@@ -320,4 +349,167 @@ float ABMEnemyBoss::PlayDodgeOnce()
 {
     // 你 Dummy 用的是 PlayOnce(AnimDodge, DodgePlayRate, 0, 0.7)
     return PlayOnce(AnimDodge, DodgePlayRate, 0.0, 0.75f);
+}
+
+float ABMEnemyBoss::PlayEnergizeOnce()
+{
+    return PlayOnce(AnimEnergize, 0.7f);
+}
+
+void ABMEnemyBoss::HandleDeath(const FBMDamageInfo& LastHitInfo)
+{
+    LastDamageInfo = LastHitInfo;
+
+    // 第一次死亡
+    if (!bReviveUsed)
+    {
+        bReviveUsed = true;
+
+        // 进过渡状态
+        if (UBMStateMachineComponent* Machine = GetFSM())
+        {
+            Machine->ChangeStateByName(BMEnemyStateNames::PhaseChange);
+        }
+        return;
+    }
+
+    // 第二次死亡
+    Super::HandleDeath(LastHitInfo);
+}
+
+bool ABMEnemyBoss::CanBeDamagedBy(const FBMDamageInfo& Info) const
+{
+    if (bInPhaseTransition)
+    {
+        return false;
+    }
+    return Super::CanBeDamagedBy(Info);
+}
+
+void ABMEnemyBoss::EnterPhase2()
+{
+    if (bIsPhase2) return;
+    bIsPhase2 = true;
+
+    ApplyPhase2Tuning();
+    AddPhase2AttackSpecs();
+
+    //// 二阶段回到 idle 动画
+    //PlayIdleLoop();
+}
+
+void ABMEnemyBoss::ApplyPhase2Tuning()
+{
+    // 回满 + 提高最大血
+    if (UBMStatsComponent* S = GetStats())
+    {
+        S->ReviveToFull(Phase2MaxHP);
+    }
+
+    // 提高基础伤害
+    if (UBMHitBoxComponent* HB = GetHitBox())
+    {
+        HB->SetDamage(Phase2BaseDamage);
+    }
+
+}
+
+void ABMEnemyBoss::AddPhase2AttackSpecs()
+{
+    auto MakeWindowParams = [](float DamageMul, EBMHitReaction OverrideReaction)
+        {
+            FBMHitBoxActivationParams P;
+            P.bResetHitRecords = true;
+            P.DedupPolicy = EBMHitDedupPolicy::PerWindow;
+            P.MaxHitsPerTarget = 1;
+            P.DamageMultiplier = DamageMul;
+            P.bOverrideReaction = (OverrideReaction != EBMHitReaction::None);
+            P.OverrideReaction = OverrideReaction;
+            return P;
+        };
+
+    {
+        FBMEnemyAttackSpec S;
+        S.Id = TEXT("Boss_Ph2_Heavy_02");
+        S.Anim = AttackPhase2Heavy2Asset.IsNull() ? nullptr : AttackPhase2Heavy2Asset.LoadSynchronous();
+        S.AttackWeight = EBMEnemyAttackWeight::Heavy;
+        S.Weight = 1.2f;
+
+        S.MinRange = 0.f;
+        S.MaxRange = 200.f;
+        S.Cooldown = 3.8f;
+        S.PlayRate = 0.7f;
+
+        S.bUninterruptible = true;
+        S.InterruptChance = 0.f;
+        S.InterruptChanceOnHeavyHit = 0.f;
+
+        S.bStopPathFollowingOnEnter = true;
+        S.bFaceTargetOnEnter = true;
+
+        S.HitBoxNames = { TEXT("boss_hand_l_heavy"), TEXT("boss_hand_r_heavy") };
+        S.HitBoxParams = MakeWindowParams(1.8f, EBMHitReaction::Heavy);
+
+        if (S.Anim) AttackSpecs.Add(S);
+    }
+
+    {
+        FBMEnemyAttackSpec S;
+        S.Id = TEXT("Boss_Ph2_Light_03");
+        S.Anim = AttackPhase2Light3Asset.IsNull() ? nullptr : AttackPhase2Light3Asset.LoadSynchronous();
+        S.AttackWeight = EBMEnemyAttackWeight::Light;
+        S.Weight = 2.5f;
+
+        S.MinRange = 0.f;
+        S.MaxRange = 200.f;
+        S.Cooldown = 1.2f;
+        S.PlayRate = 1.0f;
+
+        S.bUninterruptible = false;
+        S.InterruptChance = 0.2f;
+        S.InterruptChanceOnHeavyHit = 0.6f;
+
+        S.bStopPathFollowingOnEnter = true;
+        S.bFaceTargetOnEnter = true;
+
+        S.HitBoxNames = { TEXT("boss_hand_l_light") };
+        S.HitBoxParams = MakeWindowParams(1.2f, EBMHitReaction::Light);
+
+        if (S.Anim) AttackSpecs.Add(S);
+    }
+}
+
+float ABMEnemyBoss::PlayDeathReverseOnce(float ReversePlayRate, float ReverseMaxTime)
+{
+    UAnimSequence* Seq = AnimDeath;
+    if (!Seq || !GetMesh()) return 0.f;
+
+    ReversePlayRate = FMath::Max(0.01f, ReversePlayRate);
+
+    GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+
+    UAnimSingleNodeInstance* Inst = GetMesh()->GetSingleNodeInstance();
+    if (!Inst)
+    {
+        // 先触发一次，确保 SingleNodeInstance 创建
+        GetMesh()->PlayAnimation(Seq, false);
+        Inst = GetMesh()->GetSingleNodeInstance();
+    }
+    if (!Inst) return Seq->GetPlayLength() / ReversePlayRate;
+
+    const float Len = Seq->GetPlayLength();
+
+    // 倒放区间
+    const float Effective = (ReverseMaxTime > 0.f) ? FMath::Min(Len, ReverseMaxTime) : Len;
+
+    // 从动画末尾开始倒放
+    const float StartPos = Len;
+    Inst->SetAnimationAsset(Seq, /*bIsLooping=*/false);
+    Inst->SetPosition(StartPos, /*bFireNotifies=*/true);
+
+    // 负播放率
+    Inst->SetPlayRate(-ReversePlayRate);
+    Inst->SetPlaying(true);
+
+    return Effective / ReversePlayRate;
 }

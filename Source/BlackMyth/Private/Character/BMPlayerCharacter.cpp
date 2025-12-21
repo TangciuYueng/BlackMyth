@@ -94,9 +94,12 @@ ABMPlayerCharacter::ABMPlayerCharacter()
 
         // 2) 动画（AnimSequence）
         static ConstructorHelpers::FObjectFinder<UAnimSequence> IdleFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Idle_Zero_Pose.Idle_Zero_Pose'")
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Idle_AO_CC.Idle_AO_CC'")
         );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> MoveFinder(
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> WalkFinder(
+            TEXT("/Script/Engine.AnimSequence'/Game/Stylized_Spruce_Forest/Demo/Game_Mode/Mannequin/Animations/ThirdPersonWalk.ThirdPersonWalk'")
+        );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> RunFinder(
             TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Jog_Fwd.Jog_Fwd'")
         );
         static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttack1Finder(
@@ -146,7 +149,8 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         );
 
         if (IdleFinder.Succeeded())                     AnimIdle = IdleFinder.Object;
-        if (MoveFinder.Succeeded())                     AnimMove = MoveFinder.Object;
+		if (WalkFinder.Succeeded())                     AnimWalk = WalkFinder.Object;
+		if (RunFinder.Succeeded())                      AnimRun = RunFinder.Object;
 		if (NormalAttack1Finder.Succeeded())            AnimNormalAttack1 = NormalAttack1Finder.Object;
 		if (NormalAttack2Finder.Succeeded())            AnimNormalAttack2 = NormalAttack2Finder.Object;
 		if (NormalAttack3Finder.Succeeded())            AnimNormalAttack3 = NormalAttack3Finder.Object;
@@ -174,7 +178,7 @@ ABMPlayerCharacter::ABMPlayerCharacter()
     // === HurtBoxes ===
     UBMHurtBoxComponent* Head = CreateDefaultSubobject<UBMHurtBoxComponent>(TEXT("HB_Head"));
     Head->AttachSocketOrBone = TEXT("head");
-    Head->BoxExtent = FVector(16, 16, 16);
+    Head->BoxExtent = FVector(20, 20, 20);
     Head->DamageMultiplier = 1.6f; // 头部更疼
 
     UBMHurtBoxComponent* Abdomen = CreateDefaultSubobject<UBMHurtBoxComponent>(TEXT("HB_Abdomen"));
@@ -199,7 +203,7 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         Light.Name = TEXT("LightAttack");
         Light.Type = EBMHitBoxType::LightAttack;
         Light.AttachSocketOrBone = TEXT("weapon_r");  
-        Light.BoxExtent = FVector(8, 108, 8);
+        Light.BoxExtent = FVector(8, 130, 8);
         Light.DamageType = EBMDamageType::Melee;
         Light.ElementType = EBMElementType::Physical;
         Light.DamageScale = 1.0f;
@@ -230,6 +234,8 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         HB->RegisterDefinition(Heavy);
     }
     BuildAttackSteps();
+
+    Stats->GetStatBlockMutable().Attack = 100.0f;
 }
 
 void ABMPlayerCharacter::BeginPlay()
@@ -238,14 +244,18 @@ void ABMPlayerCharacter::BeginPlay()
 
     InitFSMStates();
 
-    // 绑定 Combat 事件：输入攻击只发请求，FSM 切 Attack 由这里统一处理
+    // 绑定 Combat 事件
     if (UBMCombatComponent* C = GetCombat())
     {
         C->OnActionRequested.AddUObject(this, &ABMPlayerCharacter::OnActionRequested);
     }
-
+    bSprintHeld = false;
+    ApplyGait();
     // 初始动画
     PlayIdleLoop();
+
+	Stats->GetStatBlockMutable().MaxHP = 1000.f;
+	Stats->GetStatBlockMutable().HP = 1000.f;
 
 	// 调试：启用 HitBox/HurtBox 可视化
     if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
@@ -265,7 +275,7 @@ void ABMPlayerCharacter::BuildAttackSteps()
         Step.Id = TEXT("Normal_01");
         Step.Anim = AnimNormalAttack1;
         Step.PlayRate = 1.5f;
-        Step.LinkWindowSeconds = 0.30f;
+        Step.LinkWindowSeconds = 0.50f;
 
         Step.HitBoxNames = { TEXT("LightAttack") };
         Step.HitBoxParams.bOverrideReaction = true;
@@ -284,7 +294,7 @@ void ABMPlayerCharacter::BuildAttackSteps()
         Step.Id = TEXT("Normal_02");
         Step.Anim = AnimNormalAttack2;
         Step.PlayRate = 1.3f;
-        Step.LinkWindowSeconds = 0.30f;
+        Step.LinkWindowSeconds = 0.50f;
 
         Step.HitBoxNames = { TEXT("LightAttack") };
         Step.HitBoxParams.bOverrideReaction = true;
@@ -303,7 +313,7 @@ void ABMPlayerCharacter::BuildAttackSteps()
         Step.Id = TEXT("Normal_03");
         Step.Anim = AnimNormalAttack3;
         Step.PlayRate = 1.3f;
-        Step.LinkWindowSeconds = 0.30f;
+        Step.LinkWindowSeconds = 0.50f;
 
         Step.HitBoxNames = { TEXT("LightAttack") };
         Step.HitBoxParams.bOverrideReaction = true;
@@ -322,7 +332,7 @@ void ABMPlayerCharacter::BuildAttackSteps()
         Step.Id = TEXT("Normal_04");
         Step.Anim = AnimNormalAttack4;
         Step.PlayRate = 1.0f;
-        Step.LinkWindowSeconds = 0.30f;
+        Step.LinkWindowSeconds = 0.50f;
 
         Step.HitBoxNames = { TEXT("LightAttack") };
         Step.HitBoxParams.bOverrideReaction = true;
@@ -415,6 +425,10 @@ void ABMPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
     PlayerInputComponent->BindAction(TEXT("NormalAttack"), IE_Pressed, this, &ABMPlayerCharacter::Input_NormalAttackPressed);
     PlayerInputComponent->BindAction(TEXT("Skill1"), IE_Pressed, this, &ABMPlayerCharacter::Input_Skill1Pressed);
     PlayerInputComponent->BindAction(TEXT("Dodge"), IE_Pressed, this, &ABMPlayerCharacter::Input_DodgePressed);
+
+    PlayerInputComponent->BindAction(TEXT("Sprint"), IE_Pressed, this, &ABMPlayerCharacter::Input_SprintPressed);
+    PlayerInputComponent->BindAction(TEXT("Sprint"), IE_Released, this, &ABMPlayerCharacter::Input_SprintReleased);
+
 
     PlayerInputComponent->BindAxis(TEXT("Turn"), this, &ABMPlayerCharacter::Input_Turn);
     PlayerInputComponent->BindAxis(TEXT("LookUp"), this, &ABMPlayerCharacter::Input_LookUp);
@@ -536,7 +550,6 @@ void ABMPlayerCharacter::Input_MoveRight(float Value)
 
 void ABMPlayerCharacter::UpdateMoveIntent()
 {
-    // 如果当前动作被锁（例如 Attack 状态），就不再驱动移动输入
     if (UBMCombatComponent* C = GetCombat())
     {
         if (!C->CanPerformAction())
@@ -544,6 +557,8 @@ void ABMPlayerCharacter::UpdateMoveIntent()
             return;
         }
     }
+
+    if (HasMoveIntent()) ApplyGait();
 
     if (Controller && HasMoveIntent())
     {
@@ -553,6 +568,43 @@ void ABMPlayerCharacter::UpdateMoveIntent()
 
         AddMovementInput(Forward, MoveIntent.X);
         AddMovementInput(Right, MoveIntent.Y);
+    }
+}
+
+void ABMPlayerCharacter::Input_SprintPressed()
+{
+    if (UBMCombatComponent* C = GetCombat())
+    {
+        if (!C->CanPerformAction())
+        {
+            return;
+        }
+    }
+
+    bSprintHeld = true;
+    ApplyGait();
+}
+
+void ABMPlayerCharacter::Input_SprintReleased()
+{
+    bSprintHeld = false;
+    ApplyGait();
+}
+
+void ABMPlayerCharacter::ApplyGait()
+{
+    UCharacterMovementComponent* Move = GetCharacterMovement();
+    if (!Move) return;
+
+    // 速度切换
+    Move->MaxWalkSpeed = bSprintHeld ? RunSpeed : WalkSpeed;
+
+    if (UBMStateMachineComponent* Machine = GetFSM())
+    {
+        if (Machine->GetCurrentStateName() == BMStateNames::Move)
+        {
+            PlayMoveLoop();
+        }
     }
 }
 
@@ -788,7 +840,8 @@ void ABMPlayerCharacter::PlayIdleLoop()
 
 void ABMPlayerCharacter::PlayMoveLoop()
 {
-    PlayLoop(AnimMove);
+	UAnimSequence* Seq = bSprintHeld ? AnimRun : AnimWalk;
+	PlayLoop(Seq);
 }
 
 float ABMPlayerCharacter::PlayJumpStartOnce(float PlayRate)

@@ -189,7 +189,6 @@ void ABMCharacterBase::HandleStatsDeath(AActor* Killer)
 void ABMCharacterBase::HandleDeath(const FBMDamageInfo& LastHitInfo)
 {
     (void)LastHitInfo;
-    // 留给派生类：敌人掉落/玩家复活/切UI/禁用输入等
 }
 
 bool ABMCharacterBase::GetActiveHitWindow(TArray<FName>& OutHitBoxNames, FBMHitBoxActivationParams& OutParams) const

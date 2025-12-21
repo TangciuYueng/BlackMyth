@@ -836,6 +836,7 @@ namespace BMEnemyStateNames
     static const FName Attack = TEXT("Enemy.Attack");
     static const FName Hit = TEXT("Enemy.Hit");
     static const FName Death = TEXT("Enemy.Death");
+    static const FName PhaseChange = TEXT("PhaseChange");
 }
 
 namespace BMCombatUtils

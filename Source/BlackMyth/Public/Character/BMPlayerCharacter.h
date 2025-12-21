@@ -160,8 +160,15 @@ public:
     void EnqueueAction(EBMCombatAction Action);
     bool ConsumeNextQueuedAction(EBMCombatAction& OutAction);
     bool ConsumeOneQueuedNormalAttack(); 
-
+    bool IsSprinting() const { return bSprintHeld; }
+    void ApplyGait();
 	FBMDamageInfo GetLastDamageInfo() const { return LastDamageInfo; }
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Gait")
+    float WalkSpeed = 350.f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Gait")
+    float RunSpeed = 600.f;
 
     UPROPERTY(EditAnywhere, Category = "BM|Player|Dodge")
     float DodgeCooldown = 1.2f;
@@ -195,6 +202,9 @@ private:
      * @param Value 轴输入值，通常位于 [-1, 1]
      */
     void Input_MoveForward(float Value);
+
+    void Input_SprintPressed();
+    void Input_SprintReleased();
 
     /**
      * 处理左右移动轴输入
@@ -343,13 +353,11 @@ public:
     UPROPERTY(EditAnywhere, Category = "BM|Assets")
     TObjectPtr<UAnimSequence> AnimIdle;
 
-    /**
-     * 移动/跑步循环动画序列
-     *
-     * 在 Move 状态下使用，表现角色奔跑或移动时的动作
-     */
-    UPROPERTY(EditAnywhere, Category = "BM|Assets")
-    TObjectPtr<UAnimSequence> AnimMove;
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Gait")
+    TObjectPtr<UAnimSequence> AnimWalk = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Gait")
+    TObjectPtr<UAnimSequence> AnimRun = nullptr;
 
     // === 普通攻击连段 ===
     UPROPERTY(EditAnywhere, Category = "BM|Player|Combo")
@@ -453,6 +461,8 @@ private:
      * 由输入回调更新，再由 UpdateMoveIntent() 统一应用
      */
     FVector2D MoveIntent = FVector2D::ZeroVector;
+
+    bool bSprintHeld = false;
 
     /**
      * 当前正在播放的循环动画引用

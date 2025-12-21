@@ -169,7 +169,15 @@ protected:
     TArray<FBMEnemyAttackSpec> AttackSpecs;
 
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack", meta = (ClampMin = "0"))
-    float AttackRangeOverride = -1.f; // <0 则由 AttackSpec MaxRange 决定
+    float AttackRangeOverride = -1.f; 
+
+    // 攻击之间的全局最小间隔
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack")
+    float GlobalAttackInterval = 2.0f;
+
+    // 全局间隔的随机浮动范围
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack")
+    float GlobalAttackIntervalDeviation = 0.5f;
 
     // 移动速度（便于不同敌人复用）
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Move")

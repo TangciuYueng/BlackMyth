@@ -35,11 +35,23 @@ void UBMDeathWidget::NativeDestruct()
 void UBMDeathWidget::OnRestartClicked()
 {
 	// Reload current level
-	if (UWorld* World = GetWorld())
-	{
-		const FName MapName = FName(*UGameplayStatics::GetCurrentLevelName(this, true));
-		UGameplayStatics::OpenLevel(this, MapName);
-	}
+    if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+    {
+        FInputModeGameOnly InputMode;
+        PC->SetInputMode(InputMode);
+        PC->bShowMouseCursor = false;
+    }
+
+    if (UBMUIManagerSubsystem* UI = GetUIManager())
+    {
+        UI->HideDeath();
+    }
+
+    const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(this, true);
+    if (!CurrentLevelName.IsEmpty())
+    {
+        UGameplayStatics::OpenLevel(this, FName(*CurrentLevelName));
+    }
 }
 
 void UBMDeathWidget::OnQuitClicked()

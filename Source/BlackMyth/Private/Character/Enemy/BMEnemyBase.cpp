@@ -200,6 +200,10 @@ bool ABMEnemyBase::IsInAttackRange() const
 
 bool ABMEnemyBase::CanStartAttack() const
 {
+    if (GetWorld() && GetWorld()->GetTimeSeconds() < NextAttackAllowedTime)
+    {
+        return false;
+    }
     if (!HasValidTarget()) return false;
 
     if (UCharacterMovementComponent* Move = GetCharacterMovement())
@@ -228,7 +232,11 @@ bool ABMEnemyBase::CanStartAttack() const
 void ABMEnemyBase::CommitAttackCooldown(float CooldownSeconds)
 {
     const float Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
-    NextAttackAllowedTime = Now + FMath::Max(0.f, CooldownSeconds);
+    // ¼ÆËãËæ»ú¼ä¸ô
+    const float RandomDev = FMath::FRandRange(-GlobalAttackIntervalDeviation, GlobalAttackIntervalDeviation);
+    const float ActualInterval = FMath::Max(0.f, GlobalAttackInterval + RandomDev);
+
+    NextAttackAllowedTime = Now + ActualInterval;
 }
 
 bool ABMEnemyBase::SelectRandomAttackForCurrentTarget(FBMEnemyAttackSpec& OutSpec) const
@@ -591,7 +599,6 @@ bool ABMEnemyBase::ResolveHitBoxWindow(
 
 bool ABMEnemyBase::TryEvadeIncomingHit(const FBMDamageInfo& InInfo)
 {
-    UE_LOG(LogTemp, Log, TEXT("[%s] TryEvadeIncomingHit: ENTER"), *GetName());
     UBMStatsComponent* S = GetStats();
     if (S && S->IsDead()) return false;
 

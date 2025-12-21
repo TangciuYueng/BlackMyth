@@ -38,16 +38,16 @@ public:
 
     const FBMStatBlock& GetStatBlock() const { return Stats; }
     FBMStatBlock& GetStatBlockMutable() { return Stats; }
-
+    void ReviveToFull(float NewMaxHP);
     void InitializeFromBlock(const FBMStatBlock& In);
 
 public:
-    UPROPERTY(EditAnywhere, Category = "BM|Stats")
-    FBMStatBlock Stats;
-
     FBMOnDeathNative OnDeathNative;
 
 private:
+    UPROPERTY(EditAnywhere, Category = "BM|Stats")
+    FBMStatBlock Stats;
+
     bool bDeathBroadcasted = false;
     TSet<FName> Tags;
 };

@@ -65,18 +65,18 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
                 // Try to load a default death widget if available. You can also expose in GI if preferred.
                 if (UClass* DeathClass = LoadClass<UBMDeathWidget>(nullptr, TEXT("/Game/UI/WBP_Death.WBP_Death_C")))
                 {
-                    UI->ShowDeath(DeathClass);
+                    // UI->ShowDeath(DeathClass);
                     // Switch to UI-only input so player cannot control character and can use mouse to click
-                    if (UWorld* World = GetWorld())
-                    {
-                        if (APlayerController* PC = World->GetFirstPlayerController())
-                        {
-                            FInputModeUIOnly InputMode;
-                            InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-                            PC->SetInputMode(InputMode);
-                            PC->bShowMouseCursor = true;
-                        }
-                    }
+                    //if (UWorld* World = GetWorld())
+                    //{
+                    //    if (APlayerController* PC = World->GetFirstPlayerController())
+                    //    {
+                    //        FInputModeUIOnly InputMode;
+                    //        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+                    //        PC->SetInputMode(InputMode);
+                    //        PC->bShowMouseCursor = true;
+                    //    }
+                    //}
                 }
             }
         }
@@ -99,6 +99,13 @@ bool UBMStatsComponent::TryConsumeMP(float Amount)
     if (Stats.MP < Amount) return false;
     Stats.MP -= Amount;
     return true;
+}
+
+void UBMStatsComponent::ReviveToFull(float NewMaxHP)
+{
+    Stats.MaxHP = FMath::Max(1.f, NewMaxHP);
+    Stats.HP = Stats.MaxHP;
+    bDeathBroadcasted = false;
 }
 
 void UBMStatsComponent::AddGameplayTag(FName Tag)

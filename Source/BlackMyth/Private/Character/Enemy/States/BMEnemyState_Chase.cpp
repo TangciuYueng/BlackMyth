@@ -40,10 +40,10 @@ void UBMEnemyState_Chase::OnUpdate(float DeltaTime)
         return;
     }
 
-    // 追击（移动执行交给 AIController）
-    E->RequestMoveToTarget(90.f);
+    // 追击
+    E->RequestMoveToTarget(1.f);
 
-    // 面向目标（动作游戏手感更好）
+    // 面向目标
     E->FaceTarget(DeltaTime);
 
 
