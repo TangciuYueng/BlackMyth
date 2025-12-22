@@ -1,25 +1,28 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Core/BMTypes.h"
 #include "BMAnimEventComponent.generated.h"
 
-UCLASS(ClassGroup = (BM), meta = (BlueprintSpawnableComponent))
+
+UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class BLACKMYTH_API UBMAnimEventComponent : public UActorComponent
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
-public:
-    UBMAnimEventComponent();
+public:	
+	// Sets default values for this component's properties
+	UBMAnimEventComponent();
 
-    void Anim_OpenHitBox(EBMHitBoxType Type);
-    void Anim_CloseHitBox();
-    void Anim_ResetHitList();
+protected:
+	// Called when the game starts
+	virtual void BeginPlay() override;
 
-    void Anim_PublishEvent(FName EventTag);
-    void Anim_SpawnEffect(FName EffectName);
+public:	
+	// Called every frame
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-private:
-    class ABMCharacterBase* GetOwnerCharacter() const;
+		
 };

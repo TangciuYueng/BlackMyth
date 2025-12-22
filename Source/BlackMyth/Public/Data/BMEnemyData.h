@@ -24,9 +24,10 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Assets")
     FSoftObjectPath MeshPath;
 
-    // 动画路径 
+    // 动画蓝图类路径 (Class Path)
+    // 格式通常是: /Game/Path/ABP_Name.ABP_Name_C
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Assets")
-    FSoftObjectPath AnimPath;
+    FSoftClassPath AnimBPPath;
 
     // 行为树路径
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI")

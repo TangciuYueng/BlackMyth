@@ -1,78 +1,34 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
 #include "Character/Components/BMStatsComponent.h"
 
-DEFINE_LOG_CATEGORY(LogBMStats);
-
+// Sets default values for this component's properties
 UBMStatsComponent::UBMStatsComponent()
 {
-    PrimaryComponentTick.bCanEverTick = false;
+	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
+	// off to improve performance if you don't need them.
+	PrimaryComponentTick.bCanEverTick = true;
+
+	// ...
 }
 
-float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
+
+// Called when the game starts
+void UBMStatsComponent::BeginPlay()
 {
-    if (IsDead())
-    {
-        InOutInfo.DamageValue = 0.f;
-        return 0.f;
-    }
+	Super::BeginPlay();
 
-    const float Input = InOutInfo.DamageValue;
-    if (Input <= 0.f)
-    {
-        InOutInfo.DamageValue = 0.f;
-        return 0.f;
-    }
-
-    // TrueDamage ���Է���������Ĭ�ϳԷ����������ɸ�����/������
-    float Mitigated = Input;
-    if (InOutInfo.DamageType != EBMDamageType::TrueDamage)
-    {
-        Mitigated = FMath::Max(0.f, Input - Stats.Defense);
-    }
-
-    const float OldHP = Stats.HP;
-    Stats.HP = FMath::Clamp(Stats.HP - Mitigated, 0.f, Stats.MaxHP);
-
-    const float Applied = OldHP - Stats.HP;
-
-    // �������������Ѫ�������� UI/Ʈ��/EventBus��
-    InOutInfo.DamageValue = Applied;
-
-    if (IsDead() && !bDeathBroadcasted)
-    {
-        bDeathBroadcasted = true;
-        OnDeathNative.Broadcast(InOutInfo.InstigatorActor.Get());
-    }
-
-    return Applied;
+	// ...
+	
 }
 
-bool UBMStatsComponent::TryConsumeStamina(float Amount)
+
+// Called every frame
+void UBMStatsComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
-    if (Amount <= 0.f) return true;
-    if (Stats.Stamina < Amount) return false;
-    Stats.Stamina -= Amount;
-    return true;
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	// ...
 }
 
-bool UBMStatsComponent::TryConsumeMP(float Amount)
-{
-    if (Amount <= 0.f) return true;
-    if (Stats.MP < Amount) return false;
-    Stats.MP -= Amount;
-    return true;
-}
-
-void UBMStatsComponent::AddGameplayTag(FName Tag)
-{
-    if (!Tag.IsNone()) Tags.Add(Tag);
-}
-
-void UBMStatsComponent::RemoveGameplayTag(FName Tag)
-{
-    if (!Tag.IsNone()) Tags.Remove(Tag);
-}
-
-bool UBMStatsComponent::HasGameplayTag(FName Tag) const
-{
-    return !Tag.IsNone() && Tags.Contains(Tag);
-}
