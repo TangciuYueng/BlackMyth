@@ -13,12 +13,5 @@ UCLASS()
 class BLACKMYTH_API ABMPlayerController : public APlayerController
 {
 	GENERATED_BODY()
-
-protected:
-    virtual void BeginPlay() override;
-    virtual void SetupInputComponent() override;
-
-private:
-    void ShowMainMenu();
-    void TogglePauseMenu();
+	
 };

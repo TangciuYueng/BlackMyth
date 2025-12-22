@@ -1,55 +1,28 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Core/BMTypes.h"
 #include "BMStatsComponent.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogBMStats, Log, All);
 
-// ��C++�����¼���������ͼ��
-DECLARE_MULTICAST_DELEGATE_OneParam(FBMOnDeathNative, AActor* /*Killer*/);
-
-UCLASS(ClassGroup = (BM), meta = (BlueprintSpawnableComponent))
+UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class BLACKMYTH_API UBMStatsComponent : public UActorComponent
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
-public:
-    UBMStatsComponent();
+public:	
+	// Sets default values for this component's properties
+	UBMStatsComponent();
 
-    // ͳһʹ�� FBMDamageInfo ��Ϊ�˺����壨����� DamageValue = ������Ч�˺���
-    float ApplyDamage(FBMDamageInfo& InOutInfo);
+protected:
+	// Called when the game starts
+	virtual void BeginPlay() override;
 
-    bool IsDead() const { return Stats.HP <= 0.f; }
+public:	
+	// Called every frame
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-    bool TryConsumeStamina(float Amount);
-
-    /**
-     * 尝试消耗魔法值（MP）
-     * 
-     * @param Amount 要消耗的 MP 数量（必须大于0）
-     * @return 如果当前 MP 足够并成功消耗返回 true，否则返回 false
-     */
-    bool TryConsumeMP(float Amount);
-
-    void AddGameplayTag(FName Tag);
-    void RemoveGameplayTag(FName Tag);
-    bool HasGameplayTag(FName Tag) const;
-
-    // ���ڽ�ɫ/ϵͳ��ȡ
-    const FBMStatBlock& GetStatBlock() const { return Stats; }
-    FBMStatBlock& GetStatBlockMutable() { return Stats; }
-
-
-
-public:
-    UPROPERTY(EditAnywhere, Category = "BM|Stats")
-    FBMStatBlock Stats;
-
-    FBMOnDeathNative OnDeathNative;
-
-private:
-    bool bDeathBroadcasted = false;
-    TSet<FName> Tags;
+		
 };
