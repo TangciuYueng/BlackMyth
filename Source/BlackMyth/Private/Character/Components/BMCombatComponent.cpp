@@ -1,34 +1,37 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Character/Components/BMCombatComponent.h"
 
-// Sets default values for this component's properties
+DEFINE_LOG_CATEGORY(LogBMCombat);
+
 UBMCombatComponent::UBMCombatComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
+    PrimaryComponentTick.bCanEverTick = false;
 }
 
-
-// Called when the game starts
-void UBMCombatComponent::BeginPlay()
+bool UBMCombatComponent::CanPerformAction() const
 {
-	Super::BeginPlay();
-
-	// ...
-	
+    return !bActionLocked;
 }
 
-
-// Called every frame
-void UBMCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+bool UBMCombatComponent::RequestLightAttack()
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// ...
+    if (!CanPerformAction())
+    {
+        return false;
+    }
+    OnLightAttackRequested.Broadcast();
+    return true;
 }
 
+void UBMCombatComponent::RequestSkill(int32 Slot)
+{
+    if (!CanPerformAction())
+    {
+        return;
+    }
+    OnSkillRequested.Broadcast(Slot);
+}
+
+void UBMCombatComponent::ResetHitList()
+{
+    // 具体命中列表在 HitBoxComponent 内维护；这里只留接口给 AnimEvent 调用
+}
