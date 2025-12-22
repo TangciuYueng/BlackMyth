@@ -19,12 +19,38 @@
 
 #include "Animation/AnimSingleNodeInstance.h"
 
+#include "System/Audio/BMLevelMusicSubsystem.h"
+#include "Sound/SoundBase.h"
+
 
 ABMPlayerCharacter::ABMPlayerCharacter()
 {
     CharacterType = EBMCharacterType::Player;
     Team = EBMTeam::Player;
 
+<<<<<<< Updated upstream
+=======
+    Inventory = CreateDefaultSubobject<UBMInventoryComponent>(TEXT("Inventory"));
+
+	// Scheme B: set a default inventory UI widget class in pure C++.
+	// Note: update this path to match your widget blueprint asset if different.
+	static ConstructorHelpers::FClassFinder<UUserWidget> InventoryWidgetClassFinder(
+		TEXT("/Game/UI/WBP_Inventory")
+	);
+	if (InventoryWidgetClassFinder.Succeeded() && Inventory)
+	{
+		Inventory->SetInventoryWidgetClass(InventoryWidgetClassFinder.Class);
+	}
+
+	static ConstructorHelpers::FObjectFinder<USoundBase> DeathSoundFinder(
+		TEXT("/Script/Engine.SoundWave'/Game/Audio/death.death'")
+	);
+	if (DeathSoundFinder.Succeeded())
+	{
+		DeathSound = DeathSoundFinder.Object;
+	}
+
+>>>>>>> Stashed changes
     // === 相机臂（跟随旋转来自 Controller） ===
     CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
     CameraBoom->SetupAttachment(RootComponent);
@@ -128,6 +154,23 @@ ABMPlayerCharacter::ABMPlayerCharacter()
 void ABMPlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
+
+	if (UBMStatsComponent* S = GetStats())
+	{
+		S->OnDeathNative.AddLambda([this](AActor* /*Killer*/)
+		{
+			if (UWorld* World = GetWorld())
+			{
+				if (UGameInstance* GI = World->GetGameInstance())
+				{
+					if (UBMLevelMusicSubsystem* Music = GI->GetSubsystem<UBMLevelMusicSubsystem>())
+					{
+						Music->PlayDeathMusic();
+					}
+				}
+			}
+		});
+	}
 
     InitFSMStates();
 

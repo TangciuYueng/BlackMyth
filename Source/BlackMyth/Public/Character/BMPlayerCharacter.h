@@ -11,6 +11,11 @@ class UInputComponent;
 class UAnimMontage;
 class USpringArmComponent;
 class UCameraComponent;
+<<<<<<< Updated upstream
+=======
+class UBMInventoryComponent;
+class USoundBase;
+>>>>>>> Stashed changes
 
 UCLASS()
 /**
@@ -330,5 +335,14 @@ private:
      */
     UPROPERTY(Transient)
     TObjectPtr<UAnimSequence> CurrentLoopAnim = nullptr;
+<<<<<<< Updated upstream
+=======
+
+    UPROPERTY(VisibleAnywhere, Category = "BM|Components")
+    TObjectPtr<UBMInventoryComponent> Inventory;
+
+	UPROPERTY(VisibleAnywhere, Category = "BM|Audio")
+	TObjectPtr<USoundBase> DeathSound = nullptr;
+>>>>>>> Stashed changes
 };
 
