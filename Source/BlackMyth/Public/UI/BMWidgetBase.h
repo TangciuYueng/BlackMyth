@@ -8,6 +8,8 @@
 
 class UBMEventBusSubsystem;
 class UBMUIManagerSubsystem;
+class UTextBlock;
+class UBMDataSubsystem;
 
 #include "BMWidgetBase.generated.h"
 
@@ -28,6 +30,13 @@ protected:
 
     UBMEventBusSubsystem* GetEventBus() const;
     UBMUIManagerSubsystem* GetUIManager() const;
+
+    // Auto-fill item prices into TextBlocks named with a convention:
+    //   - Price_<ItemID>
+    //   - ItemPrice_<ItemID>
+    // Example: a TextBlock named Price_Item_JiuZhuanJinDan will show that item's price
+    UFUNCTION(BlueprintCallable, Category = "BM|UI|ItemPrice")
+    void RefreshNamedItemPrices();
 
 private:
     UBMEventBusSubsystem* CachedEventBus = nullptr;
