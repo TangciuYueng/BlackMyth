@@ -28,6 +28,9 @@
 #include "Core/BMDataSubsystem.h"
 
 #include "Animation/AnimSingleNodeInstance.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
+#include "BMGameInstance.h"
 
 
 ABMPlayerCharacter::ABMPlayerCharacter()
@@ -911,6 +914,22 @@ void ABMPlayerCharacter::HandleDeath(const FBMDamageInfo& LastHitInfo)
     if (UBMStateMachineComponent* Machine = GetFSM())
     {
         Machine->ChangeStateByName(BMStateNames::Death);
+    }
+
+    // Stop any level music via GameInstance
+    if (UWorld* World = GetWorld())
+    {
+        if (UBMGameInstance* GI = Cast<UBMGameInstance>(World->GetGameInstance()))
+        {
+            GI->StopLevelMusic();
+        }
+    }
+
+    // Play death music
+    static const TCHAR* DeathSoundPath = TEXT("/Game/Audio/death.death");
+    if (USoundBase* DeathSound = LoadObject<USoundBase>(nullptr, DeathSoundPath))
+    {
+        UGameplayStatics::PlaySound2D(GetWorld(), DeathSound);
     }
 
     Super::HandleDeath(LastHitInfo);
