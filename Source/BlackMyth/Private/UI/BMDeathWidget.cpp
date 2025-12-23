@@ -5,6 +5,7 @@
 #include "System/UI/BMUIManagerSubsystem.h"
 #include "BMGameInstance.h"
 #include "UI/BMMainWidget.h"
+#include "Character/Components/BMStatsComponent.h"
 
 void UBMDeathWidget::NativeConstruct()
 {
@@ -34,23 +35,22 @@ void UBMDeathWidget::NativeDestruct()
 
 void UBMDeathWidget::OnRestartClicked()
 {
-	// Reload current level
-    if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+    // Reload current level (clean reset of animations, movement, input, etc.)
+    if (UWorld* World = GetWorld())
     {
-        FInputModeGameOnly InputMode;
-        PC->SetInputMode(InputMode);
-        PC->bShowMouseCursor = false;
-    }
-
-    if (UBMUIManagerSubsystem* UI = GetUIManager())
-    {
-        UI->HideDeath();
-    }
-
-    const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(this, true);
-    if (!CurrentLevelName.IsEmpty())
-    {
-        UGameplayStatics::OpenLevel(this, FName(*CurrentLevelName));
+        const FName MapName = FName(*UGameplayStatics::GetCurrentLevelName(this, /*bRemovePrefixPIE*/ true));
+        // Capture persistent data (coins/exp/items) in GI before reload
+        if (UGameInstance* GI = World->GetGameInstance())
+        {
+            if (auto* BMGI = Cast<UBMGameInstance>(GI))
+            {
+                if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+                {
+                    BMGI->CapturePlayerPersistentData(PC);
+                }
+            }
+        }
+        UGameplayStatics::OpenLevel(this, MapName);
     }
 }
 

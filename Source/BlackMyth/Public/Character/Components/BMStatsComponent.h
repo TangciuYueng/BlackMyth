@@ -39,6 +39,9 @@ public:
     void ReviveToFull(float NewMaxHP);
     void InitializeFromBlock(const FBMStatBlock& In);
 
+    // Revive the owner by restoring HP to MaxHP and clearing death state
+    void Revive();
+
 public:
     FBMOnDeathNative OnDeathNative;
 

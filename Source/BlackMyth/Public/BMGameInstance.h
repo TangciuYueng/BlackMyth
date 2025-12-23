@@ -26,6 +26,21 @@ public:
     // Ĭ����Ϸ��ͼ·�������� /Game/Maps/MyDefaultMap ���ʲ��� MyDefaultMap��
     UPROPERTY(EditDefaultsOnly, Category="Maps") FString DefaultGameMapPath;
 
+public:
+    // Simple persistent data kept across level reloads
+    UPROPERTY(BlueprintReadWrite, Category="Persistent") int32 PersistentCoins = 0;
+    UPROPERTY(BlueprintReadWrite, Category="Persistent") int32 PersistentExp = 0;
+    UPROPERTY(BlueprintReadWrite, Category="Persistent") int32 PersistentItemCount = 0; // optional aggregate
+    UPROPERTY(BlueprintReadWrite, Category="Persistent") int32 PersistentLevel = 1;
+    UPROPERTY(BlueprintReadWrite, Category="Persistent") int32 PersistentSkillPoints = 0;
+    UPROPERTY(BlueprintReadWrite, Category="Persistent") int32 PersistentAttributePoints = 0;
+    UPROPERTY(BlueprintReadWrite, Category="Persistent") TMap<FName, int32> PersistentItems;
+    UPROPERTY(BlueprintReadWrite, Category="Persistent") bool bHasCapturedPersistentData = false;
+
+    // Capture from player state/components before reload
+    UFUNCTION(BlueprintCallable, Category="Persistent") void CapturePlayerPersistentData(APlayerController* PC);
+    // Restore to player state/components after reload
+    UFUNCTION(BlueprintCallable, Category="Persistent") void RestorePlayerPersistentData(APlayerController* PC);
 protected:
     virtual void Init() override;
     virtual void Shutdown() override;

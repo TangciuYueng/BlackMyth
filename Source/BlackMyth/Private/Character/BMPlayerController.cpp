@@ -11,6 +11,7 @@
 #include "Character/Components/BMStatsComponent.h"
 #include "Core/BMTypes.h"
 #include "System/Event/BMEventBusSubsystem.h"
+#include "Character/Components/BMExperienceComponent.h"
 
 void ABMPlayerController::BeginPlay()
 {
@@ -18,6 +19,17 @@ void ABMPlayerController::BeginPlay()
 
     if (UGameInstance* GI = GetGameInstance())
     {
+        // Restore persistent player data (coins/exp/items) after level reload
+        if (auto* BMGI = Cast<UBMGameInstance>(GI))
+        {
+            BMGI->RestorePlayerPersistentData(this);
+        }
+
+        // Ensure game is unpaused and input is in GameOnly after reload
+        UGameplayStatics::SetGamePaused(this, false);
+        FInputModeGameOnly GameOnly;
+        SetInputMode(GameOnly);
+        bShowMouseCursor = false;
         UBMUIManagerSubsystem* UIManager = GI->GetSubsystem<UBMUIManagerSubsystem>();
         UBMGameInstance* BMGI = Cast<UBMGameInstance>(GI);
         if (UIManager)
@@ -83,14 +95,13 @@ void ABMPlayerController::SetupInputComponent()
         InputComponent->BindKey(EKeys::K, IE_Pressed, this, &ABMPlayerController::ApplyHalfHPDamage);
         UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound K to ApplyHalfHPDamage via C++"));
 
-        // [TEST] Bind L to consume 25 stamina for testing stamina bar updates
-        InputComponent->BindKey(EKeys::L, IE_Pressed, this, &ABMPlayerController::ConsumeStaminaTest);
-        UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound L to ConsumeStaminaTest via C++"));
-
-        // Bind 1/2 to trigger skill cooldown timers
-        InputComponent->BindKey(EKeys::One, IE_Pressed, this, &ABMPlayerController::StartSkill1Cooldown);
-        InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ABMPlayerController::StartSkill2Cooldown);
-        UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound 1/2 keys to trigger skill cooldown timers"));
+        // Bind Skill1 to RightMouseButton, Skill2 to Q, Skill3 to E
+        InputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &ABMPlayerController::StartSkill1Cooldown);
+        InputComponent->BindKey(EKeys::Q, IE_Pressed, this, &ABMPlayerController::StartSkill2Cooldown);
+        InputComponent->BindKey(EKeys::E, IE_Pressed, this, &ABMPlayerController::StartSkill3Cooldown);
+        // Debug: L to add one level worth of XP
+        InputComponent->BindKey(EKeys::L, IE_Pressed, this, &ABMPlayerController::DebugGainOneLevel);
+        UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound RMB->Skill1, Q->Skill2, E->Skill3, L->GainOneLevel"));
     }
 }
 
@@ -121,6 +132,25 @@ void ABMPlayerController::ApplyHalfHPDamage()
     UE_LOG(LogTemp, Log, TEXT("ApplyHalfHPDamage: Applied=%.2f, NewHP=%.2f/%.2f"), Applied, Block.HP, Block.MaxHP);
 }
 
+void ABMPlayerController::DebugGainOneLevel()
+{
+    UE_LOG(LogTemp, Log, TEXT("DebugGainOneLevel: invoked"));
+    APawn* MyPawn = GetPawn();
+    if (!MyPawn)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("DebugGainOneLevel: No pawn."));
+        return;
+    }
+    if (UBMExperienceComponent* XP = MyPawn->FindComponentByClass<UBMExperienceComponent>())
+    {
+        const int32 CurrentLevel = XP->GetLevel();
+        const float Threshold = XP->GetMaxXPForNextLevel();
+        const float Current = XP->GetCurrentXP();
+        const float Delta = FMath::Max(0.f, Threshold - Current);
+        XP->AddXP(Delta);
+        UE_LOG(LogTemp, Log, TEXT("DebugGainOneLevel: Added %f XP for level %d->%d (current %f / need %f)"), Delta, CurrentLevel, CurrentLevel+1, Current, Threshold);
+    }
+}
 // [TEST] Consume 25 stamina to test stamina bar updates
 void ABMPlayerController::ConsumeStaminaTest()
 {
@@ -153,6 +183,11 @@ void ABMPlayerController::StartSkill1Cooldown()
 void ABMPlayerController::StartSkill2Cooldown()
 {
     TriggerSkillCooldown(TEXT("Skill2"), 8.f);
+}
+
+void ABMPlayerController::StartSkill3Cooldown()
+{
+    TriggerSkillCooldown(TEXT("Skill3"), 12.f);
 }
 void ABMPlayerController::TriggerSkillCooldown(FName SkillId, float TotalSeconds)
 {
@@ -187,6 +222,17 @@ void ABMPlayerController::TriggerSkillCooldown(FName SkillId, float TotalSeconds
         Bus->EmitSkillCooldown(SkillId, Skill2Remaining);
         GetWorldTimerManager().SetTimer(Skill2CooldownTimer, this, &ABMPlayerController::OnSkillCooldownTick_Skill2, 1.0f, true);
     }
+    else if (SkillId == TEXT("Skill3"))
+    {
+        if (GetWorldTimerManager().IsTimerActive(Skill3CooldownTimer))
+        {
+            UE_LOG(LogTemp, Log, TEXT("Skill3 cooldown already running (%fs remaining)."), Skill3Remaining);
+            return;
+        }
+        Skill3Remaining = TotalSeconds;
+        Bus->EmitSkillCooldown(SkillId, Skill3Remaining);
+        GetWorldTimerManager().SetTimer(Skill3CooldownTimer, this, &ABMPlayerController::OnSkillCooldownTick_Skill3, 1.0f, true);
+    }
 }
 
 void ABMPlayerController::OnSkillCooldownTick_Skill1()
@@ -218,6 +264,22 @@ void ABMPlayerController::OnSkillCooldownTick_Skill2()
     if (Skill2Remaining <= 0.f)
     {
         GetWorldTimerManager().ClearTimer(Skill2CooldownTimer);
+    }
+}
+
+void ABMPlayerController::OnSkillCooldownTick_Skill3()
+{
+    UBMEventBusSubsystem* Bus = GetGameInstance() ? GetGameInstance()->GetSubsystem<UBMEventBusSubsystem>() : nullptr;
+    if (!Bus)
+    {
+        GetWorldTimerManager().ClearTimer(Skill3CooldownTimer);
+        return;
+    }
+    Skill3Remaining = FMath::Max(0.f, Skill3Remaining - 1.f);
+    Bus->EmitSkillCooldown(TEXT("Skill3"), Skill3Remaining);
+    if (Skill3Remaining <= 0.f)
+    {
+        GetWorldTimerManager().ClearTimer(Skill3CooldownTimer);
     }
 }
 

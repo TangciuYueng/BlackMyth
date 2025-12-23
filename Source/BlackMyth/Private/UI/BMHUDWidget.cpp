@@ -5,8 +5,10 @@
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 #include "System/Event/BMEventBusSubsystem.h"
-#include "Character/Components/BMStatsComponent.h"
+#include "Character/Components/BMExperienceComponent.h"
 #include "Kismet/GameplayStatics.h"
+#define LOCTEXT_NAMESPACE "BMHUD"
+#include "Character/Components/BMStatsComponent.h"
 
 void UBMHUDWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
 {
@@ -41,6 +43,34 @@ void UBMHUDWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
         });
     }
 
+    // Bind level change from experience component via EventBus
+    if (!LevelChangedHandle.IsValid())
+    {
+        LevelChangedHandle = EventBus->OnPlayerLevelUp.AddWeakLambda(this, [this](int32 OldLevel, int32 NewLevel)
+        {
+            HandleLevelChanged(NewLevel);
+        });
+    }
+
+    // Proactively set initial level
+    if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+    {
+        if (APawn* Pawn = PC->GetPawn())
+        {
+            if (UBMExperienceComponent* XP = Pawn->FindComponentByClass<UBMExperienceComponent>())
+            {
+                CachedXP = XP;
+                if (!XPLevelUpHandle.IsValid())
+                {
+                    XPLevelUpHandle = XP->OnLevelUpNative.AddLambda([this](int32 OldLevel, int32 NewLevel)
+                    {
+                        HandleLevelChanged(NewLevel);
+                    });
+                }
+                HandleLevelChanged(XP->GetLevel());
+            }
+        }
+    }
     SyncInitialValues();
 }
 
@@ -67,6 +97,26 @@ void UBMHUDWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
     {
         EventBus->OnSkillCooldownChanged.Remove(SkillCooldownHandle);
         SkillCooldownHandle.Reset();
+    }
+    if (LevelChangedHandle.IsValid())
+    {
+        EventBus->OnPlayerLevelUp.Remove(LevelChangedHandle);
+        LevelChangedHandle.Reset();
+    }
+    if (CachedXP.IsValid() && XPLevelUpHandle.IsValid())
+    {
+        CachedXP->OnLevelUpNative.Remove(XPLevelUpHandle);
+        XPLevelUpHandle.Reset();
+        CachedXP = nullptr;
+    }
+}
+
+void UBMHUDWidget::HandleLevelChanged(int32 NewLevel)
+{
+    if (LevelText)
+    {
+        LevelText->SetText(FText::Format(FText::FromString(TEXT("Lv {0}")), FText::AsNumber(NewLevel)));
+        LevelText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
     }
 }
 
@@ -103,7 +153,7 @@ void UBMHUDWidget::HandleSkillCooldownChanged(FName SkillId, float RemainingSeco
         if (Skill1CooldownText)
         {
             Skill1CooldownText->SetText(DisplayText);
-            Skill1CooldownText->SetVisibility(DisplayText.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::SelfHitTestInvisible);
+            Skill1CooldownText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
         }
     }
     else if (SkillId == TEXT("Skill2"))
@@ -111,7 +161,15 @@ void UBMHUDWidget::HandleSkillCooldownChanged(FName SkillId, float RemainingSeco
         if (Skill2CooldownText)
         {
             Skill2CooldownText->SetText(DisplayText);
-            Skill2CooldownText->SetVisibility(DisplayText.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::SelfHitTestInvisible);
+            Skill2CooldownText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+        }
+    }
+    else if (SkillId == TEXT("Skill3"))
+    {
+        if (Skill3CooldownText)
+        {
+            Skill3CooldownText->SetText(DisplayText);
+            Skill3CooldownText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
         }
     }
 }
@@ -121,7 +179,8 @@ FText UBMHUDWidget::FormatCooldownText(float RemainingSeconds) const
     const float Clamped = FMath::Max(0.f, RemainingSeconds);
     if (Clamped <= 0.05f)
     {
-        return FText::GetEmpty();
+        // Use ASCII default; provide zh-CN translation via localization if needed
+        return LOCTEXT("CooldownReady", "Ready");
     }
 
     if (Clamped < 10.f)
@@ -176,4 +235,6 @@ void UBMHUDWidget::SyncInitialValues()
     HandleHealthChanged(1.f);
     HandleStaminaChanged(1.f);
 }
+
+#undef LOCTEXT_NAMESPACE
 

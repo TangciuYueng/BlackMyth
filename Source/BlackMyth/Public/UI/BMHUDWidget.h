@@ -6,6 +6,7 @@
 #include "UI/BMWidgetBase.h"
 class UProgressBar;
 class UTextBlock;
+class UBMExperienceComponent;
 #include "BMHUDWidget.generated.h"
 
 /**
@@ -22,6 +23,8 @@ public:
     UPROPERTY(meta=(BindWidget)) class UProgressBar* StaminaBar = nullptr;
     UPROPERTY(meta=(BindWidget)) class UTextBlock* Skill1CooldownText = nullptr;
     UPROPERTY(meta=(BindWidget)) class UTextBlock* Skill2CooldownText = nullptr;
+    UPROPERTY(meta=(BindWidget)) class UTextBlock* Skill3CooldownText = nullptr;
+    UPROPERTY(meta=(BindWidget)) class UTextBlock* LevelText = nullptr; // 显示当前等级
 
 protected:
     virtual void BindEventBus(class UBMEventBusSubsystem* EventBus) override;
@@ -33,11 +36,16 @@ private:
     FDelegateHandle ManaChangedHandle;
     FDelegateHandle StaminaChangedHandle;
     FDelegateHandle SkillCooldownHandle;
+    FDelegateHandle LevelChangedHandle;
+    // Direct binding to XP component (native delegate) as a fallback
+    TWeakObjectPtr<UBMExperienceComponent> CachedXP;
+    FDelegateHandle XPLevelUpHandle;
 
     void HandleHealthChanged(float Normalized);
     void HandleManaChanged(float Normalized);
     void HandleStaminaChanged(float Normalized);
     void HandleSkillCooldownChanged(FName SkillId, float RemainingSeconds);
+    void HandleLevelChanged(int32 NewLevel);
 
     void SyncInitialValues();
 

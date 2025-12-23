@@ -266,7 +266,7 @@ struct FBMStatBlock
     float Stamina = 100.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float Attack = 10.f;
+    float Attack = 100.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float Defense = 0.f;

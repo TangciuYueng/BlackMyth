@@ -30,9 +30,16 @@ private:
     void OnSkillCooldownTick_Skill2();
     void StartSkill1Cooldown();
     void StartSkill2Cooldown();
+    void StartSkill3Cooldown();
+
+    // Test: add enough XP to gain exactly one level for HUD verification
+    void DebugGainOneLevel();
+    void OnSkillCooldownTick_Skill3();
 
     FTimerHandle Skill1CooldownTimer;
     FTimerHandle Skill2CooldownTimer;
     float Skill1Remaining = 0.f;
     float Skill2Remaining = 0.f;
+    FTimerHandle Skill3CooldownTimer;
+    float Skill3Remaining = 0.f;
 };
