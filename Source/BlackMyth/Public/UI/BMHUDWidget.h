@@ -22,6 +22,8 @@ public:
     UPROPERTY(meta=(BindWidget)) class UProgressBar* StaminaBar = nullptr;
     UPROPERTY(meta=(BindWidget)) class UTextBlock* Skill1CooldownText = nullptr;
     UPROPERTY(meta=(BindWidget)) class UTextBlock* Skill2CooldownText = nullptr;
+    UPROPERTY(meta=(BindWidget)) class UTextBlock* Skill3CooldownText = nullptr;
+    UPROPERTY(meta=(BindWidget)) class UTextBlock* LevelText = nullptr; // 显示当前等级
 
 protected:
     virtual void BindEventBus(class UBMEventBusSubsystem* EventBus) override;
@@ -32,10 +34,12 @@ private:
     FDelegateHandle HealthChangedHandle;
     FDelegateHandle ManaChangedHandle;
     FDelegateHandle SkillCooldownHandle;
+    FDelegateHandle LevelChangedHandle;
 
     void HandleHealthChanged(float Normalized);
     void HandleStaminaChanged(float Normalized);
     void HandleSkillCooldownChanged(FName SkillId, float RemainingSeconds);
+    void HandleLevelChanged(int32 NewLevel);
 
     // Format cooldown according to UX rules. Returns empty when ready.
     FText FormatCooldownText(float RemainingSeconds) const;

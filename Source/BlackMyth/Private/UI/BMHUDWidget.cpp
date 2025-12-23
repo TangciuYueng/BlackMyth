@@ -5,6 +5,8 @@
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 #include "System/Event/BMEventBusSubsystem.h"
+#include "Character/Components/BMExperienceComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 #define LOCTEXT_NAMESPACE "BMHUD"
 
@@ -33,6 +35,27 @@ void UBMHUDWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
             HandleSkillCooldownChanged(SkillId, RemainingSeconds);
         });
     }
+
+    // Bind level change from experience component via EventBus
+    if (!LevelChangedHandle.IsValid())
+    {
+        LevelChangedHandle = EventBus->OnPlayerLevelUp.AddWeakLambda(this, [this](int32 OldLevel, int32 NewLevel)
+        {
+            HandleLevelChanged(NewLevel);
+        });
+    }
+
+    // Proactively set initial level
+    if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+    {
+        if (APawn* Pawn = PC->GetPawn())
+        {
+            if (UBMExperienceComponent* XP = Pawn->FindComponentByClass<UBMExperienceComponent>())
+            {
+                HandleLevelChanged(XP->GetLevel());
+            }
+        }
+    }
 }
 
 void UBMHUDWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
@@ -53,6 +76,20 @@ void UBMHUDWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
     {
         EventBus->OnSkillCooldownChanged.Remove(SkillCooldownHandle);
         SkillCooldownHandle.Reset();
+    }
+    if (LevelChangedHandle.IsValid())
+    {
+        EventBus->OnPlayerLevelUp.Remove(LevelChangedHandle);
+        LevelChangedHandle.Reset();
+    }
+}
+
+void UBMHUDWidget::HandleLevelChanged(int32 NewLevel)
+{
+    if (LevelText)
+    {
+        LevelText->SetText(FText::Format(FText::FromString(TEXT("Lv {0}")), FText::AsNumber(NewLevel)));
+        LevelText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
     }
 }
 
@@ -89,6 +126,14 @@ void UBMHUDWidget::HandleSkillCooldownChanged(FName SkillId, float RemainingSeco
         {
             Skill2CooldownText->SetText(DisplayText);
             Skill2CooldownText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+        }
+    }
+    else if (SkillId == TEXT("Skill3"))
+    {
+        if (Skill3CooldownText)
+        {
+            Skill3CooldownText->SetText(DisplayText);
+            Skill3CooldownText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
         }
     }
 }
