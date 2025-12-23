@@ -5,6 +5,9 @@
 #include "Components/CapsuleComponent.h"
 #include "Animation/AnimSequence.h"
 #include "Engine/SkeletalMesh.h"
+#include "BMGameInstance.h"
+#include "Kismet/GameplayStatics.h"
+#include "Character/Components/BMStatsComponent.h"
 
 ABMEnemyBoss::ABMEnemyBoss()
 {
@@ -90,6 +93,21 @@ void ABMEnemyBoss::BeginPlay()
     }
 
     Super::BeginPlay();
+
+    // Bind to stats to track HP and death
+    if (UBMStatsComponent* BossStats = GetStats())
+    {
+        BossStats->OnDeathNative.AddLambda([this](AActor* Killer)
+        {
+            if (UWorld* World = GetWorld())
+            {
+                if (UBMGameInstance* GI = Cast<UBMGameInstance>(World->GetGameInstance()))
+                {
+                    GI->PlayMusic(World, TEXT("/Game/Audio/over.over"), /*bLoop=*/true);
+                }
+            }
+        });
+    }
 }
 
 void ABMEnemyBoss::ApplyConfiguredAssets()
@@ -320,4 +338,21 @@ float ABMEnemyBoss::PlayDodgeOnce()
 {
     // Äã Dummy ÓÃµÄÊÇ PlayOnce(AnimDodge, DodgePlayRate, 0, 0.7)
     return PlayOnce(AnimDodge, DodgePlayRate, 0.0, 0.75f);
+}
+
+void ABMEnemyBoss::SetAlertState(bool bAlert)
+{
+    const bool bPrevAlert = IsAlerted();
+    ABMEnemyBase::SetAlertState(bAlert);
+    if (!bPrevAlert && bAlert && !bBossAlertMusicStarted)
+    {
+        if (UWorld* World = GetWorld())
+        {
+            if (UBMGameInstance* GI = Cast<UBMGameInstance>(World->GetGameInstance()))
+            {
+                GI->PlayMusic(World, TEXT("/Game/Audio/boss1.boss1"), /*bLoop=*/true);
+                bBossAlertMusicStarted = true;
+            }
+        }
+    }
 }
