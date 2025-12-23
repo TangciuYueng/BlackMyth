@@ -90,6 +90,17 @@ bool UBMStatsComponent::TryConsumeStamina(float Amount)
     if (Amount <= 0.f) return true;
     if (Stats.Stamina < Amount) return false;
     Stats.Stamina -= Amount;
+    
+    // Emit stamina change to UI
+    if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+    {
+        if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+        {
+            const float Normalized = Stats.MaxStamina > 0.f ? Stats.Stamina / Stats.MaxStamina : 0.f;
+            Bus->EmitPlayerStamina(Normalized);
+        }
+    }
+    
     return true;
 }
 

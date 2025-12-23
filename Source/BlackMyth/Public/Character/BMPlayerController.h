@@ -22,6 +22,7 @@ private:
     void ShowMainMenu();
     void TogglePauseMenu();
     void ApplyHalfHPDamage();
+    void ConsumeStaminaTest(); // [TEST] Consume 25 stamina for testing
 
     // Skill cooldown testing
     void TriggerSkillCooldown(FName SkillId, float TotalSeconds);

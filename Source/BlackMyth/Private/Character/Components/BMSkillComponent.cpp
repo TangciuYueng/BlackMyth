@@ -216,11 +216,10 @@ bool UBMSkillComponent::CheckResourceAvailable(ABMPlayerCharacter* PlayerCharact
         return true; // 无消耗，直接返回可用
     }
 
-    // 检查 MP 是否足够
-    // 注意：当前实现假设所有技能都消耗 MP
-    // 如需支持多种资源类型（如 Stamina），可以在 FBMSkillData 中添加资源类型字段
+    // 检查 Stamina 是否足够
+    // 技能消耗 Stamina 而不是 MP
     const FBMStatBlock& StatBlock = Stats->GetStatBlock();
-    return StatBlock.MP >= Cost;
+    return StatBlock.Stamina >= Cost;
 }
 
 bool UBMSkillComponent::ConsumeResource(ABMPlayerCharacter* PlayerCharacter) const
@@ -243,9 +242,8 @@ bool UBMSkillComponent::ConsumeResource(ABMPlayerCharacter* PlayerCharacter) con
         return true; // 无消耗，直接返回成功
     }
 
-    // 消耗 MP
-    // 注意：当前实现假设所有技能都消耗 MP
-    // 如需支持多种资源类型（如 Stamina），可以在 FBMSkillData 中添加资源类型字段
-    return Stats->TryConsumeMP(Cost);
+    // 消耗 Stamina
+    // 技能消耗 Stamina 而不是 MP
+    return Stats->TryConsumeStamina(Cost);
 }
 

@@ -31,9 +31,11 @@ private:
     // Cached bindings
     FDelegateHandle HealthChangedHandle;
     FDelegateHandle ManaChangedHandle;
+    FDelegateHandle StaminaChangedHandle;
     FDelegateHandle SkillCooldownHandle;
 
     void HandleHealthChanged(float Normalized);
+    void HandleManaChanged(float Normalized);
     void HandleStaminaChanged(float Normalized);
     void HandleSkillCooldownChanged(FName SkillId, float RemainingSeconds);
 

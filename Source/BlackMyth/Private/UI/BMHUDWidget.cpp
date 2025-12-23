@@ -21,6 +21,13 @@ void UBMHUDWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
     {
         ManaChangedHandle = EventBus->OnPlayerManaChanged.AddWeakLambda(this, [this](float Normalized)
         {
+            HandleManaChanged(Normalized);
+        });
+    }
+    if (!StaminaChangedHandle.IsValid())
+    {
+        StaminaChangedHandle = EventBus->OnPlayerStaminaChanged.AddWeakLambda(this, [this](float Normalized)
+        {
             HandleStaminaChanged(Normalized);
         });
     }
@@ -47,6 +54,11 @@ void UBMHUDWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
         EventBus->OnPlayerManaChanged.Remove(ManaChangedHandle);
         ManaChangedHandle.Reset();
     }
+    if (StaminaChangedHandle.IsValid())
+    {
+        EventBus->OnPlayerStaminaChanged.Remove(StaminaChangedHandle);
+        StaminaChangedHandle.Reset();
+    }
     if (SkillCooldownHandle.IsValid())
     {
         EventBus->OnSkillCooldownChanged.Remove(SkillCooldownHandle);
@@ -60,6 +72,15 @@ void UBMHUDWidget::HandleHealthChanged(float Normalized)
     {
         HealthBar->SetPercent(FMath::Clamp(Normalized, 0.f, 1.f));
     }
+}
+
+void UBMHUDWidget::HandleManaChanged(float Normalized)
+{
+    // TODO: Add mana bar if needed
+    // if (ManaBar)
+    // {
+    //     ManaBar->SetPercent(FMath::Clamp(Normalized, 0.f, 1.f));
+    // }
 }
 
 void UBMHUDWidget::HandleStaminaChanged(float Normalized)
