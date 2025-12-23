@@ -37,6 +37,7 @@ public:
     void StopLevelMusic();
     void StartLevelMusicForWorld(class UWorld* World, const TCHAR* SoundPath);
     void OnLevelMusicFinished(class UAudioComponent* AC);
+    void PlayMusic(class UWorld* World, const TCHAR* SoundPath, bool bLoop);
 
 private:
     UPROPERTY(Transient)

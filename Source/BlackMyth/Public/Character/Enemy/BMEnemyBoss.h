@@ -16,6 +16,7 @@ class BLACKMYTH_API ABMEnemyBoss : public ABMEnemyBase
 public:
     ABMEnemyBoss();
     virtual void BeginPlay() override;
+    virtual void SetAlertState(bool bAlert) override;
 
 protected:
     void ApplyConfiguredAssets();
@@ -114,4 +115,8 @@ protected:
 
     UPROPERTY(EditAnywhere, Category = "BM|Boss|Dodge")
     FName BossDodgeCooldownKey = TEXT("Boss_Dodge");
+
+private:
+    UPROPERTY(Transient)
+    bool bBossAlertMusicStarted = false;
 };

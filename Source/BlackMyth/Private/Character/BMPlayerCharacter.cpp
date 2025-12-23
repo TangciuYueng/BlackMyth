@@ -927,10 +927,16 @@ void ABMPlayerCharacter::HandleDeath(const FBMDamageInfo& LastHitInfo)
 
     // Play death music
     static const TCHAR* DeathSoundPath = TEXT("/Game/Audio/death.death");
-    if (USoundBase* DeathSound = LoadObject<USoundBase>(nullptr, DeathSoundPath))
+    if (UWorld* World = GetWorld())
     {
-        // One-shot playback for death music (no loop)
-        UGameplayStatics::PlaySound2D(GetWorld(), DeathSound);
+        if (UBMGameInstance* GI = Cast<UBMGameInstance>(World->GetGameInstance()))
+        {
+            GI->PlayMusic(World, DeathSoundPath, /*bLoop=*/false);
+        }
+        else if (USoundBase* DeathSound = LoadObject<USoundBase>(nullptr, DeathSoundPath))
+        {
+            UGameplayStatics::PlaySound2D(World, DeathSound);
+        }
     }
 
     Super::HandleDeath(LastHitInfo);

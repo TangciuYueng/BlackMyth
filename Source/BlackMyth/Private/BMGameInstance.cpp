@@ -83,26 +83,7 @@ void UBMGameInstance::StopLevelMusic()
 
 void UBMGameInstance::StartLevelMusicForWorld(UWorld* World, const TCHAR* SoundPath)
 {
-    if (!World || !SoundPath)
-    {
-        return;
-    }
-
-    // Stop any previous
-    StopLevelMusic();
-
-    if (USoundBase* SoundAsset = LoadObject<USoundBase>(nullptr, SoundPath))
-    {
-        LevelMusicComp = UGameplayStatics::SpawnSound2D(World, SoundAsset);
-        if (LevelMusicComp)
-        {
-            LevelMusicComp->OnAudioFinishedNative.AddUObject(this, &UBMGameInstance::OnLevelMusicFinished);
-        }
-    }
-    else
-    {
-        UE_LOG(LogBlackMyth, Warning, TEXT("Failed to load level music asset: %s"), SoundPath);
-    }
+    PlayMusic(World, SoundPath, /*bLoop=*/true);
 }
 
 void UBMGameInstance::OnLevelMusicFinished(UAudioComponent* AC)
@@ -111,6 +92,33 @@ void UBMGameInstance::OnLevelMusicFinished(UAudioComponent* AC)
     if (AC && AC == LevelMusicComp && AC->Sound)
     {
         AC->Play(0.f);
+    }
+}
+
+void UBMGameInstance::PlayMusic(UWorld* World, const TCHAR* SoundPath, bool bLoop)
+{
+    if (!World || !SoundPath)
+    {
+        return;
+    }
+
+    // Stop current music to ensure only one /Game/Audio track plays
+    StopLevelMusic();
+
+    if (USoundBase* SoundAsset = LoadObject<USoundBase>(nullptr, SoundPath))
+    {
+        LevelMusicComp = UGameplayStatics::SpawnSound2D(World, SoundAsset);
+        if (LevelMusicComp)
+        {
+            if (bLoop)
+            {
+                LevelMusicComp->OnAudioFinishedNative.AddUObject(this, &UBMGameInstance::OnLevelMusicFinished);
+            }
+        }
+    }
+    else
+    {
+        UE_LOG(LogBlackMyth, Warning, TEXT("Failed to load music asset: %s"), SoundPath);
     }
 }
 
