@@ -130,7 +130,28 @@ void ABMEnemyBoss::BeginPlay()
             {
                 if (UBMGameInstance* GI = Cast<UBMGameInstance>(World->GetGameInstance()))
                 {
-                    GI->PlayMusic(World, TEXT("/Game/Audio/over.over"), /*bLoop=*/true);
+                    if (GetBossPhase() <= 1 && !bInPhaseTransition && !bReviveUsed)
+                    {
+                        // Stop current boss1 immediately, then delay-play boss2
+                        GI->StopLevelMusic();
+                        const float Delay = Phase1To2MusicDelaySeconds;
+                        FTimerHandle Temp;
+                        World->GetTimerManager().SetTimer(Temp, [this]()
+                        {
+                            if (UWorld* W = GetWorld())
+                            {
+                                if (UBMGameInstance* G = Cast<UBMGameInstance>(W->GetGameInstance()))
+                                {
+                                    G->PlayMusic(W, TEXT("/Game/Audio/boss2.boss2"), /*bLoop=*/true);
+                                }
+                            }
+                        }, Delay, /*bLoop=*/false);
+                    }
+                    else
+                    {
+                        GI->PlayMusic(World, TEXT("/Game/Audio/over.over"), /*bLoop=*/true);
+                    }
+                    UE_LOG(LogTemp, Warning, TEXT("Death handled: Phase %d, InTransition: %d, ReviveUsed: %d"), GetBossPhase(), bInPhaseTransition, bReviveUsed);
                 }
             }
         });
@@ -408,6 +429,7 @@ void ABMEnemyBoss::EnterPhase2()
 {
     if (bIsPhase2) return;
     bIsPhase2 = true;
+    BossPhase = 2;
 
     ApplyPhase2Tuning();
     AddPhase2AttackSpecs();

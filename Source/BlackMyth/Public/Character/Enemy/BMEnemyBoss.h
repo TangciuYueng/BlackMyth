@@ -172,4 +172,17 @@ private:
     float Phase2DeathReverseMaxTime = -1.0f;
     UPROPERTY(Transient)
     bool bBossAlertMusicStarted = false;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Boss|Phase")
+    int32 BossPhase = 1; // 1: 第一阶段, 2: 第二阶段
+
+    // 第一阶段死亡到播放 boss2 的延迟（秒）
+    UPROPERTY(EditAnywhere, Category = "BM|Boss|Phase")
+    float Phase1To2MusicDelaySeconds = 6.0f;
+
+public:
+    UFUNCTION(BlueprintCallable, Category = "BM|Boss|Phase")
+    void SetBossPhase(int32 InPhase) { BossPhase = InPhase; }
+    UFUNCTION(BlueprintCallable, Category = "BM|Boss|Phase")
+    int32 GetBossPhase() const { return BossPhase; }
 };
