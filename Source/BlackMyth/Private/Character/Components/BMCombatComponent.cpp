@@ -21,6 +21,10 @@ bool UBMCombatComponent::CanPerformAction(EBMCombatAction Action) const
         {
             return true;
         }
+        if (Action == EBMCombatAction::Dodge)
+        {
+            return true;
+		}
         return false;
     }
     return true;

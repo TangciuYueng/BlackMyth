@@ -161,7 +161,7 @@ void UBMExperienceComponent::ApplyLevelUpBonuses()
         return;
     }
 
-    // 获取 DataSubsystem（注意：这是 GameInstanceSubsystem，需要通过 GameInstance 访问）
+    // 获取 DataSubsystem
     UGameInstance* GameInstance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
     if (!GameInstance)
     {
@@ -187,6 +187,13 @@ void UBMExperienceComponent::ApplyLevelUpBonuses()
     // 获取可修改的 StatBlock
     FBMStatBlock& StatBlock = Stats->GetStatBlockMutable();
 
+    const float OldMaxHP = StatBlock.MaxHP;
+    const float OldAttack = StatBlock.Attack;
+    const float OldDefense = StatBlock.Defense;
+    const float OldMaxStamina = StatBlock.MaxStamina;
+    const float OldMaxMP = StatBlock.MaxMP;
+    const float OldMoveSpeed = StatBlock.MoveSpeed;
+
     // 保存当前 HP、Stamina 和 MP 的百分比，以便在更新最大值后保持比例
     const float HPRatio = StatBlock.MaxHP > 0.0f ? (StatBlock.HP / StatBlock.MaxHP) : 1.0f;
     const float StaminaRatio = StatBlock.MaxStamina > 0.0f ? (StatBlock.Stamina / StatBlock.MaxStamina) : 1.0f;
@@ -200,6 +207,10 @@ void UBMExperienceComponent::ApplyLevelUpBonuses()
     StatBlock.MaxMP = PlayerGrowthData->MaxMP;
     StatBlock.MoveSpeed = PlayerGrowthData->MoveSpeed;
 
+    const float OldHP = StatBlock.HP;
+    const float OldStamina = StatBlock.Stamina;
+    const float OldMP = StatBlock.MP;
+
     // 恢复 HP、Stamina 和 MP，保持之前的百分比（但确保不超过最大值）
     StatBlock.HP = FMath::Clamp(StatBlock.MaxHP * HPRatio, 0.0f, StatBlock.MaxHP);
     StatBlock.Stamina = FMath::Clamp(StatBlock.MaxStamina * StaminaRatio, 0.0f, StatBlock.MaxStamina);
@@ -207,6 +218,111 @@ void UBMExperienceComponent::ApplyLevelUpBonuses()
 
     UE_LOG(LogBMExperience, Log, TEXT("ApplyLevelUpBonuses: Applied growth data for level %d - MaxHP: %.1f, Attack: %.1f, Defense: %.1f, MaxStamina: %.1f, MaxMP: %.1f, MoveSpeed: %.1f"),
         Level, StatBlock.MaxHP, StatBlock.Attack, StatBlock.Defense, StatBlock.MaxStamina, StatBlock.MaxMP, StatBlock.MoveSpeed);
+    
+    // ===== 计算增益值 =====
+    const float MaxHPGain = StatBlock.MaxHP - OldMaxHP;
+    const float AttackGain = StatBlock.Attack - OldAttack;
+    const float DefenseGain = StatBlock.Defense - OldDefense;
+    const float MaxStaminaGain = StatBlock.MaxStamina - OldMaxStamina;
+    const float MaxMPGain = StatBlock.MaxMP - OldMaxMP;
+    const float MoveSpeedGain = StatBlock.MoveSpeed - OldMoveSpeed;
+    const float HPRestored = StatBlock.HP - OldHP;
+    const float StaminaRestored = StatBlock.Stamina - OldStamina;
+    const float MPRestored = StatBlock.MP - OldMP;
+    UE_LOG(LogBMExperience, Display, TEXT("========================================"));
+    UE_LOG(LogBMExperience, Display, TEXT("Level Up Bonuses Applied for Level %d"), Level);
+    UE_LOG(LogBMExperience, Display, TEXT("========================================"));
+    
+    // 生命值
+    UE_LOG(LogBMExperience, Display, TEXT("MaxHP:      %.1f -> %.1f (+%.1f, %.1f%%)"), 
+        OldMaxHP, StatBlock.MaxHP, MaxHPGain, 
+        OldMaxHP > 0.0f ? (MaxHPGain / OldMaxHP * 100.0f) : 0.0f);
+    UE_LOG(LogBMExperience, Display, TEXT("  Current HP: %.1f -> %.1f (+%.1f)"), 
+        OldHP, StatBlock.HP, HPRestored);
+    
+    // 攻击力
+    UE_LOG(LogBMExperience, Display, TEXT("Attack:     %.1f -> %.1f (+%.1f, %.1f%%)"), 
+        OldAttack, StatBlock.Attack, AttackGain,
+        OldAttack > 0.0f ? (AttackGain / OldAttack * 100.0f) : 0.0f);
+    
+    // 防御力
+    UE_LOG(LogBMExperience, Display, TEXT("Defense:    %.1f -> %.1f (+%.1f, %.1f%%)"), 
+        OldDefense, StatBlock.Defense, DefenseGain,
+        OldDefense > 0.0f ? (DefenseGain / OldDefense * 100.0f) : 0.0f);
+    
+    // 耐力值
+    UE_LOG(LogBMExperience, Display, TEXT("MaxStamina: %.1f -> %.1f (+%.1f, %.1f%%)"), 
+        OldMaxStamina, StatBlock.MaxStamina, MaxStaminaGain,
+        OldMaxStamina > 0.0f ? (MaxStaminaGain / OldMaxStamina * 100.0f) : 0.0f);
+    UE_LOG(LogBMExperience, Display, TEXT("  Current Stamina: %.1f -> %.1f (+%.1f)"), 
+        OldStamina, StatBlock.Stamina, StaminaRestored);
+    
+    // 法力值
+    UE_LOG(LogBMExperience, Display, TEXT("MaxMP:      %.1f -> %.1f (+%.1f, %.1f%%)"), 
+        OldMaxMP, StatBlock.MaxMP, MaxMPGain,
+        OldMaxMP > 0.0f ? (MaxMPGain / OldMaxMP * 100.0f) : 0.0f);
+    UE_LOG(LogBMExperience, Display, TEXT("  Current MP: %.1f -> %.1f (+%.1f)"), 
+        OldMP, StatBlock.MP, MPRestored);
+    
+    // 移动速度
+    UE_LOG(LogBMExperience, Display, TEXT("MoveSpeed:  %.1f -> %.1f (+%.1f, %.1f%%)"), 
+        OldMoveSpeed, StatBlock.MoveSpeed, MoveSpeedGain,
+        OldMoveSpeed > 0.0f ? (MoveSpeedGain / OldMoveSpeed * 100.0f) : 0.0f);
+    
+    UE_LOG(LogBMExperience, Display, TEXT("========================================"));
+    
+    // 额外奖励提示
+    UE_LOG(LogBMExperience, Display, TEXT("Bonus Rewards: +%d Skill Point(s), +%d Attribute Point(s)"),
+        SkillPointsPerLevel, AttributePointsPerLevel);
+    UE_LOG(LogBMExperience, Display, TEXT("========================================"));
+
+    UE_LOG(LogBMExperience, Display, TEXT("========================================"));
+    UE_LOG(LogBMExperience, Display, TEXT("Level Up Bonuses Applied for Level %d"), Level);
+    UE_LOG(LogBMExperience, Display, TEXT("========================================"));
+
+    // 生命值
+    UE_LOG(LogBMExperience, Display, TEXT("MaxHP:      %.1f -> %.1f (+%.1f, %.1f%%)"),
+        OldMaxHP, StatBlock.MaxHP, MaxHPGain,
+        OldMaxHP > 0.0f ? (MaxHPGain / OldMaxHP * 100.0f) : 0.0f);
+    UE_LOG(LogBMExperience, Display, TEXT("  Current HP: %.1f -> %.1f (+%.1f)"),
+        OldHP, StatBlock.HP, HPRestored);
+
+    // 攻击力
+    UE_LOG(LogBMExperience, Display, TEXT("Attack:     %.1f -> %.1f (+%.1f, %.1f%%)"),
+        OldAttack, StatBlock.Attack, AttackGain,
+        OldAttack > 0.0f ? (AttackGain / OldAttack * 100.0f) : 0.0f);
+
+    // 防御力
+    UE_LOG(LogBMExperience, Display, TEXT("Defense:    %.1f -> %.1f (+%.1f, %.1f%%)"),
+        OldDefense, StatBlock.Defense, DefenseGain,
+        OldDefense > 0.0f ? (DefenseGain / OldDefense * 100.0f) : 0.0f);
+
+    // 耐力值
+    UE_LOG(LogBMExperience, Display, TEXT("MaxStamina: %.1f -> %.1f (+%.1f, %.1f%%)"),
+        OldMaxStamina, StatBlock.MaxStamina, MaxStaminaGain,
+        OldMaxStamina > 0.0f ? (MaxStaminaGain / OldMaxStamina * 100.0f) : 0.0f);
+    UE_LOG(LogBMExperience, Display, TEXT("  Current Stamina: %.1f -> %.1f (+%.1f)"),
+        OldStamina, StatBlock.Stamina, StaminaRestored);
+
+    // 法力值
+    UE_LOG(LogBMExperience, Display, TEXT("MaxMP:      %.1f -> %.1f (+%.1f, %.1f%%)"),
+        OldMaxMP, StatBlock.MaxMP, MaxMPGain,
+        OldMaxMP > 0.0f ? (MaxMPGain / OldMaxMP * 100.0f) : 0.0f);
+    UE_LOG(LogBMExperience, Display, TEXT("  Current MP: %.1f -> %.1f (+%.1f)"),
+        OldMP, StatBlock.MP, MPRestored);
+
+    // 移动速度
+    UE_LOG(LogBMExperience, Display, TEXT("MoveSpeed:  %.1f -> %.1f (+%.1f, %.1f%%)"),
+        OldMoveSpeed, StatBlock.MoveSpeed, MoveSpeedGain,
+        OldMoveSpeed > 0.0f ? (MoveSpeedGain / OldMoveSpeed * 100.0f) : 0.0f);
+
+    UE_LOG(LogBMExperience, Display, TEXT("========================================"));
+
+    // 额外奖励提示
+    UE_LOG(LogBMExperience, Display, TEXT("Bonus Rewards: +%d Skill Point(s), +%d Attribute Point(s)"),
+        SkillPointsPerLevel, AttributePointsPerLevel);
+    UE_LOG(LogBMExperience, Display, TEXT("========================================"));
+
 }
 
 float UBMExperienceComponent::GetExpPercent() const

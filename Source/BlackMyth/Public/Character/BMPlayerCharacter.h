@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Character/BMCharacterBase.h"
+#include "Character/Components/BMExperienceComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Core/BMTypes.h"
@@ -105,12 +106,12 @@ public:
 
 
     // 技能选择
-    bool SelectSkillSpec(EBMCombatAction Action, FBMPlayerAttackSpec& OutSpec) const;
+    bool SelectSkillSpec(EBMCombatAction Action, FBMPlayerAttackSpec& OutSpec, float& OutStaminaCost) const;
 
     // 连段访问
     int32 GetComboStepCount() const { return NormalComboSteps.Num(); }
     bool GetComboStep(int32 Index, FBMPlayerComboStep& Out) const;
-
+    UBMExperienceComponent* GetExperience() const { return Experience; }
     // 播放 Recover
     float PlayComboRecoverOnce(const FBMPlayerComboStep& Step);
 
@@ -160,8 +161,15 @@ public:
     void EnqueueAction(EBMCombatAction Action);
     bool ConsumeNextQueuedAction(EBMCombatAction& OutAction);
     bool ConsumeOneQueuedNormalAttack(); 
-
+    bool IsSprinting() const { return bSprintHeld; }
+    void ApplyGait();
 	FBMDamageInfo GetLastDamageInfo() const { return LastDamageInfo; }
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Gait")
+    float WalkSpeed = 350.f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Gait")
+    float RunSpeed = 600.f;
 
     UPROPERTY(EditAnywhere, Category = "BM|Player|Dodge")
     float DodgeCooldown = 1.2f;
@@ -196,6 +204,9 @@ private:
      */
     void Input_MoveForward(float Value);
 
+    void Input_SprintPressed();
+    void Input_SprintReleased();
+
     /**
      * 处理左右移动轴输入
      *
@@ -219,6 +230,8 @@ private:
 
     void Input_NormalAttackPressed();
     void Input_Skill1Pressed();
+    void Input_Skill2Pressed();
+    void Input_Skill3Pressed();
 
     /**
      * 水平视角旋转输入回调
@@ -343,20 +356,15 @@ public:
     UPROPERTY(EditAnywhere, Category = "BM|Assets")
     TObjectPtr<UAnimSequence> AnimIdle;
 
-    /**
-     * 移动/跑步循环动画序列
-     *
-     * 在 Move 状态下使用，表现角色奔跑或移动时的动作
-     */
-    UPROPERTY(EditAnywhere, Category = "BM|Assets")
-    TObjectPtr<UAnimSequence> AnimMove;
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Gait")
+    TObjectPtr<UAnimSequence> AnimWalk = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Gait")
+    TObjectPtr<UAnimSequence> AnimRun = nullptr;
 
     // === 普通攻击连段 ===
     UPROPERTY(EditAnywhere, Category = "BM|Player|Combo")
     TArray<FBMPlayerComboStep> NormalComboSteps;
-
-    UPROPERTY(EditAnywhere, Category = "BM|Player|Combo")
-    TObjectPtr<UAnimSequence> AnimComboRecover = nullptr;
 
     UPROPERTY(EditAnywhere, Category = "BM|Player|Combo")
     float ComboRecoverPlayRate = 1.0f;
@@ -395,6 +403,11 @@ public:
     UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
     TObjectPtr<UAnimSequence> AnimSkill1 = nullptr;
 
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimSkill2 = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimSkill3 = nullptr;
     // 受击/死亡动画
     UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
     TObjectPtr<UAnimSequence> AnimHitLight = nullptr;
@@ -454,6 +467,8 @@ private:
      */
     FVector2D MoveIntent = FVector2D::ZeroVector;
 
+    bool bSprintHeld = false;
+
     /**
      * 当前正在播放的循环动画引用
      *
@@ -464,5 +479,8 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "BM|Components")
     TObjectPtr<UBMInventoryComponent> Inventory;
+
+    UPROPERTY(VisibleAnywhere, Category = "BM|Components")
+    TObjectPtr<UBMExperienceComponent> Experience;
 };
 

@@ -8,7 +8,24 @@ DEFINE_LOG_CATEGORY(LogBMStats);
 
 UBMStatsComponent::UBMStatsComponent()
 {
-    PrimaryComponentTick.bCanEverTick = false;
+    PrimaryComponentTick.bCanEverTick = true;
+}
+
+void UBMStatsComponent::BeginPlay()
+{
+    Super::BeginPlay();
+
+    if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+    {
+        if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+        {
+            const float HealthNormalized = Stats.MaxHP > 0.f ? Stats.HP / Stats.MaxHP : 0.f;
+            Bus->EmitPlayerHealth(HealthNormalized);
+
+            const float StaminaNormalized = Stats.MaxStamina > 0.f ? Stats.Stamina / Stats.MaxStamina : 0.f;
+            Bus->EmitPlayerStamina(StaminaNormalized);
+        }
+    }
 }
 
 float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
@@ -65,18 +82,18 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
                 // Try to load a default death widget if available. You can also expose in GI if preferred.
                 if (UClass* DeathClass = LoadClass<UBMDeathWidget>(nullptr, TEXT("/Game/UI/WBP_Death.WBP_Death_C")))
                 {
-                    UI->ShowDeath(DeathClass);
+                    // UI->ShowDeath(DeathClass);
                     // Switch to UI-only input so player cannot control character and can use mouse to click
-                    if (UWorld* World = GetWorld())
-                    {
-                        if (APlayerController* PC = World->GetFirstPlayerController())
-                        {
-                            FInputModeUIOnly InputMode;
-                            InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-                            PC->SetInputMode(InputMode);
-                            PC->bShowMouseCursor = true;
-                        }
-                    }
+                    //if (UWorld* World = GetWorld())
+                    //{
+                    //    if (APlayerController* PC = World->GetFirstPlayerController())
+                    //    {
+                    //        FInputModeUIOnly InputMode;
+                    //        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+                    //        PC->SetInputMode(InputMode);
+                    //        PC->bShowMouseCursor = true;
+                    //    }
+                    //}
                 }
             }
         }
@@ -110,6 +127,42 @@ bool UBMStatsComponent::TryConsumeMP(float Amount)
     if (Stats.MP < Amount) return false;
     Stats.MP -= Amount;
     return true;
+}
+
+void UBMStatsComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+    if (DeltaTime <= 0.f || IsDead())
+    {
+        return;
+    }
+
+    if (Stats.MaxStamina > 0.f && Stats.Stamina < Stats.MaxStamina)
+    {
+        const float OldStamina = Stats.Stamina;
+        const float Regen = StaminaRegenPerSec * DeltaTime;
+        Stats.Stamina = FMath::Clamp(Stats.Stamina + Regen, 0.f, Stats.MaxStamina);
+
+        if (!FMath::IsNearlyEqual(Stats.Stamina, OldStamina))
+        {
+            if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+            {
+                if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+                {
+                    const float Normalized = Stats.MaxStamina > 0.f ? Stats.Stamina / Stats.MaxStamina : 0.f;
+                    Bus->EmitPlayerStamina(Normalized);
+                }
+            }
+        }
+    }
+}
+
+void UBMStatsComponent::ReviveToFull(float NewMaxHP)
+{
+    Stats.MaxHP = FMath::Max(1.f, NewMaxHP);
+    Stats.HP = Stats.MaxHP;
+    bDeathBroadcasted = false;
 }
 
 void UBMStatsComponent::AddGameplayTag(FName Tag)

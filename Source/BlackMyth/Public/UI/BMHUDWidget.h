@@ -39,6 +39,8 @@ private:
     void HandleStaminaChanged(float Normalized);
     void HandleSkillCooldownChanged(FName SkillId, float RemainingSeconds);
 
+    void SyncInitialValues();
+
     // Format cooldown according to UX rules. Returns empty when ready.
     FText FormatCooldownText(float RemainingSeconds) const;
 };

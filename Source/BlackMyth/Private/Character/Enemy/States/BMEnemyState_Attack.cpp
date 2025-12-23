@@ -32,7 +32,7 @@ void UBMEnemyState_Attack::OnEnter(float)
         return;
     }
 
-    // 1) 写入 Combat 上下文：给 NotifyState 使用（开启哪些 HitBox）
+    // 1) 写入 Combat 上下文
     if (UBMCombatComponent* Combat = E->GetCombat())
     {
         FBMHitBoxActivationParams Params;
@@ -115,9 +115,10 @@ void UBMEnemyState_Attack::OnUpdate(float DeltaTime)
 
 bool UBMEnemyState_Attack::CanTransitionTo(FName StateName) const
 {
-    if (StateName == BMEnemyStateNames::Death) return true;
-    if (StateName == BMEnemyStateNames::Hit)   return true; // 是否真的进 Hit，由 EnemyBase 决策
-	if (StateName == BMEnemyStateNames::Dodge) return true;
+    if (StateName == BMEnemyStateNames::Death)          return true;
+    if (StateName == BMEnemyStateNames::Hit)            return true; 
+    if (StateName == BMEnemyStateNames::PhaseChange)    return true; 
+	if (StateName == BMEnemyStateNames::Dodge)          return true;
     return bFinished;
 }
 

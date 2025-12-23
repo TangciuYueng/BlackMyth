@@ -25,4 +25,22 @@ public:
 
     // Ĭ����Ϸ��ͼ·�������� /Game/Maps/MyDefaultMap ���ʲ��� MyDefaultMap��
     UPROPERTY(EditDefaultsOnly, Category="Maps") FString DefaultGameMapPath;
+
+protected:
+    virtual void Init() override;
+    virtual void Shutdown() override;
+
+private:
+    FDelegateHandle PostLoadMapHandle;
+    void HandlePostLoadMap(class UWorld* LoadedWorld);
+
+public:
+    void StopLevelMusic();
+    void StartLevelMusicForWorld(class UWorld* World, const TCHAR* SoundPath);
+    void OnLevelMusicFinished(class UAudioComponent* AC);
+    void PlayMusic(class UWorld* World, const TCHAR* SoundPath, bool bLoop);
+
+private:
+    UPROPERTY(Transient)
+    class UAudioComponent* LevelMusicComp = nullptr;
 };

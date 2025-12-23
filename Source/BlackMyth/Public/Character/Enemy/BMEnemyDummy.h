@@ -27,10 +27,11 @@ protected:
     void BuildAttackSpecs();
     void BuildHitBoxes();
     void BuildHurtBoxes();
+	void BuildLootTable();
     virtual float PlayDodgeOnce() override;
 
 protected:
-    // ===== 资产：你自己改路径 =====
+    // ===== 资产 =====
     UPROPERTY(EditDefaultsOnly, Category = "BM|Dummy|Assets")
     TSoftObjectPtr<USkeletalMesh> MeshAsset;
 
@@ -66,14 +67,14 @@ protected:
     TSoftObjectPtr<UAnimSequence> AttackHeavy2Asset;
 
 protected:
-    // ===== HurtBox（按你已有组件字段写法：AttachSocketOrBone / BoxExtent / DamageMultiplier）=====
+    // ===== HurtBox =====
     UPROPERTY(VisibleAnywhere, Category = "BM|Dummy|Components")
     TObjectPtr<UBMHurtBoxComponent> HurtBody = nullptr;
 
     UPROPERTY(VisibleAnywhere, Category = "BM|Dummy|Components")
     TObjectPtr<UBMHurtBoxComponent> HurtHead = nullptr;
 
-    // ===== 可调参数（不同小怪派生时只改这些即可）=====
+    // ===== 可调参数 =====
     UPROPERTY(EditDefaultsOnly, Category = "BM|Dummy|Tuning")
     float DummyAggroRange = 900.f;
 
@@ -97,6 +98,18 @@ protected:
 
     UPROPERTY(EditAnywhere, Category = "BM|Dummy|Dodge")
     float DummyDodgeCooldown = 2.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Loot", meta = (ClampMin = "0"))
+    int32 DummyCurrencyDropMin = 200;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Loot", meta = (ClampMin = "0"))
+    int32 DummyCurrencyDropMax = 300;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Loot", meta = (ClampMin = "0.0"))
+    float DummyExpDropMin = 100.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Loot", meta = (ClampMin = "0.0"))
+    float DummyExpDropMax = 300.0f;
 
     UPROPERTY(EditAnywhere, Category = "BM|Dummy|Dodge")
     FName DummyDodgeCooldownKey = TEXT("Dummy_Dodge");
