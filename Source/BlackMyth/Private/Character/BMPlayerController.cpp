@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 
 #include "Character/BMPlayerController.h"
 #include "BMGameInstance.h"
@@ -96,9 +94,9 @@ void ABMPlayerController::SetupInputComponent()
         UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound K to ApplyHalfHPDamage via C++"));
 
         // Bind Skill1 to RightMouseButton, Skill2 to Q, Skill3 to E
-        InputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &ABMPlayerController::StartSkill1Cooldown);
-        InputComponent->BindKey(EKeys::Q, IE_Pressed, this, &ABMPlayerController::StartSkill2Cooldown);
-        InputComponent->BindKey(EKeys::E, IE_Pressed, this, &ABMPlayerController::StartSkill3Cooldown);
+        //InputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &ABMPlayerController::StartSkill1Cooldown);
+        //InputComponent->BindKey(EKeys::Q, IE_Pressed, this, &ABMPlayerController::StartSkill2Cooldown);
+        //InputComponent->BindKey(EKeys::E, IE_Pressed, this, &ABMPlayerController::StartSkill3Cooldown);
         // Debug: L to add one level worth of XP
         InputComponent->BindKey(EKeys::L, IE_Pressed, this, &ABMPlayerController::DebugGainOneLevel);
         UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound RMB->Skill1, Q->Skill2, E->Skill3, L->GainOneLevel"));

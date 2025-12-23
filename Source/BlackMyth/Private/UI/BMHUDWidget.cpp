@@ -25,13 +25,6 @@ void UBMHUDWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
     {
         StaminaChangedHandle = EventBus->OnPlayerStaminaChanged.AddWeakLambda(this, [this](float Normalized)
         {
-            HandleManaChanged(Normalized);
-        });
-    }
-    if (!StaminaChangedHandle.IsValid())
-    {
-        StaminaChangedHandle = EventBus->OnPlayerStaminaChanged.AddWeakLambda(this, [this](float Normalized)
-        {
             HandleStaminaChanged(Normalized);
         });
     }
@@ -82,11 +75,6 @@ void UBMHUDWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
     {
         EventBus->OnPlayerHealthChanged.Remove(HealthChangedHandle);
         HealthChangedHandle.Reset();
-    }
-    if (StaminaChangedHandle.IsValid())
-    {
-        EventBus->OnPlayerStaminaChanged.Remove(StaminaChangedHandle);
-        StaminaChangedHandle.Reset();
     }
     if (StaminaChangedHandle.IsValid())
     {
