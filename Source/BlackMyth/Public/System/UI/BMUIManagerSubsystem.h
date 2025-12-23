@@ -53,6 +53,12 @@ public:
     void ShowMainMenu(TSubclassOf<class UBMMainWidget> MainClass);
 
     UFUNCTION(BlueprintCallable)
+    void HideMainMenu();
+
+    UFUNCTION(BlueprintCallable)
+    bool IsMainMenuVisible() const;
+
+    UFUNCTION(BlueprintCallable)
     void HideAllMenus();
 
     UFUNCTION(BlueprintCallable)
@@ -61,6 +67,15 @@ public:
     UFUNCTION(BlueprintCallable)
     void HideDeath();
 
+    UFUNCTION(BlueprintCallable)
+    void ShowSaveLoadMenu(TSubclassOf<class UBMSaveLoadMenuWidget> SaveLoadClass);
+
+    UFUNCTION(BlueprintCallable)
+    void HideSaveLoadMenu();
+
+    UFUNCTION(BlueprintCallable)
+    bool IsSaveLoadMenuVisible() const;
+
 private:
     TWeakObjectPtr<class UBMHUDWidget> HUD;
     TWeakObjectPtr<class UBMBossBarBase> BossBar;
@@ -68,4 +83,5 @@ private:
     TWeakObjectPtr<class UBMPauseMenuWidget> PauseMenu;
     TWeakObjectPtr<class UBMMainWidget> MainMenu;
     TWeakObjectPtr<class UBMDeathWidget> DeathWidget;
+    TWeakObjectPtr<class UBMSaveLoadMenuWidget> SaveLoadMenu;
 };

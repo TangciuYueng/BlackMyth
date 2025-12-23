@@ -5,8 +5,10 @@
 #include "Components/Button.h"
 #include "System/Event/BMEventBusSubsystem.h"
 #include "System/UI/BMUIManagerSubsystem.h"
+#include "UI/BMSaveLoadMenuWidget.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerController.h"
 #include "BMGameInstance.h"
 
 void UBMMainWidget::NativeConstruct()
@@ -24,6 +26,10 @@ void UBMMainWidget::NativeConstruct()
     {
         QuitButton->OnClicked.AddDynamic(this, &UBMMainWidget::OnQuitClicked);
     }
+    if (SaveLoadButton)
+    {
+        SaveLoadButton->OnClicked.AddDynamic(this, &UBMMainWidget::OnSaveLoadClicked);
+    }
 }
 
 void UBMMainWidget::NativeDestruct()
@@ -40,12 +46,16 @@ void UBMMainWidget::NativeDestruct()
     {
         QuitButton->OnClicked.RemoveAll(this);
     }
+    if (SaveLoadButton)
+    {
+        SaveLoadButton->OnClicked.RemoveAll(this);
+    }
     Super::NativeDestruct();
 }
 
 void UBMMainWidget::OnStartClicked()
 {
-    // ÇÐ»»µ½ÓÎÏ·ÊäÈëÄ£Ê½²¢Òþ²Ø²Ëµ¥
+    // ï¿½Ð»ï¿½ï¿½ï¿½ï¿½ï¿½Ï·ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½Ø²Ëµï¿½
     if (UWorld* World = GetWorld())
     {
         if (APlayerController* PC = World->GetFirstPlayerController())
@@ -58,7 +68,7 @@ void UBMMainWidget::OnStartClicked()
         {
             if (UBMUIManagerSubsystem* UIManager = GI->GetSubsystem<UBMUIManagerSubsystem>())
             {
-                // È·±£Ö÷²Ëµ¥±»Òþ²Ø
+                // È·ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 UIManager->HideAllMenus();
             }
         }
@@ -82,7 +92,7 @@ void UBMMainWidget::OnQuitClicked()
 
 void UBMMainWidget::OnBossBattleClicked()
 {
-    // ÇÐµ½ÓÎÏ·ÊäÈë¡¢Òþ²Ø²Ëµ¥²¢ÇÐ»»µ½ Boss Õ½µØÍ¼
+    // ï¿½Ðµï¿½ï¿½ï¿½Ï·ï¿½ï¿½ï¿½ë¡¢ï¿½ï¿½ï¿½Ø²Ëµï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½ï¿½ Boss Õ½ï¿½ï¿½Í¼
     if (UWorld* World = GetWorld())
     {
 
@@ -96,14 +106,57 @@ void UBMMainWidget::OnBossBattleClicked()
         {
             if (UBMUIManagerSubsystem* UIManager = GI->GetSubsystem<UBMUIManagerSubsystem>())
             {
-                // È·±£Ö÷²Ëµ¥±»Òþ²Ø
+                // È·ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 UIManager->HideAllMenus();
             }
         }
 
-        // ÇÐ»»µ½ÁíÒ»¸öµØÍ¼£ºStylized_Spruce_Forest£¨Î»ÓÚ Content/Stylized_PBR_Nature ÏÂ£©
+        // ï¿½Ð»ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½Stylized_Spruce_Forestï¿½ï¿½Î»ï¿½ï¿½ Content/Stylized_PBR_Nature ï¿½Â£ï¿½
         UGameplayStatics::OpenLevel(World, FName(TEXT("/Game/Stylized_Spruce_Forest/Demo/Maps/STZD_Demo_01")));
 
     }
 }
 
+void UBMMainWidget::OnSaveLoadClicked()
+{
+    if (UBMEventBusSubsystem* Bus = GetEventBus())
+    {
+        Bus->EmitNotify(FText::FromString(TEXT("Open Save/Load Menu")));
+    }
+    // Hide main menu and show SaveLoad menu
+    UWorld* World = GetWorld();
+    if (!World) return;
+    if (UBMUIManagerSubsystem* UI = GetUIManager())
+    {
+        UI->HideMainMenu();
+
+        // Resolve SaveLoad menu class from GameInstance or fallback paths
+        UBMGameInstance* BMGI = Cast<UBMGameInstance>(World->GetGameInstance());
+        TSubclassOf<UBMSaveLoadMenuWidget> SaveLoadClass = nullptr;
+        if (BMGI && BMGI->SaveLoadMenuClass.IsValid())
+        {
+            SaveLoadClass = BMGI->SaveLoadMenuClass.Get();
+        }
+        if (!SaveLoadClass)
+        {
+            SaveLoadClass = LoadClass<UBMSaveLoadMenuWidget>(nullptr, TEXT("/Game/UI/WBP_LoadMenu"));
+        }
+        if (!SaveLoadClass)
+        {
+            SaveLoadClass = LoadClass<UBMSaveLoadMenuWidget>(nullptr, TEXT("/Game//UI/WBP_LoadMenu.WBP_LoadMenu_C"));
+        }
+        if (SaveLoadClass)
+        {
+            UI->ShowSaveLoadMenu(SaveLoadClass);
+        }
+    }
+
+    // Ensure UI input mode for SaveLoad menu interaction
+    if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+    {
+        FInputModeUIOnly InputMode;
+        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+        PC->SetInputMode(InputMode);
+        PC->bShowMouseCursor = true;
+    }
+}

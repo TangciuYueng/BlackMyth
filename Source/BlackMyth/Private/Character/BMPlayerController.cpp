@@ -34,7 +34,7 @@ void ABMPlayerController::BeginPlay()
         UBMGameInstance* BMGI = Cast<UBMGameInstance>(GI);
         if (UIManager)
         {
-            // ½öÔÚÖ¸¶¨Ö÷²Ëµ¥¹Ø¿¨ÏÔÊ¾Ö÷²Ëµ¥
+            // ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½Ø¿ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½Ëµï¿½
             const UWorld* World = GetWorld();
             // Compare against the asset name of the startup map. For full path "/Game/emptymap/emptymap" the asset name is "emptymap".
             const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(const_cast<UObject*>(static_cast<const UObject*>(World)), /*bRemovePrefixPIE*/ true);
@@ -67,7 +67,7 @@ void ABMPlayerController::BeginPlay()
                 UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Showing MainMenu with class %s"), *ClassToUse->GetName());
                 UIManager->ShowMainMenu(ClassToUse);
 
-                // ÇÐ»»Îª UI Only Ä£Ê½£¬ÏÔÊ¾Êó±êÒÔÈ·±£²Ëµ¥¿É¼ûºÍ¿É½»»¥
+                // ï¿½Ð»ï¿½Îª UI Only Ä£Ê½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½Ëµï¿½ï¿½É¼ï¿½ï¿½Í¿É½ï¿½ï¿½ï¿½
                 FInputModeUIOnly InputMode;
                 InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
                 SetInputMode(InputMode);
@@ -86,8 +86,8 @@ void ABMPlayerController::SetupInputComponent()
     Super::SetupInputComponent();
     if (InputComponent)
     {
-        // ½öÊ¹ÓÃ C++ °ó¶¨£¬²»ÒÀÀµ Project Settings µÄ Action Mappings
-        // Ö±½Ó°ó¶¨ Tab ¼üÒÔ´ò¿ªÔÝÍ£²Ëµ¥
+        // ï¿½ï¿½Ê¹ï¿½ï¿½ C++ ï¿½ó¶¨£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Project Settings ï¿½ï¿½ Action Mappings
+        // Ö±ï¿½Ó°ï¿½ Tab ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½Í£ï¿½Ëµï¿½
         InputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &ABMPlayerController::TogglePauseMenu);
         UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound Tab to TogglePauseMenu via C++"));
 
@@ -151,6 +151,30 @@ void ABMPlayerController::DebugGainOneLevel()
         UE_LOG(LogTemp, Log, TEXT("DebugGainOneLevel: Added %f XP for level %d->%d (current %f / need %f)"), Delta, CurrentLevel, CurrentLevel+1, Current, Threshold);
     }
 }
+// [TEST] Consume 25 stamina to test stamina bar updates
+void ABMPlayerController::ConsumeStaminaTest()
+{
+    APawn* MyPawn = GetPawn();
+    if (!MyPawn)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ConsumeStaminaTest: No pawn possessed."));
+        return;
+    }
+    UBMStatsComponent* Stats = MyPawn->FindComponentByClass<UBMStatsComponent>();
+    if (!Stats)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ConsumeStaminaTest: BMStatsComponent not found on pawn %s."), *MyPawn->GetName());
+        return;
+    }
+    const float StaminaCost = 25.0f;
+    const FBMStatBlock& Block = Stats->GetStatBlock();
+    const float OldStamina = Block.Stamina;
+    const bool bSuccess = Stats->TryConsumeStamina(StaminaCost);
+    const float NewStamina = Stats->GetStatBlock().Stamina;
+    UE_LOG(LogTemp, Log, TEXT("ConsumeStaminaTest: Consumed=%.2f, Success=%d, OldStamina=%.2f, NewStamina=%.2f/%.2f"), 
+        StaminaCost, bSuccess, OldStamina, NewStamina, Block.MaxStamina);
+}
+
 void ABMPlayerController::StartSkill1Cooldown()
 {
     TriggerSkillCooldown(TEXT("Skill1"), 10.f);
@@ -298,7 +322,7 @@ void ABMPlayerController::TogglePauseMenu()
             if (PauseClass)
             {
                 UIManager->ShowPauseMenu(PauseClass);
-                // ÇÐ»»Îª UI Only Ä£Ê½ÒÔ±ãÔÝÍ£²Ëµ¥¿É½»»¥
+                // ï¿½Ð»ï¿½Îª UI Only Ä£Ê½ï¿½Ô±ï¿½ï¿½ï¿½Í£ï¿½Ëµï¿½ï¿½É½ï¿½ï¿½ï¿½
                 FInputModeUIOnly InputMode;
                 InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
                 SetInputMode(InputMode);

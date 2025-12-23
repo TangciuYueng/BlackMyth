@@ -19,6 +19,7 @@ public:
     // Basic HUD-related events
     DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerHealthChanged, float /*Normalized*/);
     DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerManaChanged, float /*Normalized*/);
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStaminaChanged, float /*Normalized*/);
     DECLARE_MULTICAST_DELEGATE_TwoParams(FOnSkillCooldownChanged, FName /*SkillId*/, float /*RemainingSeconds*/);
 
     // Boss bar
@@ -40,6 +41,7 @@ public:
     // Dispatchers
     FOnPlayerHealthChanged OnPlayerHealthChanged;
     FOnPlayerManaChanged OnPlayerManaChanged;
+    FOnPlayerStaminaChanged OnPlayerStaminaChanged;
     FOnSkillCooldownChanged OnSkillCooldownChanged;
 
     FOnBossPhaseChanged OnBossPhaseChanged;
@@ -57,6 +59,7 @@ public:
     // Convenience emitters
     void EmitPlayerHealth(float Normalized) { OnPlayerHealthChanged.Broadcast(Normalized); }
     void EmitPlayerMana(float Normalized) { OnPlayerManaChanged.Broadcast(Normalized); }
+    void EmitPlayerStamina(float Normalized) { OnPlayerStaminaChanged.Broadcast(Normalized); }
     void EmitSkillCooldown(FName SkillId, float Remaining) { OnSkillCooldownChanged.Broadcast(SkillId, Remaining); }
     void EmitBossPhase(int32 Phase, const FText& Hint) { OnBossPhaseChanged.Broadcast(Phase, Hint); }
     void EmitBossHealth(float Normalized) { OnBossHealthChanged.Broadcast(Normalized); }

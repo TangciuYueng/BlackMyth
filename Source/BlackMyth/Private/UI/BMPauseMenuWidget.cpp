@@ -6,6 +6,7 @@
 #include "Components/TextBlock.h"
 #include "System/Event/BMEventBusSubsystem.h"
 #include "System/UI/BMUIManagerSubsystem.h"
+#include "System/Save/BMSaveGameSubsystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "BMGameInstance.h"
 #include "UI/BMMainWidget.h"
@@ -19,6 +20,10 @@ void UBMPauseMenuWidget::NativeConstruct()
     if (ResumeButton)
     {
         ResumeButton->OnClicked.AddDynamic(this, &UBMPauseMenuWidget::OnResumeClicked);
+    }
+    if (SaveButton)
+    {
+        SaveButton->OnClicked.AddDynamic(this, &UBMPauseMenuWidget::OnSaveClicked);
     }
     if (SkillTreeButton)
     {
@@ -60,6 +65,10 @@ void UBMPauseMenuWidget::NativeDestruct()
     {
         ResumeButton->OnClicked.RemoveAll(this);
     }
+    if (SaveButton)
+    {
+        SaveButton->OnClicked.RemoveAll(this);
+    }
     if (SkillTreeButton)
     {
         SkillTreeButton->OnClicked.RemoveAll(this);
@@ -96,6 +105,36 @@ void UBMPauseMenuWidget::OnResumeClicked()
     if (UBMUIManagerSubsystem* UI = GetUIManager())
     {
         UI->HidePauseMenu();
+    }
+}
+
+void UBMPauseMenuWidget::OnSaveClicked()
+{
+    // Optional: notify via event bus
+    if (UBMEventBusSubsystem* Bus = GetEventBus())
+    {
+        Bus->EmitNotify(LOCTEXT("PauseSave", "Saving game..."));
+    }
+
+    // Get save subsystem from GameInstance and save current game
+    if (UGameInstance* GI = GetGameInstance())
+    {
+        if (UBMSaveGameSubsystem* SaveSubsystem = GI->GetSubsystem<UBMSaveGameSubsystem>())
+        {
+            const bool bSuccess = SaveSubsystem->SaveCurrentGame();
+
+            if (UBMEventBusSubsystem* Bus2 = GetEventBus())
+            {
+                if (bSuccess)
+                {
+                    Bus2->EmitNotify(LOCTEXT("PauseSaveOk", "Game saved"));
+                }
+                else
+                {
+                    Bus2->EmitNotify(LOCTEXT("PauseSaveFail", "Save failed"));
+                }
+            }
+        }
     }
 }
 

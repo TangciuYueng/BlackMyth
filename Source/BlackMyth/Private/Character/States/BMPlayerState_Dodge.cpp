@@ -1,6 +1,7 @@
 #include "Character/States/BMPlayerState_Dodge.h"
 #include "Character/BMPlayerCharacter.h"
 #include "Character/Components/BMCombatComponent.h"
+#include "Character/Components/BMStatsComponent.h"
 #include "Character/Components/BMStateMachineComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -11,6 +12,18 @@ void UBMPlayerState_Dodge::OnEnter(float)
 
     PC->GetWorldTimerManager().ClearTimer(TimerHandleFinish);
     PC->GetWorldTimerManager().ClearTimer(TimerHandleStep);
+
+    if (UBMStatsComponent* Stats = PC->GetStats())
+    {
+        if (!Stats->TryConsumeStamina(40.f))
+        {
+            if (UBMStateMachineComponent* M = PC->GetFSM())
+            {
+                M->ChangeStateByName(PC->HasMoveIntent() ? BMStateNames::Move : BMStateNames::Idle);
+            }
+            return;
+        }
+    }
 
     // 冷却
     if (UBMCombatComponent* Combat = PC->GetCombat())
@@ -37,6 +50,8 @@ void UBMPlayerState_Dodge::OnEnter(float)
     LockedDir.Z = 0.f;
     LockedDir = LockedDir.IsNearlyZero() ? PC->GetActorForwardVector() : LockedDir.GetSafeNormal();
 
+    // 立即面向闪避方向
+    PC->SetActorRotation(LockedDir.Rotation());
     // 禁用朝移动方向转向
     if (UCharacterMovementComponent* Move = PC->GetCharacterMovement())
     {
@@ -190,12 +205,8 @@ void UBMPlayerState_Dodge::OnExit(float)
 
 bool UBMPlayerState_Dodge::CanTransitionTo(FName StateName) const
 {
-    // 不可被打断
-    if (!bFinished)
-    {
-        return (StateName == BMStateNames::Death);
-    }
-    return true;
+	if (StateName == BMStateNames::Death) return true;
+    return bFinished;
 }
 
 void UBMPlayerState_Dodge::FinishDodge()

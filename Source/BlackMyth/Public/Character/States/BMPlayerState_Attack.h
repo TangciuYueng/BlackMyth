@@ -40,7 +40,7 @@ private:
     FTimerHandle TimerRecoverEnd;
 
     bool bFinished = false;
-
+    bool bRecover = false;
     // combo runtime
     bool bIsCombo = false;
     int32 ComboIndex = -1;
