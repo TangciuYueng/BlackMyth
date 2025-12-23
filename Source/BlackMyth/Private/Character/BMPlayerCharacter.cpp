@@ -1,6 +1,11 @@
 #include "Character/BMPlayerCharacter.h"
 
 #include "Character/Components/BMCombatComponent.h"
+#include "Character/Components/BMHurtBoxComponent.h"
+#include "Character/Components/BMHitBoxComponent.h"
+#include "Character/Components/BMStatsComponent.h"
+#include "Character/Components/BMInventoryComponent.h"
+#include "Character/Components/BMExperienceComponent.h"
 #include "Character/Components/BMStateMachineComponent.h"
 #include "Character/States/BMPlayerState_Idle.h"
 #include "Character/States/BMPlayerState_Move.h"
@@ -19,10 +24,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
-#include "Character/Components/BMHurtBoxComponent.h"
-#include "Character/Components/BMHitBoxComponent.h"
-#include "Character/Components/BMStatsComponent.h"
-#include "Character/Components/BMInventoryComponent.h"
+
 
 #include "UObject/ConstructorHelpers.h"
 #include "Core/BMDataSubsystem.h"
@@ -36,9 +38,6 @@ ABMPlayerCharacter::ABMPlayerCharacter()
     Team = EBMTeam::Player;
 
     Inventory = CreateDefaultSubobject<UBMInventoryComponent>(TEXT("Inventory"));
-
-	// Scheme B: set a default inventory UI widget class in pure C++.
-	// Note: update this path to match your widget blueprint asset if different.
 	static ConstructorHelpers::FClassFinder<UUserWidget> InventoryWidgetClassFinder(
 		TEXT("/Game/UI/WBP_Inventory")
 	);
@@ -46,6 +45,13 @@ ABMPlayerCharacter::ABMPlayerCharacter()
 	{
 		Inventory->SetInventoryWidgetClass(InventoryWidgetClassFinder.Class);
 	}
+
+    // 经验组件
+    Experience = CreateDefaultSubobject<UBMExperienceComponent>(TEXT("ExperienceComponent"));
+    if (Experience)
+    {
+        Experience->SetIsReplicated(false); // 单机/本地玩家
+    }
 
     // === 相机臂（跟随旋转来自 Controller） ===
     CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -129,6 +135,12 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         static ConstructorHelpers::FObjectFinder<UAnimSequence> Skill1Finder(
             TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/RMB_Hit.RMB_Hit'")
 		);
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> Skill2Finder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Primary_Melee_E_Slow.Primary_Melee_E_Slow'")
+        );
+        static ConstructorHelpers::FObjectFinder<UAnimSequence> Skill3Finder(
+            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/RMB_Push.RMB_Push'")
+        );
         static ConstructorHelpers::FObjectFinder<UAnimSequence> JumpStartFinder(
             TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Flip_Fwd.Q_Flip_Fwd'")
         );
@@ -160,6 +172,8 @@ ABMPlayerCharacter::ABMPlayerCharacter()
 		if (NormalAttackRecover3Finder.Succeeded())     AnimNormalAttackRecover3 = NormalAttackRecover3Finder.Object;
 		if (NormalAttackRecover4Finder.Succeeded())     AnimNormalAttackRecover4 = NormalAttackRecover4Finder.Object;
 		if (Skill1Finder.Succeeded())                   AnimSkill1 = Skill1Finder.Object;
+		if (Skill2Finder.Succeeded())                   AnimSkill2 = Skill2Finder.Object;
+		if (Skill3Finder.Succeeded())                   AnimSkill3 = Skill3Finder.Object;
         if (JumpStartFinder.Succeeded())                AnimJumpStart = JumpStartFinder.Object;
         if (FallLoopFinder.Succeeded())                 AnimFallLoop = FallLoopFinder.Object;
         if (HitLightFinder.Succeeded())                 AnimHitLight = HitLightFinder.Object;
@@ -347,13 +361,12 @@ void ABMPlayerCharacter::BuildAttackSteps()
         NormalComboSteps.Add(Step);
     }
 
-    // 收招动画
-    AnimComboRecover = AnimIdle; 
-
     SkillSlots.Reset();
     {
         FBMPlayerSkillSlot Slot;
         Slot.Action = EBMCombatAction::Skill1;
+
+        Slot.StaminaCost = 30.f;
 
         Slot.Spec.Id = TEXT("Skill1");
         Slot.Spec.Anim = AnimSkill1;
@@ -364,7 +377,57 @@ void ABMPlayerCharacter::BuildAttackSteps()
         Slot.Spec.HitBoxNames = { TEXT("HeavyAttack") };
         Slot.Spec.HitBoxParams.bOverrideReaction = true;
         Slot.Spec.HitBoxParams.OverrideReaction = EBMHitReaction::Heavy;
-        Slot.Spec.HitBoxParams.DamageMultiplier = 1.25f;
+        Slot.Spec.HitBoxParams.DamageMultiplier = 1.3f;
+
+        Slot.Spec.bUninterruptible = true;
+        Slot.Spec.InterruptChance = 0.f;
+        Slot.Spec.InterruptChanceOnHeavyHit = 0.f;
+
+        Slot.Spec.Cooldown = 2.0f;
+
+        SkillSlots.Add(Slot);
+    }
+    {
+        FBMPlayerSkillSlot Slot;
+        Slot.Action = EBMCombatAction::Skill2;
+
+        Slot.StaminaCost = 50.f;
+
+        Slot.Spec.Id = TEXT("Skill2");
+        Slot.Spec.Anim = AnimSkill2;
+        Slot.Spec.PlayRate = 1.0f;
+        Slot.Spec.StartTime = 0.0f;
+        Slot.Spec.MaxPlayTime = 0.5f;
+
+        Slot.Spec.HitBoxNames = { TEXT("HeavyAttack") };
+        Slot.Spec.HitBoxParams.bOverrideReaction = true;
+        Slot.Spec.HitBoxParams.OverrideReaction = EBMHitReaction::Heavy;
+        Slot.Spec.HitBoxParams.DamageMultiplier = 1.5f;
+
+        Slot.Spec.bUninterruptible = true;
+        Slot.Spec.InterruptChance = 0.f;
+        Slot.Spec.InterruptChanceOnHeavyHit = 0.f;
+
+        Slot.Spec.Cooldown = 2.0f;
+
+        SkillSlots.Add(Slot);
+    }
+    {
+        FBMPlayerSkillSlot Slot;
+        Slot.Action = EBMCombatAction::Skill3;
+
+        Slot.StaminaCost = 80.f;
+
+        Slot.Spec.Id = TEXT("Skill3");
+        Slot.Spec.Anim = AnimSkill3;
+        Slot.Spec.PlayRate = 1.0f;
+        Slot.Spec.StartTime = 0.0f;
+        Slot.Spec.MaxPlayTime = -1.0f;
+
+        Slot.Spec.HitBoxNames = { TEXT("HeavyAttack") };
+        Slot.Spec.HitBoxParams.bOverrideReaction = true;
+        Slot.Spec.HitBoxParams.OverrideReaction = EBMHitReaction::Heavy;
+        Slot.Spec.HitBoxParams.DamageMultiplier = 0.01f;
 
         Slot.Spec.bUninterruptible = true;
         Slot.Spec.InterruptChance = 0.f;
@@ -424,6 +487,8 @@ void ABMPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
     PlayerInputComponent->BindAction(TEXT("Jump"), IE_Pressed, this, &ABMPlayerCharacter::Input_JumpPressed);
     PlayerInputComponent->BindAction(TEXT("NormalAttack"), IE_Pressed, this, &ABMPlayerCharacter::Input_NormalAttackPressed);
     PlayerInputComponent->BindAction(TEXT("Skill1"), IE_Pressed, this, &ABMPlayerCharacter::Input_Skill1Pressed);
+    PlayerInputComponent->BindAction(TEXT("Skill2"), IE_Pressed, this, &ABMPlayerCharacter::Input_Skill2Pressed);
+    PlayerInputComponent->BindAction(TEXT("Skill3"), IE_Pressed, this, &ABMPlayerCharacter::Input_Skill3Pressed);
     PlayerInputComponent->BindAction(TEXT("Dodge"), IE_Pressed, this, &ABMPlayerCharacter::Input_DodgePressed);
 
     PlayerInputComponent->BindAction(TEXT("Sprint"), IE_Pressed, this, &ABMPlayerCharacter::Input_SprintPressed);
@@ -643,6 +708,22 @@ void ABMPlayerCharacter::Input_Skill1Pressed()
     }
 }
 
+void ABMPlayerCharacter::Input_Skill2Pressed()
+{
+    if (UBMCombatComponent* C = GetCombat())
+    {
+        C->RequestAction(EBMCombatAction::Skill2);
+    }
+}
+
+void ABMPlayerCharacter::Input_Skill3Pressed()
+{
+    if (UBMCombatComponent* C = GetCombat())
+    {
+        C->RequestAction(EBMCombatAction::Skill3);
+    }
+}
+
 void ABMPlayerCharacter::Input_DodgePressed()
 {
     if (UBMCombatComponent* C = GetCombat())
@@ -700,12 +781,21 @@ void ABMPlayerCharacter::OnActionRequested(EBMCombatAction Action)
         }
 
         FBMPlayerAttackSpec Spec;
-        if (!SelectSkillSpec(Action, Spec)) return;
+        float SkillStaminaCost = 0.f;
+        if (!SelectSkillSpec(Action, Spec, SkillStaminaCost)) return;
 
         if (UBMCombatComponent* C = GetCombat())
         {
             if (!C->IsCooldownReady(Spec.Id))
                 return;
+        }
+
+        if (UBMStatsComponent* S = GetStats())
+        {
+            if (S->GetStatBlock().Stamina < SkillStaminaCost)
+            {
+                return;
+            }
         }
 
         EnqueueAction(Action);
@@ -725,6 +815,14 @@ void ABMPlayerCharacter::OnActionRequested(EBMCombatAction Action)
         if (UBMCombatComponent* C = GetCombat())
         {
             if (!C->IsCooldownReady(DodgeCooldownKey))
+            {
+                return;
+            }
+        }
+
+        if (UBMStatsComponent* S = GetStats())
+        {
+            if (S->GetStatBlock().Stamina < 40.f)
             {
                 return;
             }
@@ -998,6 +1096,7 @@ bool ABMPlayerCharacter::ResolveHitBoxWindow(
 
 void ABMPlayerCharacter::EnqueueAction(EBMCombatAction Action)
 {
+    ActionQueue.Reset();
     ActionQueue.Add(Action);
 }
 
@@ -1022,13 +1121,14 @@ bool ABMPlayerCharacter::ConsumeOneQueuedNormalAttack()
     return false;
 }
 
-bool ABMPlayerCharacter::SelectSkillSpec(EBMCombatAction Action, FBMPlayerAttackSpec& OutSpec) const
+bool ABMPlayerCharacter::SelectSkillSpec(EBMCombatAction Action, FBMPlayerAttackSpec& OutSpec, float& OutStaminaCost) const
 {
     for (const FBMPlayerSkillSlot& S : SkillSlots)
     {
         if (S.Action == Action)
         {
             OutSpec = S.Spec;
+            OutStaminaCost = S.StaminaCost;
             return (OutSpec.Anim != nullptr);
         }
     }

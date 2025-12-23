@@ -438,7 +438,6 @@ struct FBMPlayerAttackSpec
     UPROPERTY(EditAnywhere, Category = "BM|Player|Attack")
     TObjectPtr<UAnimSequence> Anim = nullptr;
 
-    // 用于“同类招式多段随机”
     UPROPERTY(EditAnywhere, Category = "BM|Player|Attack", meta = (ClampMin = "0.01"))
     float Weight = 1.0f;
 
@@ -488,6 +487,10 @@ struct FBMPlayerSkillSlot
 
     UPROPERTY(EditAnywhere)
     EBMCombatAction Action = EBMCombatAction::Skill1;
+
+    // 释放该技能需要消耗的耐力
+    UPROPERTY(EditAnywhere, meta = (ClampMin = "0.0"))
+    float StaminaCost = 0.f;
 
     UPROPERTY(EditAnywhere)
     FBMPlayerAttackSpec Spec;

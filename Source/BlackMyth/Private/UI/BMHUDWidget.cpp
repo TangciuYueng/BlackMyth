@@ -5,6 +5,8 @@
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 #include "System/Event/BMEventBusSubsystem.h"
+#include "Character/Components/BMStatsComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 void UBMHUDWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
 {
@@ -17,9 +19,9 @@ void UBMHUDWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
             HandleHealthChanged(Normalized);
         });
     }
-    if (!ManaChangedHandle.IsValid())
+    if (!StaminaChangedHandle.IsValid())
     {
-        ManaChangedHandle = EventBus->OnPlayerManaChanged.AddWeakLambda(this, [this](float Normalized)
+        StaminaChangedHandle = EventBus->OnPlayerStaminaChanged.AddWeakLambda(this, [this](float Normalized)
         {
             HandleStaminaChanged(Normalized);
         });
@@ -31,6 +33,8 @@ void UBMHUDWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
             HandleSkillCooldownChanged(SkillId, RemainingSeconds);
         });
     }
+
+    SyncInitialValues();
 }
 
 void UBMHUDWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
@@ -42,10 +46,10 @@ void UBMHUDWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
         EventBus->OnPlayerHealthChanged.Remove(HealthChangedHandle);
         HealthChangedHandle.Reset();
     }
-    if (ManaChangedHandle.IsValid())
+    if (StaminaChangedHandle.IsValid())
     {
-        EventBus->OnPlayerManaChanged.Remove(ManaChangedHandle);
-        ManaChangedHandle.Reset();
+        EventBus->OnPlayerStaminaChanged.Remove(StaminaChangedHandle);
+        StaminaChangedHandle.Reset();
     }
     if (SkillCooldownHandle.IsValid())
     {
@@ -118,5 +122,37 @@ FText UBMHUDWidget::FormatCooldownText(float RemainingSeconds) const
     Opts.MinimumIntegralDigits = 2;
     const FText SecText = FText::AsNumber(Seconds, &Opts);
     return FText::FromString(FString::Printf(TEXT("%d:%s"), Minutes, *SecText.ToString()));
+}
+
+void UBMHUDWidget::SyncInitialValues()
+{
+    const UWorld* World = GetWorld();
+    if (!World)
+    {
+        HandleHealthChanged(1.f);
+        HandleStaminaChanged(1.f);
+        return;
+    }
+
+    APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(World, 0);
+    if (!PlayerPawn)
+    {
+        HandleHealthChanged(1.f);
+        HandleStaminaChanged(1.f);
+        return;
+    }
+
+    if (UBMStatsComponent* Stats = PlayerPawn->FindComponentByClass<UBMStatsComponent>())
+    {
+        const FBMStatBlock& Block = Stats->GetStatBlock();
+        const float HealthNormalized = Block.MaxHP > 0.f ? Block.HP / Block.MaxHP : 0.f;
+        const float StaminaNormalized = Block.MaxStamina > 0.f ? Block.Stamina / Block.MaxStamina : 0.f;
+        HandleHealthChanged(HealthNormalized);
+        HandleStaminaChanged(StaminaNormalized);
+        return;
+    }
+
+    HandleHealthChanged(1.f);
+    HandleStaminaChanged(1.f);
 }
 

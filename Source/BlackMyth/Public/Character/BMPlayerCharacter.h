@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Character/BMCharacterBase.h"
+#include "Character/Components/BMExperienceComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Core/BMTypes.h"
@@ -105,12 +106,12 @@ public:
 
 
     // 技能选择
-    bool SelectSkillSpec(EBMCombatAction Action, FBMPlayerAttackSpec& OutSpec) const;
+    bool SelectSkillSpec(EBMCombatAction Action, FBMPlayerAttackSpec& OutSpec, float& OutStaminaCost) const;
 
     // 连段访问
     int32 GetComboStepCount() const { return NormalComboSteps.Num(); }
     bool GetComboStep(int32 Index, FBMPlayerComboStep& Out) const;
-
+    UBMExperienceComponent* GetExperience() const { return Experience; }
     // 播放 Recover
     float PlayComboRecoverOnce(const FBMPlayerComboStep& Step);
 
@@ -229,6 +230,8 @@ private:
 
     void Input_NormalAttackPressed();
     void Input_Skill1Pressed();
+    void Input_Skill2Pressed();
+    void Input_Skill3Pressed();
 
     /**
      * 水平视角旋转输入回调
@@ -364,9 +367,6 @@ public:
     TArray<FBMPlayerComboStep> NormalComboSteps;
 
     UPROPERTY(EditAnywhere, Category = "BM|Player|Combo")
-    TObjectPtr<UAnimSequence> AnimComboRecover = nullptr;
-
-    UPROPERTY(EditAnywhere, Category = "BM|Player|Combo")
     float ComboRecoverPlayRate = 1.0f;
 
     // === 技能列表 ===
@@ -403,6 +403,11 @@ public:
     UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
     TObjectPtr<UAnimSequence> AnimSkill1 = nullptr;
 
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimSkill2 = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
+    TObjectPtr<UAnimSequence> AnimSkill3 = nullptr;
     // 受击/死亡动画
     UPROPERTY(EditAnywhere, Category = "BM|Player|Assets")
     TObjectPtr<UAnimSequence> AnimHitLight = nullptr;
@@ -474,5 +479,8 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "BM|Components")
     TObjectPtr<UBMInventoryComponent> Inventory;
+
+    UPROPERTY(VisibleAnywhere, Category = "BM|Components")
+    TObjectPtr<UBMExperienceComponent> Experience;
 };
 

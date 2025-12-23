@@ -4,6 +4,8 @@
 #include "Character/Components/BMStateMachineComponent.h"
 #include "Character/Components/BMCombatComponent.h"
 #include "Character/Components/BMStatsComponent.h"
+#include "Character/Components/BMInventoryComponent.h"
+#include "Character/Components/BMExperienceComponent.h"
 
 #include "Character/Enemy/States/BMEnemyState_Idle.h"
 #include "Character/Enemy/States/BMEnemyState_Patrol.h"
@@ -158,19 +160,124 @@ void ABMEnemyBase::SetAlertState(bool bAlert)
 
 void ABMEnemyBase::DropLoot()
 {
-    for (const FBMLootItem& Item : LootTable)
+    // 获取玩家
+    APawn* PlayerPawn = CachedPlayer.Get();
+    if (!PlayerPawn)
     {
-        if (Item.ItemID.IsNone()) continue;
-        const float P = FMath::Clamp(Item.Probability, 0.f, 1.f);
-        if (FMath::FRand() > P) continue;
-
-        const int32 MinQ = FMath::Max(1, Item.MinQuantity);
-        const int32 MaxQ = FMath::Max(MinQ, Item.MaxQuantity);
-        const int32 Qty = FMath::RandRange(MinQ, MaxQ);
-
-        // 基类只负责“决定掉不掉、掉多少”，具体 Spawn 交给掉落系统/派生类
-        UE_LOG(LogTemp, Log, TEXT("[%s] DropLoot: %s x%d"), *GetName(), *Item.ItemID.ToString(), Qty);
+        if (UWorld* W = GetWorld())
+        {
+            PlayerPawn = UGameplayStatics::GetPlayerPawn(W, 0);
+        }
     }
+
+    if (!PlayerPawn)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[%s] DropLoot: No player found"), *GetName());
+        return;
+    }
+
+    // 获取玩家的 Inventory 和 Experience 组件
+    UBMInventoryComponent* PlayerInventory = PlayerPawn->FindComponentByClass<UBMInventoryComponent>();
+    UBMExperienceComponent* PlayerExperience = PlayerPawn->FindComponentByClass<UBMExperienceComponent>();
+
+    int32 TotalCurrency = 0;
+    float TotalExp = 0.0f;
+    TArray<FString> DroppedItems;
+
+    // 掉落金币
+    if (PlayerInventory && CurrencyDropMax > 0)
+    {
+        const int32 Currency = FMath::RandRange(FMath::Max(0, CurrencyDropMin), FMath::Max(0, CurrencyDropMax));
+        if (Currency > 0)
+        {
+            if (PlayerInventory->AddCurrency(Currency))
+            {
+                TotalCurrency = Currency;
+                UE_LOG(LogTemp, Log, TEXT("[%s] DropLoot: Dropped %d currency"), *GetName(), Currency);
+            }
+        }
+    }
+
+    // 掉落经验
+    if (PlayerExperience && ExpDropMax > 0.0f)
+    {
+        const float Exp = FMath::FRandRange(FMath::Max(0.0f, ExpDropMin), FMath::Max(0.0f, ExpDropMax));
+        if (Exp > 0.0f)
+        {
+            const int32 LevelsGained = PlayerExperience->AddXP(Exp);
+            TotalExp = Exp;
+            UE_LOG(LogTemp, Log, TEXT("[%s] DropLoot: Dropped %.2f XP (Player gained %d levels)"),
+                *GetName(), Exp, LevelsGained);
+        }
+    }
+
+    // 掉落物品
+    if (PlayerInventory && LootTable.Num() > 0)
+    {
+        for (const FBMLootItem& LootItem : LootTable)
+        {
+            // 概率判定
+            const float Roll = FMath::FRand();
+            if (Roll > LootItem.Probability)
+            {
+                continue; // 未通过概率检查
+            }
+
+            // 确定掉落数量
+            const int32 Quantity = FMath::RandRange(
+                FMath::Max(0, LootItem.MinQuantity),
+                FMath::Max(0, LootItem.MaxQuantity)
+            );
+
+            if (Quantity <= 0)
+            {
+                continue;
+            }
+
+            // 尝试添加物品
+            if (PlayerInventory->AddItem(LootItem.ItemID, Quantity))
+            {
+                DroppedItems.Add(FString::Printf(TEXT("%s x%d"), *LootItem.ItemID.ToString(), Quantity));
+                UE_LOG(LogTemp, Log, TEXT("[%s] DropLoot: Dropped item %s x%d (Probability: %.2f%%)"),
+                    *GetName(), *LootItem.ItemID.ToString(), Quantity, LootItem.Probability * 100.0f);
+            }
+            else
+            {
+                UE_LOG(LogTemp, Warning, TEXT("[%s] DropLoot: Failed to add item %s x%d (inventory full or item not found)"),
+                    *GetName(), *LootItem.ItemID.ToString(), Quantity);
+            }
+        }
+    }
+
+    // 汇总日志输出
+    FString SummaryLog = FString::Printf(TEXT("===== [%s] Loot Summary ====="), *GetName());
+
+    if (TotalCurrency > 0)
+    {
+        SummaryLog += FString::Printf(TEXT("\n  Currency: +%d"), TotalCurrency);
+    }
+
+    if (TotalExp > 0.0f)
+    {
+        SummaryLog += FString::Printf(TEXT("\n  Experience: +%.2f"), TotalExp);
+    }
+
+    if (DroppedItems.Num() > 0)
+    {
+        SummaryLog += TEXT("\n  Items:");
+        for (const FString& Item : DroppedItems)
+        {
+            SummaryLog += FString::Printf(TEXT("\n    - %s"), *Item);
+        }
+    }
+    else
+    {
+        SummaryLog += TEXT("\n  Items: None");
+    }
+
+    SummaryLog += TEXT("\n=============================");
+
+    UE_LOG(LogTemp, Log, TEXT("%s"), *SummaryLog);
 }
 
 bool ABMEnemyBase::IsInAttackRange() const
@@ -562,7 +669,7 @@ void ABMEnemyBase::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
 
 void ABMEnemyBase::HandleDeath(const FBMDamageInfo& LastHitInfo)
 {
-    // 先切 Death 状态，再做通用逻辑（避免 Super 停止动画/销毁导致播不出来）
+    // 先切 Death 状态，再做通用逻辑
     RequestDeathState(LastHitInfo);
 
     Super::HandleDeath(LastHitInfo);

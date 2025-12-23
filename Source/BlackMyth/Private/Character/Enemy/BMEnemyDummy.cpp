@@ -17,14 +17,19 @@ ABMEnemyDummy::ABMEnemyDummy()
 	DodgeOnHitChance = DummyDodgeOnHitChance;
 	DodgeCooldown = DummyDodgeCooldown;
 	DodgeCooldownKey = DummyDodgeCooldownKey;
+	CurrencyDropMin = DummyCurrencyDropMin;
+	CurrencyDropMax = DummyCurrencyDropMax;
+	ExpDropMax = DummyExpDropMax;
+	ExpDropMin = DummyExpDropMin;
 
 
-    // 网格偏移（按你项目习惯）
+    // 网格偏移
     GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -90.f));
     GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 
     BuildHurtBoxes();
     BuildHitBoxes();
+    BuildLootTable();
 
     // ===== 资产路径占位 =====
     MeshAsset = TSoftObjectPtr<USkeletalMesh>(FSoftObjectPath(TEXT("/Script/Engine.SkeletalMesh'/Game/Monster/Mesh/SK_Monster.SK_Monster'")));
@@ -250,6 +255,56 @@ void ABMEnemyDummy::BuildHitBoxes()
     }
 
 
+}
+
+void ABMEnemyDummy::BuildLootTable()
+{
+    LootTable.Reset();
+
+    
+    {
+        FBMLootItem Item;
+        Item.ItemID = TEXT("Item_CheDianWei");
+        Item.ItemType = EBMItemType::Consumable;
+        Item.Rarity = EBMItemRarity::Common;
+        Item.Probability = 0.80f;        
+        Item.MinQuantity = 1;
+        Item.MaxQuantity = 3;
+        Item.Weight = 1.0f;
+
+        LootTable.Add(Item);
+    }
+
+    
+    {
+        FBMLootItem Item;
+        Item.ItemID = TEXT("Item_JinChenXin");
+        Item.ItemType = EBMItemType::Material;
+        Item.Rarity = EBMItemRarity::Rare;
+        Item.Probability = 0.35f;        
+        Item.MinQuantity = 1;
+        Item.MaxQuantity = 2;
+        Item.Weight = 1.0f;
+
+        LootTable.Add(Item);
+    }
+
+    
+    {
+        FBMLootItem Item;
+        Item.ItemID = TEXT("Item_JiuZhuanJinDan");
+        Item.ItemType = EBMItemType::Consumable;
+        Item.Rarity = EBMItemRarity::Legendary;
+        Item.Probability = 0.05f;        
+        Item.MinQuantity = 1;
+        Item.MaxQuantity = 1;
+        Item.Weight = 1.0f;
+
+        LootTable.Add(Item);
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("[%s] BuildLootTable: Configured %d loot items"),
+        *GetName(), LootTable.Num());
 }
 
 float ABMEnemyDummy::PlayDodgeOnce()

@@ -8,7 +8,24 @@ DEFINE_LOG_CATEGORY(LogBMStats);
 
 UBMStatsComponent::UBMStatsComponent()
 {
-    PrimaryComponentTick.bCanEverTick = false;
+    PrimaryComponentTick.bCanEverTick = true;
+}
+
+void UBMStatsComponent::BeginPlay()
+{
+    Super::BeginPlay();
+
+    if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+    {
+        if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+        {
+            const float HealthNormalized = Stats.MaxHP > 0.f ? Stats.HP / Stats.MaxHP : 0.f;
+            Bus->EmitPlayerHealth(HealthNormalized);
+
+            const float StaminaNormalized = Stats.MaxStamina > 0.f ? Stats.Stamina / Stats.MaxStamina : 0.f;
+            Bus->EmitPlayerStamina(StaminaNormalized);
+        }
+    }
 }
 
 float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
@@ -90,6 +107,14 @@ bool UBMStatsComponent::TryConsumeStamina(float Amount)
     if (Amount <= 0.f) return true;
     if (Stats.Stamina < Amount) return false;
     Stats.Stamina -= Amount;
+    if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+    {
+        if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+        {
+            const float Normalized = Stats.MaxStamina > 0.f ? Stats.Stamina / Stats.MaxStamina : 0.f;
+            Bus->EmitPlayerStamina(Normalized);
+        }
+    }
     return true;
 }
 
@@ -99,6 +124,35 @@ bool UBMStatsComponent::TryConsumeMP(float Amount)
     if (Stats.MP < Amount) return false;
     Stats.MP -= Amount;
     return true;
+}
+
+void UBMStatsComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+    if (DeltaTime <= 0.f || IsDead())
+    {
+        return;
+    }
+
+    if (Stats.MaxStamina > 0.f && Stats.Stamina < Stats.MaxStamina)
+    {
+        const float OldStamina = Stats.Stamina;
+        const float Regen = StaminaRegenPerSec * DeltaTime;
+        Stats.Stamina = FMath::Clamp(Stats.Stamina + Regen, 0.f, Stats.MaxStamina);
+
+        if (!FMath::IsNearlyEqual(Stats.Stamina, OldStamina))
+        {
+            if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+            {
+                if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+                {
+                    const float Normalized = Stats.MaxStamina > 0.f ? Stats.Stamina / Stats.MaxStamina : 0.f;
+                    Bus->EmitPlayerStamina(Normalized);
+                }
+            }
+        }
+    }
 }
 
 void UBMStatsComponent::ReviveToFull(float NewMaxHP)

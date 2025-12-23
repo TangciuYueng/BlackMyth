@@ -24,14 +24,13 @@ public:
     virtual void DropLoot();
     virtual void SetAlertState(bool bAlert);
 
-    // ===== FSM/AI 需要的“只读接口” =====
+    // ===== FSM/AI 需要的只读接口 =====
     bool IsAlerted() const { return bIsAlert; }
     APawn* GetCurrentTarget() const { return CurrentTarget.Get(); }
     bool HasValidTarget() const { return CurrentTarget.IsValid(); }
 
     float GetAggroRange() const { return AggroRange; }
     float GetPatrolRadius() const { return PatrolRadius; }
-    float GetExpReward() const { return ExpReward; }
 	float GetPatrolSpeed() const { return PatrolSpeed; }
 	float GetChaseSpeed() const { return ChaseSpeed; }
     FVector GetHomeLocation() const { return HomeLocation; }
@@ -127,10 +126,19 @@ protected:
     float PatrolRadius = 400.f;
 
     UPROPERTY(EditAnywhere, Category = "BM|Enemy")
-    float ExpReward = 15.f;
-
-    UPROPERTY(EditAnywhere, Category = "BM|Enemy")
     TArray<FBMLootItem> LootTable;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Loot", meta = (ClampMin = "0"))
+    int32 CurrencyDropMin = 200;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Loot", meta = (ClampMin = "0"))
+    int32 CurrencyDropMax = 300;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Loot", meta = (ClampMin = "0.0"))
+    float ExpDropMin = 100.0f;
+
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|Loot", meta = (ClampMin = "0.0"))
+    float ExpDropMax = 300.0f;
 
     // ===== 工程性：FSM 驱动的资产配置（建议由派生类/编辑器配置）=====
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Assets")

@@ -349,8 +349,8 @@ private:
     // Name -> Definitions 下标，加速 Def 查找（避免每次 overlap 遍历）
     UPROPERTY(Transient)
     TMap<FName, int32> NameToDefIndex;
-
-    // 当前攻击窗口参数（一次窗口内多个 hitbox 共享）
+    
+    // 当前攻击窗口参数
     FBMHitBoxActivationParams ActiveWindowParams;
 
     // 命中记录（去重/多段命中用）

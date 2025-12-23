@@ -269,7 +269,7 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
             break;
     }
 
-    // 通过去重检查后，先记一次命中（避免同一帧/短时间内重复触发 overlap 造成多次结算）
+    // 通过去重检查后，先记一次命中
     Record.TotalHits++;
     Record.HitBoxHits.FindOrAdd(HitBoxName)++;
 
@@ -286,7 +286,7 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
 
     if (!Def)
     {
-        // 回退：遍历查找（便于你调试缓存是否正确）
+        // 回退：遍历查找
         for (const FBMHitBoxDefinition& D : Definitions)
         {
             if (D.Name == HitBoxName)
@@ -302,7 +302,7 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
         return;
     }
 
-    // -------- 6) 计算基础伤害（Damage 覆盖优先，否则用 Stats.Attack） --------
+    // -------- 6) 计算基础伤害 --------
     float BaseAttack = 0.f;
     if (Damage > 0.f)
     {
@@ -321,9 +321,10 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
     Info.RawDamageValue = BaseAttack;
 
     // Def：BaseAttack * DamageScale + AdditiveDamage
-    // Window：再乘以这次攻击窗口倍率（同一套 HitBoxDef 可被不同招式复用）
+    // Window：再乘以这次攻击窗口倍率
     const float DefDamage = BaseAttack * Def->DamageScale + Def->AdditiveDamage;
     Info.DamageValue = DefDamage * FMath::Max(0.f, ActiveWindowParams.DamageMultiplier);
+
 
     Info.DamageType = Def->DamageType;
     Info.ElementType = Def->ElementType;
