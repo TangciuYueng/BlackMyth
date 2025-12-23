@@ -94,10 +94,23 @@ void UBMGameInstance::StartLevelMusicForWorld(UWorld* World, const TCHAR* SoundP
     if (USoundBase* SoundAsset = LoadObject<USoundBase>(nullptr, SoundPath))
     {
         LevelMusicComp = UGameplayStatics::SpawnSound2D(World, SoundAsset);
+        if (LevelMusicComp)
+        {
+            LevelMusicComp->OnAudioFinishedNative.AddUObject(this, &UBMGameInstance::OnLevelMusicFinished);
+        }
     }
     else
     {
         UE_LOG(LogBlackMyth, Warning, TEXT("Failed to load level music asset: %s"), SoundPath);
+    }
+}
+
+void UBMGameInstance::OnLevelMusicFinished(UAudioComponent* AC)
+{
+    // Loop level music by restarting when finished
+    if (AC && AC == LevelMusicComp && AC->Sound)
+    {
+        AC->Play(0.f);
     }
 }
 
