@@ -52,6 +52,14 @@ void UBMHUDWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
         {
             if (UBMExperienceComponent* XP = Pawn->FindComponentByClass<UBMExperienceComponent>())
             {
+                CachedXP = XP;
+                if (!XPLevelUpHandle.IsValid())
+                {
+                    XPLevelUpHandle = XP->OnLevelUpNative.AddLambda([this](int32 OldLevel, int32 NewLevel)
+                    {
+                        HandleLevelChanged(NewLevel);
+                    });
+                }
                 HandleLevelChanged(XP->GetLevel());
             }
         }
@@ -81,6 +89,12 @@ void UBMHUDWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
     {
         EventBus->OnPlayerLevelUp.Remove(LevelChangedHandle);
         LevelChangedHandle.Reset();
+    }
+    if (CachedXP.IsValid() && XPLevelUpHandle.IsValid())
+    {
+        CachedXP->OnLevelUpNative.Remove(XPLevelUpHandle);
+        XPLevelUpHandle.Reset();
+        CachedXP = nullptr;
     }
 }
 

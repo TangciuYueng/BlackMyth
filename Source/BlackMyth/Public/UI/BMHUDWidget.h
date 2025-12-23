@@ -6,6 +6,7 @@
 #include "UI/BMWidgetBase.h"
 class UProgressBar;
 class UTextBlock;
+class UBMExperienceComponent;
 #include "BMHUDWidget.generated.h"
 
 /**
@@ -35,6 +36,9 @@ private:
     FDelegateHandle ManaChangedHandle;
     FDelegateHandle SkillCooldownHandle;
     FDelegateHandle LevelChangedHandle;
+    // Direct binding to XP component (native delegate) as a fallback
+    TWeakObjectPtr<UBMExperienceComponent> CachedXP;
+    FDelegateHandle XPLevelUpHandle;
 
     void HandleHealthChanged(float Normalized);
     void HandleStaminaChanged(float Normalized);

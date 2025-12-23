@@ -84,7 +84,7 @@ public:
      * 
      * @return 下一级所需经验值
      */
-    float GetMaxXPForNextLevel() const { return CalculateXPForLevel(Level + 1); }
+    float GetMaxXPForNextLevel() const { return CalculateXPForNextLevel(Level); }
 
     /**
      * 获取技能点数量

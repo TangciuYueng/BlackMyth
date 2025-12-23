@@ -11,6 +11,7 @@
 #include "Character/Components/BMStatsComponent.h"
 #include "Core/BMTypes.h"
 #include "System/Event/BMEventBusSubsystem.h"
+#include "Character/Components/BMExperienceComponent.h"
 
 void ABMPlayerController::BeginPlay()
 {
@@ -98,7 +99,9 @@ void ABMPlayerController::SetupInputComponent()
         InputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &ABMPlayerController::StartSkill1Cooldown);
         InputComponent->BindKey(EKeys::Q, IE_Pressed, this, &ABMPlayerController::StartSkill2Cooldown);
         InputComponent->BindKey(EKeys::E, IE_Pressed, this, &ABMPlayerController::StartSkill3Cooldown);
-        UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound RMB->Skill1, Q->Skill2, E->Skill3"));
+        // Debug: L to add one level worth of XP
+        InputComponent->BindKey(EKeys::L, IE_Pressed, this, &ABMPlayerController::DebugGainOneLevel);
+        UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound RMB->Skill1, Q->Skill2, E->Skill3, L->GainOneLevel"));
     }
 }
 
@@ -127,6 +130,30 @@ void ABMPlayerController::ApplyHalfHPDamage()
     Info.DamageType = EBMDamageType::TrueDamage; // ensure exact 50% HP taken, bypass Defense
     const float Applied = Stats->ApplyDamage(Info);
     UE_LOG(LogTemp, Log, TEXT("ApplyHalfHPDamage: Applied=%.2f, NewHP=%.2f/%.2f"), Applied, Block.HP, Block.MaxHP);
+}
+
+void ABMPlayerController::DebugGainOneLevel()
+{
+    UE_LOG(LogTemp, Log, TEXT("DebugGainOneLevel: invoked"));
+    APawn* MyPawn = GetPawn();
+    if (!MyPawn)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("DebugGainOneLevel: No pawn."));
+        return;
+    }
+    if (UBMExperienceComponent* XP = MyPawn->FindComponentByClass<UBMExperienceComponent>())
+    {
+        const int32 CurrentLevel = XP->GetLevel();
+        const float Threshold = XP->GetMaxXPForNextLevel();
+        const float Current = XP->GetCurrentXP();
+        const float Delta = FMath::Max(0.f, Threshold - Current);
+        XP->AddXP(Delta);
+        UE_LOG(LogTemp, Log, TEXT("DebugGainOneLevel: Added %f XP for level %d->%d (current %f / need %f)"), Delta, CurrentLevel, CurrentLevel+1, Current, Threshold);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("DebugGainOneLevel: ExperienceComponent not found on pawn %s"), *MyPawn->GetName());
+    }
 }
 void ABMPlayerController::StartSkill1Cooldown()
 {
