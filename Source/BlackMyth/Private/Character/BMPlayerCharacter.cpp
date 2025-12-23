@@ -252,7 +252,7 @@ ABMPlayerCharacter::ABMPlayerCharacter()
     }
     BuildAttackSteps();
 
-    Stats->GetStatBlockMutable().Attack = 100.0f;
+    Stats->GetStatBlockMutable().Attack = 40.0f;
 }
 
 void ABMPlayerCharacter::BeginPlay()
