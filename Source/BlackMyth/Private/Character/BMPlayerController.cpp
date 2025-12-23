@@ -150,10 +150,6 @@ void ABMPlayerController::DebugGainOneLevel()
         XP->AddXP(Delta);
         UE_LOG(LogTemp, Log, TEXT("DebugGainOneLevel: Added %f XP for level %d->%d (current %f / need %f)"), Delta, CurrentLevel, CurrentLevel+1, Current, Threshold);
     }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("DebugGainOneLevel: ExperienceComponent not found on pawn %s"), *MyPawn->GetName());
-    }
 }
 void ABMPlayerController::StartSkill1Cooldown()
 {
