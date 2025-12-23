@@ -8,6 +8,7 @@
 #include "UI/BMPauseMenuWidget.h"
 #include "UI/BMMainWidget.h"
 #include "UI/BMDeathWidget.h"
+#include "UI/BMSaveLoadMenuWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "System/Event/BMEventBusSubsystem.h"
 
@@ -122,6 +123,7 @@ void UBMUIManagerSubsystem::HideAllMenus()
     RemoveIfValid(reinterpret_cast<TWeakObjectPtr<UUserWidget>&>(PauseMenu));
     RemoveIfValid(reinterpret_cast<TWeakObjectPtr<UUserWidget>&>(MainMenu));
     RemoveIfValid(reinterpret_cast<TWeakObjectPtr<UUserWidget>&>(DeathWidget));
+    RemoveIfValid(reinterpret_cast<TWeakObjectPtr<UUserWidget>&>(SaveLoadMenu));
 }
 
 void UBMUIManagerSubsystem::HidePauseMenu()
@@ -208,3 +210,52 @@ void UBMUIManagerSubsystem::PushNotificationMessage(const FText& Message)
     }
 }
 
+
+void UBMUIManagerSubsystem::HideMainMenu()
+{
+    if (UUserWidget* W = MainMenu.Get())
+    {
+        W->RemoveFromParent();
+    }
+    MainMenu = nullptr;
+}
+
+bool UBMUIManagerSubsystem::IsMainMenuVisible() const
+{
+    const UUserWidget* W = MainMenu.Get();
+    return W && W->IsInViewport();
+}
+
+void UBMUIManagerSubsystem::ShowSaveLoadMenu(TSubclassOf<UBMSaveLoadMenuWidget> SaveLoadClass)
+{
+    UWorld* World = GetWorld();
+    if (!World) return;
+    if (SaveLoadMenu.IsValid())
+    {
+        UUserWidget* W = SaveLoadMenu.Get();
+        if (W && !W->IsInViewport())
+        {
+            W->AddToViewport();
+        }
+        return;
+    }
+    if (UUserWidget* W = CreateAndAdd(SaveLoadClass, World))
+    {
+        SaveLoadMenu = Cast<UBMSaveLoadMenuWidget>(W);
+    }
+}
+
+void UBMUIManagerSubsystem::HideSaveLoadMenu()
+{
+    if (UUserWidget* W = SaveLoadMenu.Get())
+    {
+        W->RemoveFromParent();
+    }
+    SaveLoadMenu = nullptr;
+}
+
+bool UBMUIManagerSubsystem::IsSaveLoadMenuVisible() const
+{
+    const UUserWidget* W = SaveLoadMenu.Get();
+    return W && W->IsInViewport();
+}

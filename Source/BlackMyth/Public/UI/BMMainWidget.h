@@ -17,8 +17,9 @@ class BLACKMYTH_API UBMMainWidget : public UBMWidgetBase
 
 public:
     UPROPERTY(meta=(BindWidget)) class UButton* StartButton = nullptr;
-    UPROPERTY(meta=(BindWidget)) class UButton* BossBattle = nullptr; // “boss战（我是老手）”
+    UPROPERTY(meta=(BindWidget)) class UButton* BossBattle = nullptr;
     UPROPERTY(meta=(BindWidget)) class UButton* QuitButton = nullptr;
+    UPROPERTY(meta=(BindWidget)) class UButton* SaveLoadButton = nullptr;
 
 protected:
     virtual void NativeConstruct() override;
@@ -31,4 +32,6 @@ private:
     void OnBossBattleClicked();
     UFUNCTION()
     void OnQuitClicked();
+    UFUNCTION()
+    void OnSaveLoadClicked();
 };
