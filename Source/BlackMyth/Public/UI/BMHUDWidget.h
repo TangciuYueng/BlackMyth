@@ -30,12 +30,14 @@ protected:
 private:
     // Cached bindings
     FDelegateHandle HealthChangedHandle;
-    FDelegateHandle ManaChangedHandle;
+    FDelegateHandle StaminaChangedHandle;
     FDelegateHandle SkillCooldownHandle;
 
     void HandleHealthChanged(float Normalized);
     void HandleStaminaChanged(float Normalized);
     void HandleSkillCooldownChanged(FName SkillId, float RemainingSeconds);
+
+    void SyncInitialValues();
 
     // Format cooldown according to UX rules. Returns empty when ready.
     FText FormatCooldownText(float RemainingSeconds) const;

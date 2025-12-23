@@ -2,6 +2,7 @@
 
 #include "Character/BMPlayerCharacter.h"
 #include "Character/Components/BMCombatComponent.h"
+#include "Character/Components/BMStatsComponent.h"
 #include "Character/Components/BMStateMachineComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Core/BMTypes.h"
@@ -18,6 +19,7 @@ void UBMPlayerState_Attack::OnEnter(float)
     PC->GetWorldTimerManager().ClearTimer(TimerRecoverEnd);
 
     bFinished = false;
+	bRecover = false;
     bIsCombo = false;
     ComboIndex = -1;
     bLinkWindowOpen = false;
@@ -55,7 +57,8 @@ void UBMPlayerState_Attack::OnEnter(float)
     if (BMCombatUtils::IsSkillAction(Action))
     {
         FBMPlayerAttackSpec Spec;
-        if (!PC->SelectSkillSpec(Action, Spec))
+        float StaminaCost = 0.f;
+        if (!PC->SelectSkillSpec(Action, Spec, StaminaCost))
         {
             FinishAttack(true);
             return;
@@ -67,6 +70,19 @@ void UBMPlayerState_Attack::OnEnter(float)
             if (!Combat->IsCooldownReady(Spec.Id))
             {
                 FinishAttack(true);
+                return;
+            }
+        }
+
+        if (UBMStatsComponent* Stats = PC->GetStats())
+        {
+            if (!Stats->TryConsumeStamina(StaminaCost))
+            {
+                FinishAttack(true);
+                if (UBMStateMachineComponent* M = PC->GetFSM())
+                {
+                    M->ChangeStateByName(BMStateNames::Idle);
+                }
                 return;
             }
         }
@@ -104,6 +120,7 @@ bool UBMPlayerState_Attack::CanTransitionTo(FName StateName) const
 {
     if (StateName == BMStateNames::Death) return true;
     if (StateName == BMStateNames::Hit)   return true;
+    if (StateName == BMStateNames::Dodge) return bRecover;
     return bFinished;
 }
 
@@ -237,7 +254,7 @@ void UBMPlayerState_Attack::StartRecoverForStep(int32 FromStepIndex)
         OnRecoverFinished();
         return;
     }
-
+	bRecover = true;
     PC->GetWorldTimerManager().SetTimer(
         TimerRecoverEnd, this, &UBMPlayerState_Attack::OnRecoverFinished, Dur, false);
 }

@@ -18,19 +18,17 @@ class BLACKMYTH_API UBMStatsComponent : public UActorComponent
 public:
     UBMStatsComponent();
 
+    virtual void BeginPlay() override;
+
     float ApplyDamage(FBMDamageInfo& InOutInfo);
 
     bool IsDead() const { return Stats.HP <= 0.f; }
 
     bool TryConsumeStamina(float Amount);
 
-    /**
-     * 尝试消耗魔法值（MP）
-     * 
-     * @param Amount 要消耗的 MP 数量（必须大于0）
-     * @return 如果当前 MP 足够并成功消耗返回 true，否则返回 false
-     */
     bool TryConsumeMP(float Amount);
+
+    virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
     void AddGameplayTag(FName Tag);
     void RemoveGameplayTag(FName Tag);
@@ -38,16 +36,20 @@ public:
 
     const FBMStatBlock& GetStatBlock() const { return Stats; }
     FBMStatBlock& GetStatBlockMutable() { return Stats; }
-
+    void ReviveToFull(float NewMaxHP);
     void InitializeFromBlock(const FBMStatBlock& In);
 
 public:
-    UPROPERTY(EditAnywhere, Category = "BM|Stats")
-    FBMStatBlock Stats;
-
     FBMOnDeathNative OnDeathNative;
 
 private:
+    UPROPERTY(EditAnywhere, Category = "BM|Stats")
+    FBMStatBlock Stats;
+
+    // ����ÿ��ָ��ٶ�
+    UPROPERTY(EditAnywhere, Category = "BM|Stats", meta = (ClampMin = "0.0"))
+    float StaminaRegenPerSec = 10.f;
+
     bool bDeathBroadcasted = false;
     TSet<FName> Tags;
 };

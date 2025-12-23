@@ -124,11 +124,6 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
         return 0.f;
     }
 
-    // 统一：RawDamageValue 作为原始输入，DamageValue 作为可变通道
-    const float Base = (InOutInfo.RawDamageValue > 0.f) ? InOutInfo.RawDamageValue : InOutInfo.DamageValue;
-    InOutInfo.RawDamageValue = Base;
-    InOutInfo.DamageValue = Base;
-
     UBMHurtBoxComponent* MatchedHB = nullptr;
     if (UPrimitiveComponent* HitComp = InOutInfo.HitComponent.Get())
     {
@@ -163,7 +158,6 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
 
 void ABMCharacterBase::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
 {
-    // 基类只做轻量日志，派生类可 override
     UE_LOG(LogBMCharacter, Verbose, TEXT("[%s] Took %.2f damage from %s"),
         *GetName(),
         FinalInfo.DamageValue,
@@ -189,7 +183,6 @@ void ABMCharacterBase::HandleStatsDeath(AActor* Killer)
 void ABMCharacterBase::HandleDeath(const FBMDamageInfo& LastHitInfo)
 {
     (void)LastHitInfo;
-    // 留给派生类：敌人掉落/玩家复活/切UI/禁用输入等
 }
 
 bool ABMCharacterBase::GetActiveHitWindow(TArray<FName>& OutHitBoxNames, FBMHitBoxActivationParams& OutParams) const

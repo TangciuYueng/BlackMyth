@@ -187,8 +187,8 @@ void ABMEnemyWhisper::BuildAttackSpecs()
         S.Weight = 2.0f;
 
         S.MinRange = 0.f;
-        S.MaxRange = 110.f;
-        S.Cooldown = 1.0f;
+        S.MaxRange = 80.f;
+        S.Cooldown = 3.0f;
         S.PlayRate = 1.0f;
 
         S.bUninterruptible = false;
@@ -213,8 +213,8 @@ void ABMEnemyWhisper::BuildAttackSpecs()
         S.Weight = 2.0f;
 
         S.MinRange = 0.f;
-        S.MaxRange = 140.f;
-        S.Cooldown = 1.2f;
+        S.MaxRange = 80.f;
+        S.Cooldown = 4.0f;
         S.PlayRate = 1.0f;
 
         S.bUninterruptible = false;
@@ -238,9 +238,9 @@ void ABMEnemyWhisper::BuildAttackSpecs()
         S.AttackWeight = EBMEnemyAttackWeight::Heavy;
         S.Weight = 1.0f;
 
-        S.MinRange = 80.f;
-        S.MaxRange = 180.f;
-        S.Cooldown = 2.0f;
+        S.MinRange = 0.f;
+        S.MaxRange = 80.f;
+        S.Cooldown = 6.0f;
         S.PlayRate = 1.0f;
 
         S.bUninterruptible = false;
