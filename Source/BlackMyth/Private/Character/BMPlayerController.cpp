@@ -18,6 +18,17 @@ void ABMPlayerController::BeginPlay()
 
     if (UGameInstance* GI = GetGameInstance())
     {
+        // Restore persistent player data (coins/exp/items) after level reload
+        if (auto* BMGI = Cast<UBMGameInstance>(GI))
+        {
+            BMGI->RestorePlayerPersistentData(this);
+        }
+
+        // Ensure game is unpaused and input is in GameOnly after reload
+        UGameplayStatics::SetGamePaused(this, false);
+        FInputModeGameOnly GameOnly;
+        SetInputMode(GameOnly);
+        bShowMouseCursor = false;
         UBMUIManagerSubsystem* UIManager = GI->GetSubsystem<UBMUIManagerSubsystem>();
         UBMGameInstance* BMGI = Cast<UBMGameInstance>(GI);
         if (UIManager)

@@ -6,6 +6,8 @@
 #include "Components/TextBlock.h"
 #include "System/Event/BMEventBusSubsystem.h"
 
+#define LOCTEXT_NAMESPACE "BMHUD"
+
 void UBMHUDWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
 {
     if (!EventBus) return;
@@ -78,7 +80,7 @@ void UBMHUDWidget::HandleSkillCooldownChanged(FName SkillId, float RemainingSeco
         if (Skill1CooldownText)
         {
             Skill1CooldownText->SetText(DisplayText);
-            Skill1CooldownText->SetVisibility(DisplayText.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::SelfHitTestInvisible);
+            Skill1CooldownText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
         }
     }
     else if (SkillId == TEXT("Skill2"))
@@ -86,7 +88,7 @@ void UBMHUDWidget::HandleSkillCooldownChanged(FName SkillId, float RemainingSeco
         if (Skill2CooldownText)
         {
             Skill2CooldownText->SetText(DisplayText);
-            Skill2CooldownText->SetVisibility(DisplayText.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::SelfHitTestInvisible);
+            Skill2CooldownText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
         }
     }
 }
@@ -96,7 +98,8 @@ FText UBMHUDWidget::FormatCooldownText(float RemainingSeconds) const
     const float Clamped = FMath::Max(0.f, RemainingSeconds);
     if (Clamped <= 0.05f)
     {
-        return FText::GetEmpty();
+        // Use ASCII default; provide zh-CN translation via localization if needed
+        return LOCTEXT("CooldownReady", "Ready");
     }
 
     if (Clamped < 10.f)
@@ -119,4 +122,6 @@ FText UBMHUDWidget::FormatCooldownText(float RemainingSeconds) const
     const FText SecText = FText::AsNumber(Seconds, &Opts);
     return FText::FromString(FString::Printf(TEXT("%d:%s"), Minutes, *SecText.ToString()));
 }
+
+#undef LOCTEXT_NAMESPACE
 

@@ -5,6 +5,7 @@
 #include "System/UI/BMUIManagerSubsystem.h"
 #include "BMGameInstance.h"
 #include "UI/BMMainWidget.h"
+#include "Character/Components/BMStatsComponent.h"
 
 void UBMDeathWidget::NativeConstruct()
 {
@@ -34,12 +35,23 @@ void UBMDeathWidget::NativeDestruct()
 
 void UBMDeathWidget::OnRestartClicked()
 {
-	// Reload current level
-	if (UWorld* World = GetWorld())
-	{
-		const FName MapName = FName(*UGameplayStatics::GetCurrentLevelName(this, true));
-		UGameplayStatics::OpenLevel(this, MapName);
-	}
+    // Reload current level (clean reset of animations, movement, input, etc.)
+    if (UWorld* World = GetWorld())
+    {
+        const FName MapName = FName(*UGameplayStatics::GetCurrentLevelName(this, /*bRemovePrefixPIE*/ true));
+        // Capture persistent data (coins/exp/items) in GI before reload
+        if (UGameInstance* GI = World->GetGameInstance())
+        {
+            if (auto* BMGI = Cast<UBMGameInstance>(GI))
+            {
+                if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+                {
+                    BMGI->CapturePlayerPersistentData(PC);
+                }
+            }
+        }
+        UGameplayStatics::OpenLevel(this, MapName);
+    }
 }
 
 void UBMDeathWidget::OnQuitClicked()

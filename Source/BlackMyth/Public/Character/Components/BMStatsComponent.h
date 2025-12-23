@@ -41,6 +41,9 @@ public:
 
     void InitializeFromBlock(const FBMStatBlock& In);
 
+    // Revive the owner by restoring HP to MaxHP and clearing death state
+    void Revive();
+
 public:
     UPROPERTY(EditAnywhere, Category = "BM|Stats")
     FBMStatBlock Stats;

@@ -3,6 +3,7 @@
 #include "System/UI/BMUIManagerSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "UI/BMDeathWidget.h"
+#include "GameFramework/Pawn.h"
 
 DEFINE_LOG_CATEGORY(LogBMStats);
 
@@ -39,13 +40,19 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
 
     InOutInfo.DamageValue = Applied;
 
-    // Emit HP change to UI
-    if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+    // Emit HP change to UI ONLY for player-controlled pawn
+    if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))
     {
-        if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+        if (OwnerPawn->IsPlayerControlled())
         {
-            const float Normalized = Stats.MaxHP > 0.f ? Stats.HP / Stats.MaxHP : 0.f;
-            Bus->EmitPlayerHealth(Normalized);
+            if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+            {
+                if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+                {
+                    const float Normalized = Stats.MaxHP > 0.f ? Stats.HP / Stats.MaxHP : 0.f;
+                    Bus->EmitPlayerHealth(Normalized);
+                }
+            }
         }
     }
 
@@ -54,27 +61,33 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
         bDeathBroadcasted = true;
         OnDeathNative.Broadcast(InOutInfo.InstigatorActor.Get());
 
-        if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+        if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))
         {
-            if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+            if (OwnerPawn->IsPlayerControlled())
             {
-                Bus->EmitPlayerDied();
-            }
-            if (auto* UI = GI->GetSubsystem<UBMUIManagerSubsystem>())
-            {
-                // Try to load a default death widget if available. You can also expose in GI if preferred.
-                if (UClass* DeathClass = LoadClass<UBMDeathWidget>(nullptr, TEXT("/Game/UI/WBP_Death.WBP_Death_C")))
+                if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
                 {
-                    UI->ShowDeath(DeathClass);
-                    // Switch to UI-only input so player cannot control character and can use mouse to click
-                    if (UWorld* World = GetWorld())
+                    if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
                     {
-                        if (APlayerController* PC = World->GetFirstPlayerController())
+                        Bus->EmitPlayerDied();
+                    }
+                    if (auto* UI = GI->GetSubsystem<UBMUIManagerSubsystem>())
+                    {
+                        // Try to load a default death widget if available. You can also expose in GI if preferred.
+                        if (UClass* DeathClass = LoadClass<UBMDeathWidget>(nullptr, TEXT("/Game/UI/WBP_Death.WBP_Death_C")))
                         {
-                            FInputModeUIOnly InputMode;
-                            InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-                            PC->SetInputMode(InputMode);
-                            PC->bShowMouseCursor = true;
+                            UI->ShowDeath(DeathClass);
+                            // Switch to UI-only input so player cannot control character and can use mouse to click
+                            if (UWorld* World = GetWorld())
+                            {
+                                if (APlayerController* PC = World->GetFirstPlayerController())
+                                {
+                                    FInputModeUIOnly InputMode;
+                                    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+                                    PC->SetInputMode(InputMode);
+                                    PC->bShowMouseCursor = true;
+                                }
+                            }
                         }
                     }
                 }
@@ -123,3 +136,26 @@ void UBMStatsComponent::InitializeFromBlock(const FBMStatBlock& In)
     Stats.MP = FMath::Clamp(Stats.MP, 0.f, Stats.MaxMP);
     Stats.Stamina = FMath::Clamp(Stats.Stamina, 0.f, Stats.MaxStamina);
 }
+
+// Restore HP to MaxHP and clear death flag; do not touch coins/exp/etc.
+void UBMStatsComponent::Revive()
+{
+    bDeathBroadcasted = false;
+    Stats.HP = Stats.MaxHP;
+    // Notify HUD (player only)
+    if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))
+    {
+        if (OwnerPawn->IsPlayerControlled())
+        {
+            if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+            {
+                if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+                {
+                    const float Normalized = Stats.MaxHP > 0.f ? Stats.HP / Stats.MaxHP : 0.f;
+                    Bus->EmitPlayerHealth(Normalized);
+                }
+            }
+        }
+    }
+}
+
