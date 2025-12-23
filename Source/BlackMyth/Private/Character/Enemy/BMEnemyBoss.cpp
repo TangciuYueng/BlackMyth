@@ -7,6 +7,9 @@
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimSingleNodeInstance.h"
 #include "Engine/SkeletalMesh.h"
+#include "BMGameInstance.h"
+#include "Kismet/GameplayStatics.h"
+#include "Character/Components/BMStatsComponent.h"
 
 #include "Character/Enemy/States/BMEnemyBossState_PhaseChange.h"
 #include "Character/Components/BMStateMachineComponent.h"
@@ -14,7 +17,7 @@
 
 ABMEnemyBoss::ABMEnemyBoss()
 {
-    // ===== »ùÀà¿Éµ÷²ÎÊı£¨AI/ÒÆ¶¯/ÉÁ±Ü£©=====
+    // ===== åŸºç±»å¯è°ƒå‚æ•°ï¼ˆAI/ç§»åŠ¨/é—ªé¿ï¼‰=====
     AggroRange = BossAggroRange;
     PatrolRadius = BossPatrolRadius;
     PatrolSpeed = BossPatrolSpeed;
@@ -30,14 +33,14 @@ ABMEnemyBoss::ABMEnemyBoss()
 
 
 
-    // ===== ÌåĞÍ/Åö×² =====
+    // ===== ä½“å‹/ç¢°æ’ =====
     ApplyBossBodyTuning();
 
-    // ===== ÏÈ´´½¨ HurtBox/HitBox ¶¨Òå =====
+    // ===== å…ˆåˆ›å»º HurtBox/HitBox å®šä¹‰ =====
     BuildHurtBoxes();
     BuildHitBoxes();
 
-    // ===== ×Ê²úÂ·¾¶Õ¼Î»£©=====
+    // ===== èµ„äº§è·¯å¾„å ä½ï¼‰=====
     MeshAsset = TSoftObjectPtr<USkeletalMesh>(FSoftObjectPath(
         TEXT("/Script/Engine.SkeletalMesh'/Game/ParagonRampage/Characters/Heroes/Rampage/Meshes/Rampage.Rampage'")));
 
@@ -77,18 +80,18 @@ ABMEnemyBoss::ABMEnemyBoss()
 
 void ABMEnemyBoss::ApplyBossBodyTuning()
 {
-    // 1) Capsule£º¾ö¶¨¡°ÎïÀíÌå»ı/ÃüÖĞ/Ñ°Â·±ÜÕÏ¡±
+    // 1) Capsuleï¼šå†³å®šâ€œç‰©ç†ä½“ç§¯/å‘½ä¸­/å¯»è·¯é¿éšœâ€
     if (UCapsuleComponent* Cap = GetCapsuleComponent())
     {
         Cap->SetCapsuleSize(BossCapsuleRadius, BossCapsuleHalfHeight);
     }
 
-    // 2) Mesh£º¾ö¶¨¡°ÊÓ¾õÌåĞÍ¡±
+    // 2) Meshï¼šå†³å®šâ€œè§†è§‰ä½“å‹â€
     if (USkeletalMeshComponent* TempMesh = GetMesh())
     {
         TempMesh->SetWorldScale3D(FVector(BossMeshScale));
 
-        // 3) Mesh Z Æ«ÒÆ£º°´ scale ·Å´ó£¨±ÜÃâ½Å¸¡¿Õ£©
+        // 3) Mesh Z åç§»ï¼šæŒ‰ scale æ”¾å¤§ï¼ˆé¿å…è„šæµ®ç©ºï¼‰
         const float Z = BaseMeshZOffset * BossMeshScale;
         TempMesh->SetRelativeLocation(FVector(0.f, 0.f, Z));
 
@@ -101,7 +104,7 @@ void ABMEnemyBoss::BeginPlay()
     ApplyConfiguredAssets();
     BuildAttackSpecs();
 
-	// ×¢²á¶ş½×¶Î×ª»»×´Ì¬
+	// æ³¨å†ŒäºŒé˜¶æ®µè½¬æ¢çŠ¶æ€
     if (UBMStateMachineComponent* Machine = GetFSM())
     {
         auto* SPhase = NewObject<UBMEnemyBossState_PhaseChange>(Machine);
@@ -109,7 +112,7 @@ void ABMEnemyBoss::BeginPlay()
         Machine->RegisterState(BMEnemyStateNames::PhaseChange, SPhase);
     }
 
-    // µ÷ÊÔ¿ÉÊÓ»¯
+    // è°ƒè¯•å¯è§†åŒ–
     if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
     for (UBMHurtBoxComponent* HB : HurtBoxes)
     {
@@ -117,6 +120,21 @@ void ABMEnemyBoss::BeginPlay()
     }
 
     Super::BeginPlay();
+
+    // Bind to stats to track HP and death
+    if (UBMStatsComponent* BossStats = GetStats())
+    {
+        BossStats->OnDeathNative.AddLambda([this](AActor* Killer)
+        {
+            if (UWorld* World = GetWorld())
+            {
+                if (UBMGameInstance* GI = Cast<UBMGameInstance>(World->GetGameInstance()))
+                {
+                    GI->PlayMusic(World, TEXT("/Game/Audio/over.over"), /*bLoop=*/true);
+                }
+            }
+        });
+    }
 }
 
 void ABMEnemyBoss::ApplyConfiguredAssets()
@@ -260,7 +278,7 @@ void ABMEnemyBoss::BuildAttackSpecs()
             return P;
         };
 
-    // Çá¹¥»÷
+    // è½»æ”»å‡»
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Boss_Light_01");
@@ -286,7 +304,7 @@ void ABMEnemyBoss::BuildAttackSpecs()
         if (S.Anim) AttackSpecs.Add(S);
     }
 
-    // ÖØ¹¥»÷1£º°ÔÌå
+    // é‡æ”»å‡»1ï¼šéœ¸ä½“
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Boss_Light_02");
@@ -312,7 +330,7 @@ void ABMEnemyBoss::BuildAttackSpecs()
         if (S.Anim) AttackSpecs.Add(S);
     }
 
-    // ÖØ¹¥»÷2£º½ÅÌß/ÔÒµØ£¬Ô¶Ò»µã
+    // é‡æ”»å‡»2ï¼šè„šè¸¢/ç ¸åœ°ï¼Œè¿œä¸€ç‚¹
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Boss_Heavy_01");
@@ -338,7 +356,7 @@ void ABMEnemyBoss::BuildAttackSpecs()
         if (S.Anim) AttackSpecs.Add(S);
     }
 
-    // »ù´¡ÉËº¦
+    // åŸºç¡€ä¼¤å®³
     if (UBMHitBoxComponent* HB = GetHitBox())
     {
         HB->SetDamage(BossBaseDamage);
@@ -347,7 +365,7 @@ void ABMEnemyBoss::BuildAttackSpecs()
 
 float ABMEnemyBoss::PlayDodgeOnce()
 {
-    // Äã Dummy ÓÃµÄÊÇ PlayOnce(AnimDodge, DodgePlayRate, 0, 0.7)
+    // ä½  Dummy ç”¨çš„æ˜¯ PlayOnce(AnimDodge, DodgePlayRate, 0, 0.7)
     return PlayOnce(AnimDodge, DodgePlayRate, 0.0, 0.75f);
 }
 
@@ -360,12 +378,12 @@ void ABMEnemyBoss::HandleDeath(const FBMDamageInfo& LastHitInfo)
 {
     LastDamageInfo = LastHitInfo;
 
-    // µÚÒ»´ÎËÀÍö
+    // ç¬¬ä¸€æ¬¡æ­»äº¡
     if (!bReviveUsed)
     {
         bReviveUsed = true;
 
-        // ½ø¹ı¶É×´Ì¬
+        // è¿›è¿‡æ¸¡çŠ¶æ€
         if (UBMStateMachineComponent* Machine = GetFSM())
         {
             Machine->ChangeStateByName(BMEnemyStateNames::PhaseChange);
@@ -373,7 +391,7 @@ void ABMEnemyBoss::HandleDeath(const FBMDamageInfo& LastHitInfo)
         return;
     }
 
-    // µÚ¶ş´ÎËÀÍö
+    // ç¬¬äºŒæ¬¡æ­»äº¡
     Super::HandleDeath(LastHitInfo);
 }
 
@@ -394,19 +412,19 @@ void ABMEnemyBoss::EnterPhase2()
     ApplyPhase2Tuning();
     AddPhase2AttackSpecs();
 
-    //// ¶ş½×¶Î»Øµ½ idle ¶¯»­
+    //// äºŒé˜¶æ®µå›åˆ° idle åŠ¨ç”»
     //PlayIdleLoop();
 }
 
 void ABMEnemyBoss::ApplyPhase2Tuning()
 {
-    // »ØÂú + Ìá¸ß×î´óÑª
+    // å›æ»¡ + æé«˜æœ€å¤§è¡€
     if (UBMStatsComponent* S = GetStats())
     {
         S->ReviveToFull(Phase2MaxHP);
     }
 
-    // Ìá¸ß»ù´¡ÉËº¦
+    // æé«˜åŸºç¡€ä¼¤å®³
     if (UBMHitBoxComponent* HB = GetHitBox())
     {
         HB->SetDamage(Phase2BaseDamage);
@@ -491,7 +509,7 @@ float ABMEnemyBoss::PlayDeathReverseOnce(float ReversePlayRate, float ReverseMax
     UAnimSingleNodeInstance* Inst = GetMesh()->GetSingleNodeInstance();
     if (!Inst)
     {
-        // ÏÈ´¥·¢Ò»´Î£¬È·±£ SingleNodeInstance ´´½¨
+        // å…ˆè§¦å‘ä¸€æ¬¡ï¼Œç¡®ä¿ SingleNodeInstance åˆ›å»º
         GetMesh()->PlayAnimation(Seq, false);
         Inst = GetMesh()->GetSingleNodeInstance();
     }
@@ -499,17 +517,33 @@ float ABMEnemyBoss::PlayDeathReverseOnce(float ReversePlayRate, float ReverseMax
 
     const float Len = Seq->GetPlayLength();
 
-    // µ¹·ÅÇø¼ä
+    // å€’æ”¾åŒºé—´
     const float Effective = (ReverseMaxTime > 0.f) ? FMath::Min(Len, ReverseMaxTime) : Len;
 
-    // ´Ó¶¯»­Ä©Î²¿ªÊ¼µ¹·Å
+    // ä»åŠ¨ç”»æœ«å°¾å¼€å§‹å€’æ”¾
     const float StartPos = Len;
     Inst->SetAnimationAsset(Seq, /*bIsLooping=*/false);
     Inst->SetPosition(StartPos, /*bFireNotifies=*/true);
 
-    // ¸º²¥·ÅÂÊ
+    // è´Ÿæ’­æ”¾ç‡
     Inst->SetPlayRate(-ReversePlayRate);
     Inst->SetPlaying(true);
 
     return Effective / ReversePlayRate;
+}
+void ABMEnemyBoss::SetAlertState(bool bAlert)
+{
+    const bool bPrevAlert = IsAlerted();
+    ABMEnemyBase::SetAlertState(bAlert);
+    if (!bPrevAlert && bAlert && !bBossAlertMusicStarted)
+    {
+        if (UWorld* World = GetWorld())
+        {
+            if (UBMGameInstance* GI = Cast<UBMGameInstance>(World->GetGameInstance()))
+            {
+                GI->PlayMusic(World, TEXT("/Game/Audio/boss1.boss1"), /*bLoop=*/true);
+                bBossAlertMusicStarted = true;
+            }
+        }
+    }
 }

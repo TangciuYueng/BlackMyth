@@ -24,4 +24,22 @@ public:
 
     // 默认游戏地图路径（例如 /Game/Maps/MyDefaultMap 或资产名 MyDefaultMap）
     UPROPERTY(EditDefaultsOnly, Category="Maps") FString DefaultGameMapPath;
+
+protected:
+    virtual void Init() override;
+    virtual void Shutdown() override;
+
+private:
+    FDelegateHandle PostLoadMapHandle;
+    void HandlePostLoadMap(class UWorld* LoadedWorld);
+
+public:
+    void StopLevelMusic();
+    void StartLevelMusicForWorld(class UWorld* World, const TCHAR* SoundPath);
+    void OnLevelMusicFinished(class UAudioComponent* AC);
+    void PlayMusic(class UWorld* World, const TCHAR* SoundPath, bool bLoop);
+
+private:
+    UPROPERTY(Transient)
+    class UAudioComponent* LevelMusicComp = nullptr;
 };

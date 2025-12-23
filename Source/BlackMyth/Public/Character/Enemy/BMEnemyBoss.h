@@ -24,6 +24,8 @@ public:
     float GetPhase2DeathHoldSeconds() const { return Phase2DeathHoldSeconds; }
     float GetPhase2DeathReversePlayRate() const { return Phase2DeathReversePlayRate; }
     float GetPhase2DeathReverseMaxTime() const { return Phase2DeathReverseMaxTime; }
+    virtual void SetAlertState(bool bAlert) override;
+
 protected:
     void ApplyConfiguredAssets();
     void ApplyBossBodyTuning();
@@ -33,11 +35,11 @@ protected:
     virtual float PlayDodgeOnce() override;
     virtual void HandleDeath(const FBMDamageInfo& LastHitInfo) override;
     virtual bool CanBeDamagedBy(const FBMDamageInfo& Info) const override;
-    void AddPhase2AttackSpecs();     // Ö»×·¼Ó¶ş½×¶ÎĞÂÕĞÊ½
-    void ApplyPhase2Tuning();        // ¼ÓÑª¡¢¼ÓÉËº¦µÈ
+    void AddPhase2AttackSpecs();     // åªè¿½åŠ äºŒé˜¶æ®µæ–°æ‹›å¼
+    void ApplyPhase2Tuning();        // åŠ è¡€ã€åŠ ä¼¤å®³ç­‰
 
 protected:
-    // ===== Boss ÌåĞÍ/Åö×²µ÷²Î =====
+    // ===== Boss ä½“å‹/ç¢°æ’è°ƒå‚ =====
     UPROPERTY(EditDefaultsOnly, Category = "BM|Boss|Body")
     float BossMeshScale = 1.45f;
 
@@ -47,11 +49,11 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "BM|Boss|Body")
     float BossCapsuleHalfHeight = 120.f;
 
-    // Mesh µÄ»ù´¡Æ«ÒÆ
+    // Mesh çš„åŸºç¡€åç§»
     UPROPERTY(EditDefaultsOnly, Category = "BM|Boss|Body")
     float BaseMeshZOffset = -90.f;
 
-    // ===== ×Ê²ú =====
+    // ===== èµ„äº§ =====
     UPROPERTY(EditDefaultsOnly, Category = "BM|Boss|Assets")
     TSoftObjectPtr<USkeletalMesh> MeshAsset;
 
@@ -76,7 +78,7 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "BM|Boss|Assets")
     TSoftObjectPtr<UAnimSequence> AnimDodgeAsset;
 
-    // ===== ¹¥»÷¶¯»­ =====
+    // ===== æ”»å‡»åŠ¨ç”» =====
     UPROPERTY(EditDefaultsOnly, Category = "BM|Boss|Assets|Attack")
     TSoftObjectPtr<UAnimSequence> AttackLight1Asset;
 
@@ -86,7 +88,7 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "BM|Boss|Assets|Attack")
     TSoftObjectPtr<UAnimSequence> AttackHeavy1Asset;
 
-    // ===== ¶ş½×¶ÎĞÂÔöÕĞÊ½×ÊÔ´ =====
+    // ===== äºŒé˜¶æ®µæ–°å¢æ‹›å¼èµ„æº =====
     UPROPERTY(EditDefaultsOnly, Category = "BM|Boss|Assets|Attack|Phase2")
     TSoftObjectPtr<UAnimSequence> AttackPhase2Heavy2Asset;
 
@@ -99,7 +101,7 @@ protected:
     UPROPERTY(Transient)
     TObjectPtr<UAnimSequence> AnimEnergize = nullptr;
 
-    // ===== ¶ş½×¶Îµ÷²Î =====
+    // ===== äºŒé˜¶æ®µè°ƒå‚ =====
     UPROPERTY(EditDefaultsOnly, Category = "BM|Boss|Phase2")
     float Phase2MaxHP = 300.f;               
 
@@ -107,7 +109,7 @@ protected:
     float Phase2BaseDamage = 32.f;           
 
 protected:
-    // ===== HurtBox£¨ÅäÖÃÊ½×é¼ş£©=====
+    // ===== HurtBoxï¼ˆé…ç½®å¼ç»„ä»¶ï¼‰=====
     UPROPERTY(VisibleAnywhere, Category = "BM|Boss|Components")
     TObjectPtr<UBMHurtBoxComponent> HurtBody = nullptr;
 
@@ -118,11 +120,11 @@ protected:
     TObjectPtr<UBMHurtBoxComponent> HurtHead = nullptr;
 
 protected:
-    // ===== ¿Éµ÷²ÎÊı =====
+    // ===== å¯è°ƒå‚æ•° =====
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack")
     float BossGlobalAttackInterval = 2.5f;
 
-    // È«¾Ö¼ä¸ôµÄËæ»ú¸¡¶¯·¶Î§
+    // å…¨å±€é—´éš”çš„éšæœºæµ®åŠ¨èŒƒå›´
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack")
     float BossGlobalAttackIntervalDeviation = 1.5f;
 
@@ -154,18 +156,20 @@ protected:
     FName BossDodgeCooldownKey = TEXT("Boss_Dodge");
 
 private:
-    bool bReviveUsed = false;        // ÊÇ·ñÒÑ¾­ÓÃ¹ıÒ»´Î¸´»î
-    bool bIsPhase2 = false;          // µ±Ç°ÊÇ·ñ¶ş½×¶Î
-    bool bInPhaseTransition = false; // ¹ı¶ÉÆÚ
-    // Death ²¥ÍêºóÍ£Áô¶à¾Ã
+    bool bReviveUsed = false;        // æ˜¯å¦å·²ç»ç”¨è¿‡ä¸€æ¬¡å¤æ´»
+    bool bIsPhase2 = false;          // å½“å‰æ˜¯å¦äºŒé˜¶æ®µ
+    bool bInPhaseTransition = false; // è¿‡æ¸¡æœŸ
+    // Death æ’­å®Œååœç•™å¤šä¹…
     UPROPERTY(EditDefaultsOnly, Category = "BM|Boss|Phase2|Transition")
     float Phase2DeathHoldSeconds = 3.0f;
 
-    // µ¹·Å²¥·ÅÂÊ
+    // å€’æ”¾æ’­æ”¾ç‡
     UPROPERTY(EditDefaultsOnly, Category = "BM|Boss|Phase2|Transition")
     float Phase2DeathReversePlayRate = 0.7f;
 
-    // µ¹·ÅÊ±³¤
+    // å€’æ”¾æ—¶é•¿
     UPROPERTY(EditDefaultsOnly, Category = "BM|Boss|Phase2|Transition")
     float Phase2DeathReverseMaxTime = -1.0f;
+    UPROPERTY(Transient)
+    bool bBossAlertMusicStarted = false;
 };
