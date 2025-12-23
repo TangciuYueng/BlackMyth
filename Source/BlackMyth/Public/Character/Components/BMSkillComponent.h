@@ -210,9 +210,8 @@ private:
     /**
      * 检查资源是否足够
      * 
-     * 根据技能配置的消耗值，检查角色的 MP 是否足够。
-     * 注意：当前实现假设所有技能都消耗 MP，如需支持 Stamina 或其他资源类型，
-     * 可以在 FBMSkillData 中添加资源类型字段。
+     * 根据技能配置的消耗值，检查角色的 Stamina 是否足够。
+     * 技能消耗 Stamina 而不是 MP。
      * 
      * @param PlayerCharacter 要检查的玩家角色
      * @return 如果资源足够返回 true，否则返回 false
@@ -222,7 +221,8 @@ private:
     /**
      * 消耗技能所需的资源
      * 
-     * 从角色的 Stats 组件中扣除技能消耗的资源量。
+     * 从角色的 Stats 组件中扣除技能消耗的 Stamina 量。
+     * 技能消耗 Stamina 而不是 MP。
      * 
      * @param PlayerCharacter 要扣除资源的玩家角色
      * @return 如果成功扣除资源返回 true，否则返回 false

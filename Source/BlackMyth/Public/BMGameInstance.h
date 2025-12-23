@@ -15,14 +15,15 @@ class BLACKMYTH_API UBMGameInstance : public UGameInstance
 	GENERATED_BODY()
 
 public:
-    // ÅäÖÃ£ºUIÀ¶Í¼ÀàÂ·¾¶»º´æ
+    // ï¿½ï¿½ï¿½Ã£ï¿½UIï¿½ï¿½Í¼ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     UPROPERTY(EditDefaultsOnly, Category="UI") TSoftClassPtr<class UBMMainWidget> MainMenuClass;
     UPROPERTY(EditDefaultsOnly, Category="UI") TSoftClassPtr<class UBMPauseMenuWidget> PauseMenuClass;
     UPROPERTY(EditDefaultsOnly, Category="UI") TSoftClassPtr<class UBMHUDWidget> HUDClass;
     UPROPERTY(EditDefaultsOnly, Category="UI") TSoftClassPtr<class UBMNotificationWidget> NotificationClass;
+    UPROPERTY(EditDefaultsOnly, Category="UI") TSoftClassPtr<class UBMSaveLoadMenuWidget> SaveLoadMenuClass;
     UPROPERTY(EditDefaultsOnly, Category="UI") bool bShowMainMenuOnStartup = true; // Ensure main menu auto-shows at startup
 
-    // Ä¬ÈÏÓÎÏ·µØÍ¼Â·¾¶£¨ÀýÈç /Game/Maps/MyDefaultMap »ò×Ê²úÃû MyDefaultMap£©
+    // Ä¬ï¿½ï¿½ï¿½ï¿½Ï·ï¿½ï¿½Í¼Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ /Game/Maps/MyDefaultMap ï¿½ï¿½ï¿½Ê²ï¿½ï¿½ï¿½ MyDefaultMapï¿½ï¿½
     UPROPERTY(EditDefaultsOnly, Category="Maps") FString DefaultGameMapPath;
 
 protected:

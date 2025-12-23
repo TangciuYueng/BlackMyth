@@ -107,6 +107,8 @@ bool UBMStatsComponent::TryConsumeStamina(float Amount)
     if (Amount <= 0.f) return true;
     if (Stats.Stamina < Amount) return false;
     Stats.Stamina -= Amount;
+    
+    // Emit stamina change to UI
     if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
     {
         if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
@@ -115,6 +117,7 @@ bool UBMStatsComponent::TryConsumeStamina(float Amount)
             Bus->EmitPlayerStamina(Normalized);
         }
     }
+    
     return true;
 }
 
