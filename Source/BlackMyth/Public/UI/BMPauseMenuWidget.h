@@ -19,15 +19,16 @@ class BLACKMYTH_API UBMPauseMenuWidget : public UBMWidgetBase
 public:
     // Buttons
     UPROPERTY(meta=(BindWidget)) class UButton* ResumeButton = nullptr;
+    UPROPERTY(meta=(BindWidget)) class UButton* SaveButton = nullptr;
     UPROPERTY(meta=(BindWidget)) class UButton* SkillTreeButton = nullptr;
     UPROPERTY(meta=(BindWidget)) class UButton* EquipmentUpgradeButton = nullptr;
     UPROPERTY(meta=(BindWidget)) class UButton* SettingsButton = nullptr;
     UPROPERTY(meta=(BindWidget)) class UButton* ReturnToMainButton = nullptr;
 
     // Status texts
-    UPROPERTY(meta=(BindWidget)) class UTextBlock* TitleText = nullptr;               // "ÔÝÍ£"
-    UPROPERTY(meta=(BindWidget)) class UTextBlock* CurrentStatusText = nullptr;       // "µ±Ç°×´Ì¬£º"
-    UPROPERTY(meta=(BindWidget)) class UTextBlock* HealthText = nullptr;              // "ÉúÃüÖµ£º350/500"
+    UPROPERTY(meta=(BindWidget)) class UTextBlock* TitleText = nullptr;               // "ï¿½ï¿½Í£"
+    UPROPERTY(meta=(BindWidget)) class UTextBlock* CurrentStatusText = nullptr;       // "ï¿½ï¿½Ç°×´Ì¬ï¿½ï¿½"
+    UPROPERTY(meta=(BindWidget)) class UTextBlock* HealthText = nullptr;              // "ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½350/500"
 
 protected:
     virtual void NativeConstruct() override;
@@ -41,6 +42,8 @@ private:
 
     UFUNCTION()
     void OnResumeClicked();
+    UFUNCTION()
+    void OnSaveClicked();
     UFUNCTION()
     void OnSkillTreeClicked();
     UFUNCTION()
