@@ -93,3 +93,4 @@ void UBMNotificationWidget::NativeTick(const FGeometry& MyGeometry, float InDelt
     }
 }
 
+
