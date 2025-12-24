@@ -89,7 +89,6 @@ void ABMPlayerController::SetupInputComponent()
         InputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &ABMPlayerController::TogglePauseMenu);
         UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound Tab to TogglePauseMenu via C++"));
 
-        // [TEST] Bind K to apply 50% actual damage to the player
         InputComponent->BindKey(EKeys::K, IE_Pressed, this, &ABMPlayerController::ApplyHalfHPDamage);
         UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound K to ApplyHalfHPDamage via C++"));
 

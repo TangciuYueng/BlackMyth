@@ -10,6 +10,24 @@ class UBMExperienceComponent;
 #include "BMHUDWidget.generated.h"
 
 /**
+ * 技能冷却数据结构
+ */
+USTRUCT()
+struct FSkillCooldownData
+{
+    GENERATED_BODY()
+
+    /** 冷却结束的时间戳（World Time） */
+    float CooldownEndTime = 0.f;
+
+    /** 冷却总时长 */
+    float TotalCooldown = 0.f;
+
+    /** 是否正在冷却中 */
+    bool bIsCoolingDown = false;
+};
+
+/**
  * 
  */
 UCLASS()
@@ -29,6 +47,7 @@ public:
 protected:
     virtual void BindEventBus(class UBMEventBusSubsystem* EventBus) override;
     virtual void UnbindEventBus(class UBMEventBusSubsystem* EventBus) override;
+    virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 private:
     // Cached bindings
@@ -51,4 +70,17 @@ private:
 
     // Format cooldown according to UX rules. Returns empty when ready.
     FText FormatCooldownText(float RemainingSeconds) const;
+
+    /** 更新所有技能的冷却显示 */
+    void UpdateCooldownDisplays(float DeltaTime);
+    
+    /** 更新单个技能的冷却显示 */
+    void UpdateSingleCooldownDisplay(FName SkillId, FSkillCooldownData& CooldownData, UTextBlock* TextWidget);
+    
+    /** 获取当前世界时间 */
+    float GetCurrentWorldTime() const;
+
+    /** 技能冷却数据映射表 */
+    UPROPERTY(Transient)
+    TMap<FName, FSkillCooldownData> SkillCooldowns;
 };

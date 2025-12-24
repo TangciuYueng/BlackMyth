@@ -6,6 +6,8 @@
 #include "Character/Components/BMStatsComponent.h"
 #include "Character/Components/BMInventoryComponent.h"
 #include "Character/Components/BMExperienceComponent.h"
+#include "Character/Components/BMHealthBarComponent.h"
+#include "Components/CapsuleComponent.h"
 
 #include "Character/Enemy/States/BMEnemyState_Idle.h"
 #include "Character/Enemy/States/BMEnemyState_Patrol.h"
@@ -50,7 +52,7 @@ void ABMEnemyBase::BeginPlay()
     StartPerceptionTimer();
 
     InitEnemyStates();
-
+    InitFloatingHealthBar();
 }
 
 void ABMEnemyBase::Tick(float DeltaSeconds)
@@ -156,6 +158,11 @@ void ABMEnemyBase::SetAlertState(bool bAlert)
 {
     if (bIsAlert == bAlert) return;
     bIsAlert = bAlert;
+
+    if (FloatingHealthBar)
+    {
+        FloatingHealthBar->SetVisibility(bAlert, true);
+    }
 }
 
 void ABMEnemyBase::DropLoot()
@@ -755,6 +762,36 @@ FVector ABMEnemyBase::ComputeBackwardDodgeDirFromHit(const FBMDamageInfo& InInfo
 
     Dir.Z = 0.f;
     return Dir.IsNearlyZero() ? -GetActorForwardVector() : Dir.GetSafeNormal();
+}
+
+void ABMEnemyBase::InitFloatingHealthBar()
+{
+    if (!ShouldShowFloatingHealthBar())
+    {
+        UE_LOG(LogTemp, Log, TEXT("[%s] InitFloatingHealthBar: Skipped (ShouldShowFloatingHealthBar=false)"), *GetName());
+        return;
+    }
+
+    FloatingHealthBar = NewObject<UBMEnemyHealthBarComponent>(this, TEXT("FloatingHealthBar"));
+    if (!FloatingHealthBar)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[%s] InitFloatingHealthBar: Failed to create component"), *GetName());
+        return;
+    }
+
+    FloatingHealthBar->SetupAttachment(GetCapsuleComponent());
+    FloatingHealthBar->RegisterComponent();
+
+    const float CapsuleHalfHeight = GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 90.f;
+    const float TotalOffset = CapsuleHalfHeight + FloatingHealthBarOffset;
+    FloatingHealthBar->SetVerticalOffset(TotalOffset);
+
+    FloatingHealthBar->ObserveCharacter(this);
+
+    FloatingHealthBar->SetVisibility(bIsAlert, true);
+
+    UE_LOG(LogTemp, Log, TEXT("[%s] InitFloatingHealthBar: Created at offset %.1f (CapsuleHalf=%.1f + Custom=%.1f), InitialVisible=%s"),
+        *GetName(), TotalOffset, CapsuleHalfHeight, FloatingHealthBarOffset, bIsAlert ? TEXT("true") : TEXT("false"));
 }
 
 

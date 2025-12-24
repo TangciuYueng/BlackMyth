@@ -8,6 +8,7 @@
 
 class APawn;
 class UAnimSequence;
+class UBMEnemyHealthBarComponent;
 
 UCLASS()
 class BLACKMYTH_API ABMEnemyBase : public ABMCharacterBase
@@ -103,6 +104,13 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "BM|Dodge")
     FName DodgeCooldownKey = TEXT("Enemy_Dodge");
+
+    // ===== Floating Health Bar =====
+    /** Whether to show floating health bar above enemy head. Override in subclass to disable (e.g., Boss). */
+    virtual bool ShouldShowFloatingHealthBar() const { return true; }
+
+    /** Get the floating health bar component (may be null if disabled). */
+    UBMEnemyHealthBarComponent* GetFloatingHealthBar() const { return FloatingHealthBar; }
 protected:
     // ÉËº¦Á´Â·£ºÈÔ×ß ABMCharacterBase£¨HitBox->TakeDamageFromHit->Stats£©
     virtual void HandleDamageTaken(const FBMDamageInfo& FinalInfo) override;
@@ -201,11 +209,21 @@ protected:
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Perception")
     float PerceptionInterval = 0.2f;
 
+    // ===== Floating Health Bar =====
+    /** Floating health bar component displayed above enemy head. */
+    UPROPERTY(VisibleAnywhere, Category = "BM|Enemy|UI")
+    TObjectPtr<UBMEnemyHealthBarComponent> FloatingHealthBar = nullptr;
+
+    /** Vertical offset for the floating health bar above capsule top. */
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|UI", meta = (ClampMin = "0.0"))
+    float FloatingHealthBarOffset = 50.f;
+
 private:
-    void InitEnemyStates();
-    void CachePlayerPawn();
-    void StartPerceptionTimer();
-    void UpdatePerception();
+void InitEnemyStates();
+void CachePlayerPawn();
+void StartPerceptionTimer();
+void UpdatePerception();
+void InitFloatingHealthBar();
 
 
 

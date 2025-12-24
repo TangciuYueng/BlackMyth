@@ -178,55 +178,108 @@ UBMEnemyHealthBarComponent::UBMEnemyHealthBarComponent()
     bHideWhenFull = false;
     bFaceCamera = true;
 
-    TextComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("EnemyHealthText"));
-    if (TextComponent)
-    {
-        TextComponent->SetupAttachment(this);
-        TextComponent->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
-        TextComponent->SetVerticalAlignment(EVerticalTextAligment::EVRTA_TextCenter);
-        TextComponent->SetTextRenderColor(FColor::White);
-        TextComponent->SetWorldSize(FontWorldSize);
-        TextComponent->SetText(FText::FromString(TEXT("[----------] 0%")));
-        TextComponent->SetHiddenInGame(false);
-        TextComponent->SetTranslucentSortPriority(5);
-    }
+
 }
 
 void UBMEnemyHealthBarComponent::OnRegister()
 {
     Super::OnRegister();
 
-    if (TextComponent)
+
+    if (!BackgroundTextComponent)
     {
-        TextComponent->SetWorldSize(FontWorldSize);
+        BackgroundTextComponent = NewObject<UTextRenderComponent>(this, TEXT("BackgroundText"));
+        if (BackgroundTextComponent)
+        {
+            BackgroundTextComponent->SetupAttachment(this);
+            BackgroundTextComponent->RegisterComponent();
+        }
+    }
+
+
+    if (!ForegroundTextComponent)
+    {
+        ForegroundTextComponent = NewObject<UTextRenderComponent>(this, TEXT("ForegroundText"));
+        if (ForegroundTextComponent)
+        {
+            ForegroundTextComponent->SetupAttachment(this);
+            ForegroundTextComponent->RegisterComponent();
+        }
+    }
+
+
+    if (BackgroundTextComponent)
+    {
+        BackgroundTextComponent->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
+        BackgroundTextComponent->SetVerticalAlignment(EVerticalTextAligment::EVRTA_TextCenter);
+        BackgroundTextComponent->SetTextRenderColor(BackgroundColor);
+        BackgroundTextComponent->SetWorldSize(FontWorldSize);
+        BackgroundTextComponent->SetText(FText::FromString(BuildBackgroundBarString()));
+        BackgroundTextComponent->SetHiddenInGame(false);
+        BackgroundTextComponent->SetTranslucentSortPriority(4);
+
+        BackgroundTextComponent->SetRelativeLocation(FVector(-0.5f, 0.f, 0.f));
+    }
+
+
+    if (ForegroundTextComponent)
+    {
+        ForegroundTextComponent->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
+        ForegroundTextComponent->SetVerticalAlignment(EVerticalTextAligment::EVRTA_TextCenter);
+        ForegroundTextComponent->SetTextRenderColor(HealthColor);
+        ForegroundTextComponent->SetWorldSize(FontWorldSize);
+        ForegroundTextComponent->SetText(FText::FromString(BuildFilledBarString(SegmentCount)));
+        ForegroundTextComponent->SetHiddenInGame(false);
+        ForegroundTextComponent->SetTranslucentSortPriority(5);
     }
 }
 
 void UBMEnemyHealthBarComponent::UpdateHealthDisplay(float CurrentHP, float MaxHP)
 {
-    if (!TextComponent)
-    {
-        return;
-    }
-
-    TextComponent->SetText(FText::FromString(BuildBarString(CurrentHP, MaxHP)));
-}
-
-FString UBMEnemyHealthBarComponent::BuildBarString(float CurrentHP, float MaxHP) const
-{
     const float Percent = (MaxHP > 0.f) ? (CurrentHP / MaxHP) : 0.f;
     const int32 FilledSegments = FMath::Clamp(FMath::RoundToInt(Percent * SegmentCount), 0, SegmentCount);
 
-    FString Bar("[");
-    for (int32 Index = 0; Index < SegmentCount; ++Index)
-    {
-        Bar.AppendChar(Index < FilledSegments ? '#' : '-');
-    }
-    Bar.AppendChar(']');
-    Bar.AppendChar(' ');
-    Bar.AppendInt(FMath::RoundToInt(Percent * 100.f));
-    Bar.AppendChar('%');
 
+    if (ForegroundTextComponent)
+    {
+        ForegroundTextComponent->SetText(FText::FromString(BuildFilledBarString(FilledSegments)));
+    }
+
+
+}
+
+FString UBMEnemyHealthBarComponent::BuildFilledBarString(int32 FilledCount) const
+{
+    FString Bar;
+    Bar.AppendChar(TEXT('['));
+    for (int32 i = 0; i < FilledCount; ++i)
+    {
+        Bar.AppendChar(TEXT('|')); 
+    }
+    
+    for (int32 i = FilledCount; i < SegmentCount; ++i)
+    {
+        Bar.AppendChar(TEXT(' '));
+    }
+    
+    Bar.AppendChar(TEXT(']'));
+    
+    return Bar;
+}
+
+FString UBMEnemyHealthBarComponent::BuildBackgroundBarString() const
+{
+    FString Bar;
+    
+    Bar.AppendChar(TEXT('['));
+    
+    for (int32 i = 0; i < SegmentCount; ++i)
+    {
+        Bar.AppendChar(TEXT('|')); 
+    }
+    
+    Bar.AppendChar(TEXT(']'));
+    
     return Bar;
 }
 

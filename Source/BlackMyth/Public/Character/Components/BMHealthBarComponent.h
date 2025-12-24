@@ -73,7 +73,9 @@ private:
 };
 
 /**
- * 纯 C++ 文本血条实现，使用 TextRender 展示 ASCII 进度。
+ * 纯 C++ 文本血条实现，使用双层 TextRender 展示彩色进度条。
+ * - 背景层（灰色）：显示完整的空血条
+ * - 前景层（红色）：显示当前血量
  */
 UCLASS(ClassGroup = (BM), meta = (BlueprintSpawnableComponent))
 class BLACKMYTH_API UBMEnemyHealthBarComponent : public UBMHealthBarComponent
@@ -88,15 +90,33 @@ protected:
     virtual void UpdateHealthDisplay(float CurrentHP, float MaxHP) override;
 
 private:
-    FString BuildBarString(float CurrentHP, float MaxHP) const;
+    /** 构建血量前景字符串（红色部分） */
+    FString BuildFilledBarString(int32 FilledCount) const;
+    /** 构建背景字符串（灰色部分） */
+    FString BuildBackgroundBarString() const;
 
 private:
+    /** 背景层：显示完整的空血条（灰色） */
     UPROPERTY(VisibleAnywhere, Category = "BM|HealthBar")
-    TObjectPtr<UTextRenderComponent> TextComponent = nullptr;
+    TObjectPtr<UTextRenderComponent> BackgroundTextComponent = nullptr;
 
+    /** 前景层：显示当前血量（红色） */
+    UPROPERTY(VisibleAnywhere, Category = "BM|HealthBar")
+    TObjectPtr<UTextRenderComponent> ForegroundTextComponent = nullptr;
+
+    /** 血条分段数量 */
     UPROPERTY(EditAnywhere, Category = "BM|HealthBar|Display", meta = (ClampMin = "4", ClampMax = "40"))
-    int32 SegmentCount = 16;
+    int32 SegmentCount = 30;
 
+    /** 字体世界大小 */
     UPROPERTY(EditAnywhere, Category = "BM|HealthBar|Display", meta = (ClampMin = "8.0", ClampMax = "64.0"))
-    float FontWorldSize = 24.f;
+    float FontWorldSize = 20.f;
+
+    /** 血量颜色（红色） */
+    UPROPERTY(EditAnywhere, Category = "BM|HealthBar|Display")
+    FColor HealthColor = FColor(220, 20, 20, 255);
+
+    /** 背景颜色（灰色） */
+    UPROPERTY(EditAnywhere, Category = "BM|HealthBar|Display")
+    FColor BackgroundColor = FColor(80, 80, 80, 255);
 };

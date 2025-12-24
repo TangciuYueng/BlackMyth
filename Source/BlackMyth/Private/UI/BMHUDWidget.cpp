@@ -135,30 +135,41 @@ void UBMHUDWidget::HandleStaminaChanged(float Normalized)
 
 void UBMHUDWidget::HandleSkillCooldownChanged(FName SkillId, float RemainingSeconds)
 {
-    const FText DisplayText = FormatCooldownText(RemainingSeconds);
+    // 更新冷却数据
+    FSkillCooldownData& CooldownData = SkillCooldowns.FindOrAdd(SkillId);
+    
+    if (RemainingSeconds > 0.f)
+    {
+        // 开始冷却
+        CooldownData.CooldownEndTime = GetCurrentWorldTime() + RemainingSeconds;
+        CooldownData.TotalCooldown = RemainingSeconds;
+        CooldownData.bIsCoolingDown = true;
+    }
+    else
+    {
+        // 冷却结束
+        CooldownData.bIsCoolingDown = false;
+        CooldownData.CooldownEndTime = 0.f;
+    }
+    
+    // 立即更新一次显示
+    UTextBlock* TextWidget = nullptr;
     if (SkillId == TEXT("Skill1"))
     {
-        if (Skill1CooldownText)
-        {
-            Skill1CooldownText->SetText(DisplayText);
-            Skill1CooldownText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-        }
+        TextWidget = Skill1CooldownText;
     }
     else if (SkillId == TEXT("Skill2"))
     {
-        if (Skill2CooldownText)
-        {
-            Skill2CooldownText->SetText(DisplayText);
-            Skill2CooldownText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-        }
+        TextWidget = Skill2CooldownText;
     }
     else if (SkillId == TEXT("Skill3"))
     {
-        if (Skill3CooldownText)
-        {
-            Skill3CooldownText->SetText(DisplayText);
-            Skill3CooldownText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-        }
+        TextWidget = Skill3CooldownText;
+    }
+    
+    if (TextWidget)
+    {
+        UpdateSingleCooldownDisplay(SkillId, CooldownData, TextWidget);
     }
 }
 
@@ -222,6 +233,79 @@ void UBMHUDWidget::SyncInitialValues()
 
     HandleHealthChanged(1.f);
     HandleStaminaChanged(1.f);
+}
+
+void UBMHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+    
+    // 更新所有技能的冷却显示
+    UpdateCooldownDisplays(InDeltaTime);
+}
+
+void UBMHUDWidget::UpdateCooldownDisplays(float DeltaTime)
+{
+    // 遍历所有正在冷却的技能
+    for (TPair<FName, FSkillCooldownData>& Pair : SkillCooldowns)
+    {
+        FName SkillId = Pair.Key;
+        FSkillCooldownData& CooldownData = Pair.Value;
+        
+        if (!CooldownData.bIsCoolingDown)
+        {
+            continue;
+        }
+        
+        // 获取对应的文本控件
+        UTextBlock* TextWidget = nullptr;
+        if (SkillId == TEXT("Skill1"))
+        {
+            TextWidget = Skill1CooldownText;
+        }
+        else if (SkillId == TEXT("Skill2"))
+        {
+            TextWidget = Skill2CooldownText;
+        }
+        else if (SkillId == TEXT("Skill3"))
+        {
+            TextWidget = Skill3CooldownText;
+        }
+        
+        if (TextWidget)
+        {
+            UpdateSingleCooldownDisplay(SkillId, CooldownData, TextWidget);
+        }
+    }
+}
+
+void UBMHUDWidget::UpdateSingleCooldownDisplay(FName SkillId, FSkillCooldownData& CooldownData, UTextBlock* TextWidget)
+{
+    if (!TextWidget || !CooldownData.bIsCoolingDown)
+    {
+        return;
+    }
+    
+    const float CurrentTime = GetCurrentWorldTime();
+    const float RemainingSeconds = FMath::Max(0.f, CooldownData.CooldownEndTime - CurrentTime);
+    
+    // 检查冷却是否结束
+    if (RemainingSeconds <= 0.05f)
+    {
+        CooldownData.bIsCoolingDown = false;
+        TextWidget->SetText(FormatCooldownText(0.f));
+        TextWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+        return;
+    }
+    
+    // 更新显示
+    TextWidget->SetText(FormatCooldownText(RemainingSeconds));
+    TextWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+}
+
+float UBMHUDWidget::GetCurrentWorldTime() const
+{
+    const UWorld* World = GetWorld();
+    return World ? World->GetTimeSeconds() : 0.f;
 }
 
 #undef LOCTEXT_NAMESPACE

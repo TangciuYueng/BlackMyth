@@ -26,6 +26,8 @@ public:
     float GetPhase2DeathReverseMaxTime() const { return Phase2DeathReverseMaxTime; }
     virtual void SetAlertState(bool bAlert) override;
 
+    virtual bool ShouldShowFloatingHealthBar() const override { return false; }
+
 protected:
     void ApplyConfiguredAssets();
     void ApplyBossBodyTuning();
