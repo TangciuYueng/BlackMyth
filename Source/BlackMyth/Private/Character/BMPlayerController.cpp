@@ -10,6 +10,7 @@
 #include "Core/BMTypes.h"
 #include "System/Event/BMEventBusSubsystem.h"
 #include "Character/Components/BMExperienceComponent.h"
+#include "UI/BMNotificationWidget.h"
 
 void ABMPlayerController::BeginPlay()
 {
@@ -22,6 +23,8 @@ void ABMPlayerController::BeginPlay()
         {
             BMGI->RestorePlayerPersistentData(this);
         }
+
+
 
         // Ensure game is unpaused and input is in GameOnly after reload
         UGameplayStatics::SetGamePaused(this, false);
@@ -100,6 +103,10 @@ void ABMPlayerController::SetupInputComponent()
         // Debug: L to add one level worth of XP
         InputComponent->BindKey(EKeys::L, IE_Pressed, this, &ABMPlayerController::DebugGainOneLevel);
         UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound RMB->Skill1, Q->Skill2, E->Skill3, L->GainOneLevel"));
+
+        // Debug: N to show a test notification
+        InputComponent->BindKey(EKeys::N, IE_Pressed, this, &ABMPlayerController::DebugShowNotification);
+        UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound N to DebugShowNotification"));
     }
 }
 
@@ -112,6 +119,8 @@ void ABMPlayerController::ApplyHalfHPDamage()
         UE_LOG(LogTemp, Warning, TEXT("ApplyHalfHPDamage: No pawn possessed."));
         return;
     }
+
+// Keep utility functions at file scope, not nested inside other methods
     UBMStatsComponent* Stats = MyPawn->FindComponentByClass<UBMStatsComponent>();
     if (!Stats)
     {
@@ -335,3 +344,55 @@ void ABMPlayerController::TogglePauseMenu()
     }
 }
 
+void ABMPlayerController::DebugShowNotification()
+{
+    UGameInstance* GI = GetGameInstance();
+    if (!GI)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("DebugShowNotification: No GameInstance."));
+        return;
+    }
+
+    UBMUIManagerSubsystem* UIManager = GI->GetSubsystem<UBMUIManagerSubsystem>();
+    if (!UIManager)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("DebugShowNotification: UIManager subsystem not found."));
+        return;
+    }
+
+    // Ensure the notification widget is on screen. Mimic main menu pattern: prefer GI NotificationClass, then fallback paths.
+    if (!UIManager->IsNotificationVisible())
+    {
+        TSubclassOf<UBMNotificationWidget> NotificationClass = nullptr;
+        UBMGameInstance* BMGI = Cast<UBMGameInstance>(GI);
+        if (BMGI && BMGI->NotificationClass.IsValid())
+        {
+            UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Using GameInstance NotificationClass."));
+            NotificationClass = BMGI->NotificationClass.Get();
+        }
+        if (!NotificationClass)
+        {
+            UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Trying /Game/UI/WBP_Notification.WBP_Notification_C"));
+            NotificationClass = LoadClass<UBMNotificationWidget>(nullptr, TEXT("/Game/UI/WBP_Notification.WBP_Notification_C"));
+        }
+        if (!NotificationClass)
+        {
+            UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Trying /Game/BlackMyth/UI/WBP_Notification.WBP_Notification_C"));
+            NotificationClass = LoadClass<UBMNotificationWidget>(nullptr, TEXT("/Game/BlackMyth/UI/WBP_Notification.WBP_Notification_C"));
+        }
+
+        if (NotificationClass)
+        {
+            UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Showing Notification with class %s"), *NotificationClass->GetName());
+            UIManager->ShowNotification(NotificationClass);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("ABMPlayerController: Notification class not found. Check path or GameInstance config."));
+        }
+    }
+
+    // Push the message via EventBus so the blueprint widget receives it
+    UIManager->PushNotificationMessage(FText::FromString(MessageTest));
+    UE_LOG(LogTemp, Log, TEXT("DebugShowNotification -> %s"), *MessageTest);
+}

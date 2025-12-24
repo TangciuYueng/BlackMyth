@@ -20,6 +20,8 @@ public:
     UPROPERTY(EditDefaultsOnly, Category="UI") TSoftClassPtr<class UBMPauseMenuWidget> PauseMenuClass;
     UPROPERTY(EditDefaultsOnly, Category="UI") TSoftClassPtr<class UBMHUDWidget> HUDClass;
     UPROPERTY(EditDefaultsOnly, Category="UI") TSoftClassPtr<class UBMNotificationWidget> NotificationClass;
+    // Default notification widget blueprint (optional). If set, will be pushed to UBMNotifications on startup.
+    UPROPERTY(EditDefaultsOnly, Category="UI") TSoftClassPtr<class UUserWidget> DefaultNotificationWidgetClass;
     UPROPERTY(EditDefaultsOnly, Category="UI") TSoftClassPtr<class UBMSaveLoadMenuWidget> SaveLoadMenuClass;
     UPROPERTY(EditDefaultsOnly, Category="UI") bool bShowMainMenuOnStartup = true; // Ensure main menu auto-shows at startup
 
