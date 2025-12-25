@@ -11,6 +11,10 @@
 #include "UObject/Package.h"
 #include "Sound/SoundBase.h"
 #include "Components/AudioComponent.h"
+#include "MoviePlayer.h"
+#include "Misc/Paths.h"
+#include "HAL/FileManager.h"
+#include "Character/Components/BMStatsComponent.h"
 
 void UBMGameInstance::CapturePlayerPersistentData(APlayerController* PC)
 {
@@ -66,6 +70,7 @@ void UBMGameInstance::Init()
 {
     Super::Init();
     PostLoadMapHandle = FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &UBMGameInstance::HandlePostLoadMap);
+    PreLoadMapHandle = FCoreUObjectDelegates::PreLoadMap.AddUObject(this, &UBMGameInstance::HandlePreLoadMap);
 }
 
 void UBMGameInstance::Shutdown()
@@ -74,6 +79,11 @@ void UBMGameInstance::Shutdown()
     {
         FCoreUObjectDelegates::PostLoadMapWithWorld.Remove(PostLoadMapHandle);
         PostLoadMapHandle.Reset();
+    }
+    if (PreLoadMapHandle.IsValid())
+    {
+        FCoreUObjectDelegates::PreLoadMap.Remove(PreLoadMapHandle);
+        PreLoadMapHandle.Reset();
     }
     Super::Shutdown();
 }
@@ -113,6 +123,15 @@ void UBMGameInstance::HandlePostLoadMap(UWorld* LoadedWorld)
 
     const bool bIsTarget = bIsTarget1 || bIsTarget2;
 
+    if (bIsTarget1 && !bHasPlayedIntroVideo)
+    {
+        UE_LOG(LogBlackMyth, Log, TEXT("HandlePostLoadMap: Fallback trigger for intro video on map '%s'."), *BaseLevelName);
+        // If an intro video will play, postpone starting level music until video finishes
+        PendingLevelMusicPath = bIsTarget2 ? TEXT("/Game/Audio/level2.level2") : TEXT("/Game/Audio/level1.level1");
+        PlayIntroVideo();
+        bHasPlayedIntroVideo = true;
+    }
+
     if (!bIsTarget)
     {
         UE_LOG(LogBlackMyth, Verbose, TEXT("Map loaded but not target. WorldPath=%s, Package=%s, Combined=%s, BaseName=%s"), *WorldPathName, *PackageName, *Combined, *BaseLevelName);
@@ -120,16 +139,49 @@ void UBMGameInstance::HandlePostLoadMap(UWorld* LoadedWorld)
     }
 
     const TCHAR* TargetSoundPath = bIsTarget2 ? TEXT("/Game/Audio/level2.level2") : TEXT("/Game/Audio/level1.level1");
-    StartLevelMusicForWorld(LoadedWorld, TargetSoundPath);
-    UE_LOG(LogBlackMyth, Log, TEXT("Playing level music '%s' on map '%s' (BaseName=%s)"), TargetSoundPath, *Combined, *BaseLevelName);
+    // If intro video is pending, defer playing until OnMoviePlaybackFinished
+    if (bHasPlayedIntroVideo && !PendingLevelMusicPath.IsEmpty())
+    {
+        UE_LOG(LogBlackMyth, Log, TEXT("HandlePostLoadMap: Intro video pending, deferring level music: %s"), *PendingLevelMusicPath);
+    }
+    else
+    {
+        StartLevelMusicForWorld(LoadedWorld, TargetSoundPath);
+        UE_LOG(LogBlackMyth, Log, TEXT("Playing level music '%s' on map '%s' (BaseName=%s)"), TargetSoundPath, *Combined, *BaseLevelName);
+    }
 }
 
 void UBMGameInstance::StopLevelMusic()
 {
     if (LevelMusicComp)
     {
-        LevelMusicComp->Stop();
-        LevelMusicComp = nullptr;
+        // Protect boss phase 2 music: do not stop if boss phase 2 is active (not defeated) and the current music is boss2
+        const FString Boss2MusicPath = TEXT("/Game/Audio/boss2.boss2");
+        bool bPlayerDead = false;
+        if (UWorld* W = GetWorld())
+        {
+            if (APlayerController* PC = W->GetFirstPlayerController())
+            {
+                if (APawn* Pawn = PC->GetPawn())
+                {
+                    if (UBMStatsComponent* Stats = Pawn->FindComponentByClass<UBMStatsComponent>())
+                    {
+                        bPlayerDead = Stats->IsDead();
+                    }
+                }
+            }
+        }
+
+        if (bIsBossPhase2Defeated || bPlayerDead || CurrentLevelMusicPath.IsEmpty() || !CurrentLevelMusicPath.Equals(Boss2MusicPath, ESearchCase::IgnoreCase))
+        {
+            LevelMusicComp->Stop();
+            LevelMusicComp = nullptr;
+            CurrentLevelMusicPath.Empty();
+        }
+        else
+        {
+            UE_LOG(LogBlackMyth, Verbose, TEXT("StopLevelMusic: Skipping stop to preserve boss phase2 music: %s"), *CurrentLevelMusicPath);
+        }
     }
 }
 
@@ -159,6 +211,9 @@ void UBMGameInstance::PlayMusic(UWorld* World, const TCHAR* SoundPath, bool bLoo
 
     if (USoundBase* SoundAsset = LoadObject<USoundBase>(nullptr, SoundPath))
     {
+        // Record the current level music path for special-case logic (boss protection)
+        CurrentLevelMusicPath = FString(SoundPath);
+
         LevelMusicComp = UGameplayStatics::SpawnSound2D(World, SoundAsset);
         if (LevelMusicComp)
         {
@@ -166,11 +221,209 @@ void UBMGameInstance::PlayMusic(UWorld* World, const TCHAR* SoundPath, bool bLoo
             {
                 LevelMusicComp->OnAudioFinishedNative.AddUObject(this, &UBMGameInstance::OnLevelMusicFinished);
             }
+            // If level1 music started, trigger the intro/book UI immediately
+            const FString Level1Path = TEXT("/Game/Audio/level1.level1");
+            if (FCString::Strcmp(SoundPath, *Level1Path) == 0)
+            {
+                UE_LOG(LogBlackMyth, Log, TEXT("PlayMusic: Detected level1 music start, broadcasting OnIntroVideoFinishedNative to show book UI."));
+                OnIntroVideoFinishedNative.Broadcast();
+            }
         }
     }
     else
     {
         UE_LOG(LogBlackMyth, Warning, TEXT("Failed to load music asset: %s"), SoundPath);
+    }
+}
+
+void UBMGameInstance::PlayIntroVideo()
+{
+    // Check if file exists
+    const FString VideoPath = FPaths::ProjectContentDir() / TEXT("Movies/IntroVideo.mp4");
+    if (!IFileManager::Get().FileExists(*VideoPath))
+    {
+        UE_LOG(LogBlackMyth, Error, TEXT("PlayIntroVideo: Video file not found at '%s'. Please ensure 'Content/Movies/IntroVideo.mp4' exists."), *VideoPath);
+        return;
+    }
+
+    if (!GetMoviePlayer())
+    {
+        UE_LOG(LogBlackMyth, Warning, TEXT("PlayIntroVideo: MoviePlayer is NULL. Cannot play video."));
+        return;
+    }
+
+    FLoadingScreenAttributes LoadingScreen;
+    LoadingScreen.bAutoCompleteWhenLoadingCompletes = false;
+    LoadingScreen.bMoviesAreSkippable = true;
+    LoadingScreen.bWaitForManualStop = false;
+    LoadingScreen.MoviePaths.Add(TEXT("IntroVideo")); // Assumes "Content/Movies/IntroVideo.mp4" exists
+    LoadingScreen.PlaybackType = EMoviePlaybackType::MT_Normal;
+
+    GetMoviePlayer()->SetupLoadingScreen(LoadingScreen);
+    GetMoviePlayer()->PlayMovie();
+    
+    GetMoviePlayer()->OnMoviePlaybackFinished().AddUObject(this, &UBMGameInstance::OnMoviePlaybackFinished);
+    UE_LOG(LogBlackMyth, Log, TEXT("PlayIntroVideo: Started playing IntroVideo."));
+}
+
+void UBMGameInstance::PlayEndVideo()
+{
+    // Check if file exists
+    const FString VideoPath = FPaths::ProjectContentDir() / TEXT("Movies/EndVideo.mp4");
+    if (!IFileManager::Get().FileExists(*VideoPath))
+    {
+        UE_LOG(LogBlackMyth, Error, TEXT("PlayEndVideo: Video file not found at '%s'. Please ensure 'Content/Movies/EndVideo.mp4' exists."), *VideoPath);
+        return;
+    }
+
+    if (!GetMoviePlayer())
+    {
+        UE_LOG(LogBlackMyth, Warning, TEXT("PlayEndVideo: MoviePlayer is NULL. Cannot play video."));
+        return;
+    }
+
+    // If configured to require a manual trigger, refuse to auto-play here.
+    if (bRequireManualTriggerForEndVideo)
+    {
+        UE_LOG(LogBlackMyth, Log, TEXT("PlayEndVideo: Manual trigger required. Aborting automatic playback."));
+        // Do not play automatically; caller should call RequestPlayEndVideo or PlayEndVideo when ready.
+        return;
+    }
+
+    FLoadingScreenAttributes LoadingScreen;
+    // Do not auto-complete when loading completes; allow movie to play its full duration
+    LoadingScreen.bAutoCompleteWhenLoadingCompletes = false;
+    // Allow movies to be skippable so player input (Enter) can dismiss the movie
+    LoadingScreen.bMoviesAreSkippable = true;
+    // Wait for manual stop: require explicit stop to end the movie playback
+    LoadingScreen.bWaitForManualStop = true;
+    LoadingScreen.MoviePaths.Add(TEXT("EndVideo")); // Assumes "Content/Movies/EndVideo.mp4" exists
+    LoadingScreen.PlaybackType = EMoviePlaybackType::MT_Normal;
+
+    GetMoviePlayer()->SetupLoadingScreen(LoadingScreen);
+    GetMoviePlayer()->PlayMovie();
+
+    // Mark playing flag
+    bIsEndMoviePlaying = true;
+
+    // Ensure we're not double-bound
+    GetMoviePlayer()->OnMoviePlaybackFinished().RemoveAll(this);
+    GetMoviePlayer()->OnMoviePlaybackFinished().AddUObject(this, &UBMGameInstance::OnEndVideoPlaybackFinished);
+    UE_LOG(LogBlackMyth, Log, TEXT("PlayEndVideo: Started playing EndVideo (manual stop required)."));
+}
+
+void UBMGameInstance::RequestPlayEndVideo()
+{
+    // Allow manual play even if bRequireManualTriggerForEndVideo is true
+    const bool bOld = bRequireManualTriggerForEndVideo;
+    // Temporarily bypass the manual requirement to perform playback
+    bRequireManualTriggerForEndVideo = false;
+    PlayEndVideo();
+    // Restore original behavior
+    bRequireManualTriggerForEndVideo = bOld;
+}
+
+void UBMGameInstance::OnMoviePlaybackFinished()
+{
+    UE_LOG(LogBlackMyth, Log, TEXT("OnMoviePlaybackFinished: Movie finished."));
+    GetMoviePlayer()->OnMoviePlaybackFinished().RemoveAll(this);
+    // Notify any listeners (C++ subscribers)
+    OnIntroVideoFinishedNative.Broadcast();
+
+    // If there is pending level music, play it now
+    if (!PendingLevelMusicPath.IsEmpty() && GetWorld())
+    {
+        StartLevelMusicForWorld(GetWorld(), *PendingLevelMusicPath);
+        UE_LOG(LogBlackMyth, Log, TEXT("OnMoviePlaybackFinished: Starting pending level music '%s'"), *PendingLevelMusicPath);
+        PendingLevelMusicPath.Empty();
+    }
+}
+
+void UBMGameInstance::OnEndVideoPlaybackFinished()
+{
+    UE_LOG(LogBlackMyth, Log, TEXT("OnEndVideoPlaybackFinished: End Movie finished."));
+    GetMoviePlayer()->OnMoviePlaybackFinished().RemoveAll(this);
+    bHasWatchedEndVideo = true;
+    bIsEndMoviePlaying = false;
+    // End video finished can also notify (reuse same delegate if desired)
+    OnIntroVideoFinishedNative.Broadcast();
+
+    // If boss phase 2 was defeated, automatically return to main menu after end video
+    if (bIsBossPhase2Defeated)
+    {
+        UE_LOG(LogBlackMyth, Log, TEXT("OnEndVideoPlaybackFinished: Boss Phase2 defeated - returning to main menu (emptymap)."));
+        if (UWorld* W = GetWorld())
+        {
+            StopLevelMusic();
+            UGameplayStatics::OpenLevel(W, TEXT("emptymap"));
+        }
+    }
+
+    // Also play pending level music if any
+    if (!PendingLevelMusicPath.IsEmpty() && GetWorld())
+    {
+        StartLevelMusicForWorld(GetWorld(), *PendingLevelMusicPath);
+        UE_LOG(LogBlackMyth, Log, TEXT("OnEndVideoPlaybackFinished: Starting pending level music '%s'"), *PendingLevelMusicPath);
+        PendingLevelMusicPath.Empty();
+    }
+
+}
+
+void UBMGameInstance::StopEndVideo()
+{
+    if (!GetMoviePlayer())
+    {
+        UE_LOG(LogBlackMyth, Warning, TEXT("StopEndVideo: MoviePlayer is NULL."));
+        return;
+    }
+
+    if (!bIsEndMoviePlaying)
+    {
+        UE_LOG(LogBlackMyth, Log, TEXT("StopEndVideo: No end movie is playing."));
+        return;
+    }
+
+    // Movie player provides a manual stop method via ShutdownMoviePlayer
+    if (auto* MP = GetMoviePlayer())
+    {
+        MP->Shutdown();
+        UE_LOG(LogBlackMyth, Log, TEXT("StopEndVideo: MoviePlayer Shutdown called."));
+    }
+
+    bIsEndMoviePlaying = false;
+    bHasWatchedEndVideo = true;
+}
+
+
+void UBMGameInstance::ResetBossMusicState()
+{
+    // Reset flags related to boss phase/end-video state and stop any level music
+    bIsBossPhase2Defeated = false;
+    bHasWatchedEndVideo = false;
+
+    // Stop current level music if playing, but only if it's not boss2 music.
+    // This avoids interrupting the boss2 track when boss enters phase2 recovery.
+    const FString Boss2MusicPath = TEXT("/Game/Audio/boss2.boss2");
+    if (!CurrentLevelMusicPath.Equals(Boss2MusicPath, ESearchCase::IgnoreCase))
+    {
+        StopLevelMusic();
+    }
+}
+
+void UBMGameInstance::HandlePreLoadMap(const FString& MapName)
+{
+    // Check if we are loading the first level and haven't played the video yet
+    // MapName usually comes as full path, e.g. "/Game/Stylized_PBR_Nature/Maps/Stylized_Nature_ExampleScene"
+    
+    const FString TargetMapPackage1 = TEXT("/Game/Stylized_PBR_Nature/Maps/Stylized_Nature_ExampleScene");
+    
+    UE_LOG(LogBlackMyth, Log, TEXT("HandlePreLoadMap: Loading map '%s'. Target is '%s'. bHasPlayedIntroVideo=%d"), *MapName, *TargetMapPackage1, bHasPlayedIntroVideo);
+
+    if (!bHasPlayedIntroVideo && MapName.Contains(TargetMapPackage1))
+    {
+        UE_LOG(LogBlackMyth, Log, TEXT("HandlePreLoadMap: Detected target map load '%s', playing intro video."), *MapName);
+        PlayIntroVideo();
+        bHasPlayedIntroVideo = true;
     }
 }
 

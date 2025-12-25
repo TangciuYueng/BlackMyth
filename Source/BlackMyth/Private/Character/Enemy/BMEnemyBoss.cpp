@@ -77,7 +77,6 @@ ABMEnemyBoss::ABMEnemyBoss()
 
     
 }
-
 void ABMEnemyBoss::ApplyBossBodyTuning()
 {
     // 1) Capsule：决定“物理体积/命中/寻路避障”
@@ -149,7 +148,17 @@ void ABMEnemyBoss::BeginPlay()
                     }
                     else
                     {
-                        GI->PlayMusic(World, TEXT("/Game/Audio/over.over"), /*bLoop=*/true);
+                        // If boss is in phase2 or this is a second death, stop boss2 music and mark defeated
+                        if (GetBossPhase() >= 2)
+                        {
+                            GI->bIsBossPhase2Defeated = true;
+                            GI->StopLevelMusic();
+                            UE_LOG(LogTemp, Log, TEXT("BeginPlay death-callback: Boss phase2 defeated, stopped boss2 music."));
+                        }
+                        else
+                        {
+                            UE_LOG(LogTemp, Verbose, TEXT("BeginPlay death-callback: entering second-death branch (handled here).") );
+                        }
                     }
                     UE_LOG(LogTemp, Warning, TEXT("Death handled: Phase %d, InTransition: %d, ReviveUsed: %d"), GetBossPhase(), bInPhaseTransition, bReviveUsed);
                 }
@@ -413,6 +422,17 @@ void ABMEnemyBoss::HandleDeath(const FBMDamageInfo& LastHitInfo)
     }
 
     // 第二次死亡
+    // Mark boss-phase-2 defeated and trigger end-video only on the true second death
+    if (UWorld* World = GetWorld())
+    {
+        if (UBMGameInstance* GI = Cast<UBMGameInstance>(World->GetGameInstance()))
+        {
+            GI->bIsBossPhase2Defeated = true;
+            // Play end video here so it only fires on the second death
+            GI->PlayEndVideo();
+        }
+    }
+
     Super::HandleDeath(LastHitInfo);
 }
 
@@ -443,6 +463,15 @@ void ABMEnemyBoss::ApplyPhase2Tuning()
     // 回满 + 提高最大血
     if (UBMStatsComponent* S = GetStats())
     {
+        // Reset any boss-related music state in case boss was previously defeated and revived
+        if (UWorld* World = GetWorld())
+        {
+            if (UBMGameInstance* GI = Cast<UBMGameInstance>(World->GetGameInstance()))
+            {
+                GI->ResetBossMusicState();
+            }
+        }
+
         S->ReviveToFull(Phase2MaxHP);
     }
 

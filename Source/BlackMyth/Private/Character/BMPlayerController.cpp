@@ -1,4 +1,3 @@
-
 #include "Character/BMPlayerController.h"
 #include "BMGameInstance.h"
 #include "System/UI/BMUIManagerSubsystem.h"
@@ -10,10 +9,30 @@
 #include "Core/BMTypes.h"
 #include "System/Event/BMEventBusSubsystem.h"
 #include "Character/Components/BMExperienceComponent.h"
+#include "Character/Enemy/BMEnemyBoss.h"
+#include "BlackMythCharacter.h"
+#include "UI/UBMBookWidget.h" // Add this include
+#include "Engine/LocalPlayer.h"
+#include "UObject/ConstructorHelpers.h" // Add this include
+
+ABMPlayerController::ABMPlayerController()
+{
+    static ConstructorHelpers::FClassFinder<UBMBookWidget> BookWidgetBP(TEXT("/Game/UI/WBP_Book.WBP_Book_C"));
+    if (BookWidgetBP.Succeeded())
+    {
+        BookWidgetClass = BookWidgetBP.Class;
+    }
+}
 
 void ABMPlayerController::BeginPlay()
 {
     Super::BeginPlay();
+
+    // Bind to real intro video finished event from GameInstance
+    if (UBMGameInstance* GI = Cast<UBMGameInstance>(GetGameInstance()))
+    {
+        GI->OnIntroVideoFinishedNative.AddUObject(this, &ABMPlayerController::OnIntroVideoFinished);
+    }
 
     if (UGameInstance* GI = GetGameInstance())
     {
@@ -65,7 +84,7 @@ void ABMPlayerController::BeginPlay()
                 UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Showing MainMenu with class %s"), *ClassToUse->GetName());
                 UIManager->ShowMainMenu(ClassToUse);
 
-                // �л�Ϊ UI Only ģʽ����ʾ�����ȷ���˵��ɼ��Ϳɽ���
+                // �l�Ϊ UI Only ģʽ����ʾ�����ȷ���˵��ɼ��Ϳɽ���
                 FInputModeUIOnly InputMode;
                 InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
                 SetInputMode(InputMode);
@@ -99,7 +118,8 @@ void ABMPlayerController::SetupInputComponent()
         //InputComponent->BindKey(EKeys::E, IE_Pressed, this, &ABMPlayerController::StartSkill3Cooldown);
         // Debug: L to add one level worth of XP
         InputComponent->BindKey(EKeys::L, IE_Pressed, this, &ABMPlayerController::DebugGainOneLevel);
-        UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound RMB->Skill1, Q->Skill2, E->Skill3, L->GainOneLevel"));
+        InputComponent->BindKey(EKeys::Enter, IE_Pressed, this, &ABMPlayerController::Input_EnterPressed);
+        UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound RMB->Skill1, Q->Skill2, E->Skill3, L->GainOneLevel, Enter->EndVideo"));
     }
 }
 
@@ -149,6 +169,41 @@ void ABMPlayerController::DebugGainOneLevel()
         UE_LOG(LogTemp, Log, TEXT("DebugGainOneLevel: Added %f XP for level %d->%d (current %f / need %f)"), Delta, CurrentLevel, CurrentLevel+1, Current, Threshold);
     }
 }
+
+void ABMPlayerController::Input_EnterPressed()
+{
+    UE_LOG(LogTemp, Log, TEXT("Input_EnterPressed: Key pressed. Checking for dead Phase 2 boss..."));
+
+    if (UBMGameInstance* GI = Cast<UBMGameInstance>(GetGameInstance()))
+    {
+        if (GI->bIsBossPhase2Defeated)
+        {
+            if (GI->bHasWatchedEndVideo)
+            {
+                UE_LOG(LogTemp, Log, TEXT("Input_EnterPressed: EndVideo watched. Returning to Main Menu (emptymap)."));
+                GI->StopLevelMusic();
+                UGameplayStatics::OpenLevel(this, TEXT("emptymap"));
+            }
+            else if (GI->bIsEndMoviePlaying)
+            {
+                UE_LOG(LogTemp, Log, TEXT("Input_EnterPressed: EndVideo is playing. Stopping and returning to Main Menu."));
+                GI->StopEndVideo();
+                GI->StopLevelMusic();
+                UGameplayStatics::OpenLevel(this, TEXT("emptymap"));
+            }
+            else
+            {
+                UE_LOG(LogTemp, Log, TEXT("Input_EnterPressed: Boss Phase 2 Defeated flag is set. Playing EndVideo."));
+                // Use RequestPlayEndVideo to respect manual trigger configuration in GameInstance
+                GI->RequestPlayEndVideo();
+            }
+            return;
+        }
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("Input_EnterPressed: Boss Phase 2 Defeated flag is NOT set."));
+}
+
 // [TEST] Consume 25 stamina to test stamina bar updates
 void ABMPlayerController::ConsumeStaminaTest()
 {
@@ -320,7 +375,7 @@ void ABMPlayerController::TogglePauseMenu()
             if (PauseClass)
             {
                 UIManager->ShowPauseMenu(PauseClass);
-                // �л�Ϊ UI Only ģʽ�Ա���ͣ�˵��ɽ���
+                // �l�Ϊ UI Only ģʽ�Ա���ͣ�˵��ɽ���
                 FInputModeUIOnly InputMode;
                 InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
                 SetInputMode(InputMode);
@@ -334,4 +389,63 @@ void ABMPlayerController::TogglePauseMenu()
         }
     }
 }
+
+void ABMPlayerController::OnIntroVideoFinished()
+{
+    if (!bHasShownIntroBook)
+    {
+        ShowBookUI();
+        bHasShownIntroBook = true;
+    }
+}
+
+void ABMPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (UBMGameInstance* GI = Cast<UBMGameInstance>(GetGameInstance()))
+    {
+        GI->OnIntroVideoFinishedNative.RemoveAll(this);
+    }
+
+    Super::EndPlay(EndPlayReason);
+}
+
+void ABMPlayerController::ShowBookUI()
+{
+    // Do not show book UI on level 2 (demo level)
+    const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(GetWorld(), /*bRemovePrefixPIE=*/ true);
+    const FString DisabledLevelName = TEXT("STZD_Demo_01");
+    if (CurrentLevelName.Equals(DisabledLevelName, ESearchCase::IgnoreCase))
+    {
+        UE_LOG(LogTemp, Log, TEXT("ABMPlayerController::ShowBookUI - skipping book UI on level '%s'"), *CurrentLevelName);
+        return;
+    }
+
+    if (!BookWidgetClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ABMPlayerController::ShowBookUI - BookWidgetClass is null. Check path or constructor initialization."));
+        return;
+    }
+
+    if (BookWidgetClass)
+    {
+        if (!BookWidgetInstance)
+        {
+            BookWidgetInstance = CreateWidget<UBMBookWidget>(this, BookWidgetClass);
+        }
+
+        if (BookWidgetInstance && !BookWidgetInstance->IsInViewport())
+        {
+            BookWidgetInstance->AddToViewport(100); // High Z-order
+            
+            // Set input mode to UI only or GameAndUI to allow interaction
+            FInputModeUIOnly InputMode;
+            InputMode.SetWidgetToFocus(BookWidgetInstance->TakeWidget());
+            SetInputMode(InputMode);
+            bShowMouseCursor = true;
+            BookWidgetInstance->SetKeyboardFocus();
+        }
+    }
+}
+
+// Input_EnterPressed is implemented earlier (handles boss/end video logic).
 
