@@ -6,6 +6,8 @@
 #include "GameFramework/PlayerController.h"
 #include "BMPlayerController.generated.h"
 
+class UBMBookWidget;
+
 /**
  * 
  */
@@ -14,9 +16,18 @@ class BLACKMYTH_API ABMPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 
+public:
+    ABMPlayerController(); // Add constructor
+
 protected:
     virtual void BeginPlay() override;
     virtual void SetupInputComponent() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+public:
+    // Call this when the intro video finishes
+    UFUNCTION(BlueprintCallable, Category = "BM|UI")
+    void OnIntroVideoFinished();
 
 private:
     void ShowMainMenu();
@@ -35,6 +46,7 @@ private:
     // Test: add enough XP to gain exactly one level for HUD verification
     void DebugGainOneLevel();
     void OnSkillCooldownTick_Skill3();
+    void Input_EnterPressed();
 
     FTimerHandle Skill1CooldownTimer;
     FTimerHandle Skill2CooldownTimer;
@@ -42,4 +54,15 @@ private:
     float Skill2Remaining = 0.f;
     FTimerHandle Skill3CooldownTimer;
     float Skill3Remaining = 0.f;
+
+    // Book UI
+    UPROPERTY(EditDefaultsOnly, Category = "BM|UI")
+    TSubclassOf<UBMBookWidget> BookWidgetClass;
+
+    UPROPERTY()
+    UBMBookWidget* BookWidgetInstance = nullptr;
+
+    bool bHasShownIntroBook = false;
+
+    void ShowBookUI();
 };
