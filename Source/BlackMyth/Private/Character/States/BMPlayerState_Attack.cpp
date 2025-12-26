@@ -5,7 +5,9 @@
 #include "Character/Components/BMStatsComponent.h"
 #include "Character/Components/BMStateMachineComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "BMGameInstance.h"
 #include "Core/BMTypes.h"
+#include "System/Event/BMEventBusSubsystem.h"
 
 void UBMPlayerState_Attack::OnEnter(float)
 {
@@ -298,11 +300,24 @@ void UBMPlayerState_Attack::StartSkill(const FBMPlayerAttackSpec& Spec)
         return;
     }
 
-    // 提交冷却（技能）
+    // 提交冷却
     if (UBMCombatComponent* Combat = PC->GetCombat())
     {
         Combat->CommitCooldown(Spec.Id, Spec.Cooldown);
+        
+        // 通知UI显示冷却
+        if (UWorld* World = PC->GetWorld())
+        {
+            if (UGameInstance* GameInstance = World->GetGameInstance())
+            {
+                if (UBMEventBusSubsystem* EventBus = GameInstance->GetSubsystem<UBMEventBusSubsystem>())
+                {
+                    EventBus->EmitSkillCooldown(Spec.Id, Spec.Cooldown);
+                }
+            }
+        }
     }
+
 
     PC->GetWorldTimerManager().SetTimer(
         TimerStepEnd, this, &UBMPlayerState_Attack::OnRecoverFinished, Duration, false);

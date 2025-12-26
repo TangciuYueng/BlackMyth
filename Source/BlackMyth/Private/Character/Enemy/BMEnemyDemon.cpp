@@ -26,16 +26,6 @@ ABMEnemyDemon::ABMEnemyDemon()
     BuildHurtBoxes();
     BuildHitBoxes();
 
-    // ===== 资产路径占位 =====
-    MeshAsset = TSoftObjectPtr<USkeletalMesh>(FSoftObjectPath(TEXT("/Script/Engine.SkeletalMesh'/Game/demon2/baseMesh/SK_demon2.SK_demon2'")));
-    AnimIdleAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Monster/Animations/Demo/ThirdPersonIdle.ThirdPersonIdle'")));
-    AnimWalkAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Monster/Animations/Demo/ThirdPersonWalk.ThirdPersonWalk'")));
-    AnimRunAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Monster/Animations/Demo/ThirdPersonRun.ThirdPersonRun'")));
-    AnimHitLightAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/HitReact_Front.HitReact_Front'")));
-    AnimHitHeavyAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/HitReact_Front.HitReact_Front'")));
-    AnimDeathAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Whisper/Animations/Anim_Whisper_Death.Anim_Whisper_Death'")));
-    AnimDodgeAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Flip_Bwd.Q_Flip_Bwd'")));
-
     AttackLightAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01.MM_Attack_01'")));
     AttackHeavy1Asset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_02.MM_Attack_02'")));
     AttackHeavy2Asset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_03.MM_Attack_03'")));
@@ -43,9 +33,12 @@ ABMEnemyDemon::ABMEnemyDemon()
 
 void ABMEnemyDemon::BeginPlay()
 {
-    // 先加载资产并写入基类 Anim 指针，再让 Super::BeginPlay() 进入 FSM（避免 Idle 先播空动画）
-    ApplyConfiguredAssets();
-    // 组件/配置（HurtBox/HitBox/AttackSpecs）也在 Super 之前准备好，FSM 进入后直接可用
+    // 优先从 DataTable 读取配置
+    LoadStatsFromDataTable();
+    
+    // 先加载资产并写入基类 Anim 指针
+    // ApplyConfiguredAssets();
+    // 组件/配置（HurtBox/HitBox/AttackSpecs）
     BuildAttackSpecs();
 
     // 调试：启用 HitBox/HurtBox 可视化
@@ -165,11 +158,11 @@ void ABMEnemyDemon::BuildAttackSpecs()
         if (S.Anim) AttackSpecs.Add(S);
     }
 
-    // 伤害基值
-    if (UBMHitBoxComponent* HB = GetHitBox())
-    {
-        HB->SetDamage(DemonBaseDamage);
-    }
+    // 伤害基值（已废弃，通过 DataTable 设置）
+    // if (UBMHitBoxComponent* HB = GetHitBox())
+    // {
+    //     HB->SetDamage(DemonBaseDamage);
+    // }
 }
 
 void ABMEnemyDemon::BuildHurtBoxes()
@@ -250,6 +243,42 @@ void ABMEnemyDemon::BuildHitBoxes()
     }
 
 
+}
+
+void ABMEnemyDemon::BuildLootTable()
+{
+    LootTable.Reset();
+
+
+    {
+        FBMLootItem Item;
+        Item.ItemID = TEXT("Item_JiuZhuanJinDan");
+        Item.ItemType = EBMItemType::Consumable;
+        Item.Rarity = EBMItemRarity::Common;
+        Item.Probability = 0.80f;
+        Item.MinQuantity = 1;
+        Item.MaxQuantity = 3;
+        Item.Weight = 1.0f;
+
+        LootTable.Add(Item);
+    }
+
+
+    {
+        FBMLootItem Item;
+        Item.ItemID = TEXT("Item_TaiYiZiJinDan");
+        Item.ItemType = EBMItemType::Consumable;
+        Item.Rarity = EBMItemRarity::Legendary;
+        Item.Probability = 0.2f;
+        Item.MinQuantity = 1;
+        Item.MaxQuantity = 1;
+        Item.Weight = 1.0f;
+
+        LootTable.Add(Item);
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("[%s] BuildLootTable: Configured %d loot items"),
+        *GetName(), LootTable.Num());
 }
 
 float ABMEnemyDemon::PlayDodgeOnce()

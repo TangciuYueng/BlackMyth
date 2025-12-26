@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "CoreMinimal.h"
 #include "Character/BMCharacterBase.h"
@@ -8,6 +8,7 @@
 
 class APawn;
 class UAnimSequence;
+class UBMEnemyHealthBarComponent;
 
 UCLASS()
 class BLACKMYTH_API ABMEnemyBase : public ABMCharacterBase
@@ -19,12 +20,12 @@ public:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaSeconds) override;
 
-    // ===== ÀàÍ¼½Ó¿Ú =====
+    // ===== ç±»å›¾æ¥å£ =====
     virtual bool DetectPlayer() const;
     virtual void DropLoot();
     virtual void SetAlertState(bool bAlert);
 
-    // ===== FSM/AI ĞèÒªµÄÖ»¶Á½Ó¿Ú =====
+    // ===== FSM/AI éœ€è¦çš„åªè¯»æ¥å£ =====
     bool IsAlerted() const { return bIsAlert; }
     APawn* GetCurrentTarget() const { return CurrentTarget.Get(); }
     bool HasValidTarget() const { return CurrentTarget.IsValid(); }
@@ -36,11 +37,11 @@ public:
     FVector GetHomeLocation() const { return HomeLocation; }
 	float GetLocomotionSpeedThreshold() const { return LocomotionSpeedThreshold; }
 
-    // ¹¥»÷ÅĞ¶¨
+    // æ”»å‡»åˆ¤å®š
     bool IsInAttackRange() const;
     bool CanStartAttack() const;
 
-    // ¶¯»­²¥·Å£¨Óë Player ·ç¸ñÒ»ÖÂ£ºLoop/Once£©
+    // åŠ¨ç”»æ’­æ”¾ï¼ˆä¸ Player é£æ ¼ä¸€è‡´ï¼šLoop/Onceï¼‰
     virtual void PlayIdleLoop();
     virtual void PlayWalkLoop();
     virtual void PlayRunLoop();
@@ -51,10 +52,10 @@ public:
     FVector ComputeBackwardDodgeDirFromHit(const FBMDamageInfo& InInfo) const;
 
     void SetSingleNodePlayRate(float Rate);
-    // ³öÊÖÑ¡Ôñ
+    // å‡ºæ‰‹é€‰æ‹©
     bool SelectRandomAttackForCurrentTarget(FBMEnemyAttackSpec& OutSpec) const;
 
-    // ¹¥»÷Íê³ÉºóÓÉ AttackState µ÷ÓÃ£ºÍÆ½øÀäÈ´
+    // æ”»å‡»å®Œæˆåç”± AttackState è°ƒç”¨ï¼šæ¨è¿›å†·å´
     void CommitAttackCooldown(float CooldownSeconds);
 
     void SetActiveAttackSpec(const FBMEnemyAttackSpec& Spec);
@@ -68,22 +69,34 @@ public:
         FBMHitBoxActivationParams& OutParams
     ) const override;
 
-    // ÊÜ»÷/ËÀÍö£ºÓÉ HandleDamageTaken/HandleDeath ´¥·¢£¬×îÖÕÇĞ»»µ½ Hit/Death ×´Ì¬
+    // å—å‡»/æ­»äº¡ï¼šç”± HandleDamageTaken/HandleDeath è§¦å‘ï¼Œæœ€ç»ˆåˆ‡æ¢åˆ° Hit/Death çŠ¶æ€
     void RequestHitState(const FBMDamageInfo& FinalInfo);
     void RequestDeathState(const FBMDamageInfo& LastHitInfo);
 
-    // ´ò¶ÏÅĞ¶¨£¨¹¤³Ì»¯£º¼¯ÖĞÒ»´¦£©
+    // æ‰“æ–­åˆ¤å®šï¼ˆå·¥ç¨‹åŒ–ï¼šé›†ä¸­ä¸€å¤„ï¼‰
     bool ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) const;
 
-    // ÔË¶¯¿ØÖÆ£¨ÓÉ State µ÷ÓÃ£¬Controller ¸ºÔğÖ´ĞĞ MoveTo£©
+    // è¿åŠ¨æ§åˆ¶ï¼ˆç”± State è°ƒç”¨ï¼ŒController è´Ÿè´£æ‰§è¡Œ MoveToï¼‰
     bool RequestMoveToTarget(float AcceptanceRadius);
     bool RequestMoveToLocation(const FVector& Location, float AcceptanceRadius);
     void RequestStopMovement();
 
-    // ³¯Ïò£¨¹¥»÷Ç°/×·»÷Ê±¿ÉÓÃ£©
+    // æœå‘ï¼ˆæ”»å‡»å‰/è¿½å‡»æ—¶å¯ç”¨ï¼‰
     void FaceTarget(float DeltaSeconds, float TurnSpeedDeg = 720.f);
 
-    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
+    // ===== DataTable æ•°æ®åŠ è½½ =====
+    /** Load stats and configuration from DataTable. Override GetEnemyDataID() to specify enemy type. */
+    virtual void LoadStatsFromDataTable();
+    
+    /** Override this in subclasses to return enemy identifier for data lookup (e.g., "EnemyDummy"). */
+    virtual FName GetEnemyDataID() const { return NAME_None; }
+
+
+protected:
+    /** Load assets (mesh and animations) from DataTable data. Called by LoadStatsFromDataTable(). */
+    void LoadAssetsFromDataTable(const struct FBMEnemyData* Data);
+
+public:    UPROPERTY(EditAnywhere, Category = "BM|Dodge")
     float DodgeDistance = 420.f;               
 
     UPROPERTY(EditAnywhere, Category = "BM|Dodge")
@@ -103,14 +116,21 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "BM|Dodge")
     FName DodgeCooldownKey = TEXT("Enemy_Dodge");
+
+    // ===== Floating Health Bar =====
+    /** Whether to show floating health bar above enemy head. Override in subclass to disable (e.g., Boss). */
+    virtual bool ShouldShowFloatingHealthBar() const { return true; }
+
+    /** Get the floating health bar component (may be null if disabled). */
+    UBMEnemyHealthBarComponent* GetFloatingHealthBar() const { return FloatingHealthBar; }
 protected:
-    // ÉËº¦Á´Â·£ºÈÔ×ß ABMCharacterBase£¨HitBox->TakeDamageFromHit->Stats£©
+    // ä¼¤å®³é“¾è·¯ï¼šä»èµ° ABMCharacterBaseï¼ˆHitBox->TakeDamageFromHit->Statsï¼‰
     virtual void HandleDamageTaken(const FBMDamageInfo& FinalInfo) override;
     virtual void HandleDeath(const FBMDamageInfo& LastHitInfo) override;
     virtual bool CanBeDamagedBy(const FBMDamageInfo& Info) const override;
     virtual bool TryEvadeIncomingHit(const FBMDamageInfo& InInfo) override;
 
-    // ÄÚ²¿¶¯»­¹¤¾ß
+    // å†…éƒ¨åŠ¨ç”»å·¥å…·
     void PlayLoop(UAnimSequence* Seq, float PlayRate = 1.0f);
     float PlayOnce(
         UAnimSequence* Seq,
@@ -140,11 +160,11 @@ protected:
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Loot", meta = (ClampMin = "0.0"))
     float ExpDropMax = 300.0f;
 
-    // ===== ¹¤³ÌĞÔ£ºFSM Çı¶¯µÄ×Ê²úÅäÖÃ£¨½¨ÒéÓÉÅÉÉúÀà/±à¼­Æ÷ÅäÖÃ£©=====
+    // ===== å·¥ç¨‹æ€§ï¼šFSM é©±åŠ¨çš„èµ„äº§é…ç½®ï¼ˆå»ºè®®ç”±æ´¾ç”Ÿç±»/ç¼–è¾‘å™¨é…ç½®ï¼‰=====
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Assets")
     TObjectPtr<UAnimSequence> AnimIdle = nullptr;
 
-    // ¶¯»­×Ê²ú£ºÑ²Âß Walk / ×·»÷ Run / ÊÜ»÷ Light&Heavy / ËÀÍö Death
+    // åŠ¨ç”»èµ„äº§ï¼šå·¡é€» Walk / è¿½å‡» Run / å—å‡» Light&Heavy / æ­»äº¡ Death
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Assets")
     TObjectPtr<UAnimSequence> AnimWalk = nullptr;
 
@@ -162,11 +182,11 @@ protected:
 
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Assets")
     TObjectPtr<UAnimSequence> AnimDodge = nullptr;
-    // ÊÜ»÷ĞÅÏ¢£º¸ø HitState Ñ¡Ôñ¶¯»­ÓÃ
+    // å—å‡»ä¿¡æ¯ï¼šç»™ HitState é€‰æ‹©åŠ¨ç”»ç”¨
     UPROPERTY(Transient)
     FBMDamageInfo LastDamageInfo;
 
-    // µ±Ç°¹¥»÷£º¸ø¡°ÄÜ·ñ±»´ò¶Ï¡±ÅĞ¶¨ÓÃ
+    // å½“å‰æ”»å‡»ï¼šç»™â€œèƒ½å¦è¢«æ‰“æ–­â€åˆ¤å®šç”¨
     UPROPERTY(Transient)
     bool bHasActiveAttackSpec = false;
 
@@ -179,15 +199,15 @@ protected:
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack", meta = (ClampMin = "0"))
     float AttackRangeOverride = -1.f; 
 
-    // ¹¥»÷Ö®¼äµÄÈ«¾Ö×îĞ¡¼ä¸ô
+    // æ”»å‡»ä¹‹é—´çš„å…¨å±€æœ€å°é—´éš”
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack")
     float GlobalAttackInterval = 2.0f;
 
-    // È«¾Ö¼ä¸ôµÄËæ»ú¸¡¶¯·¶Î§
+    // å…¨å±€é—´éš”çš„éšæœºæµ®åŠ¨èŒƒå›´
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Attack")
     float GlobalAttackIntervalDeviation = 0.5f;
 
-    // ÒÆ¶¯ËÙ¶È£¨±ãÓÚ²»Í¬µĞÈË¸´ÓÃ£©
+    // ç§»åŠ¨é€Ÿåº¦ï¼ˆä¾¿äºä¸åŒæ•Œäººå¤ç”¨ï¼‰
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Move")
     float PatrolSpeed = 220.f;
 
@@ -195,17 +215,27 @@ protected:
     float ChaseSpeed = 420.f;
 
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Anim", meta = (ClampMin = "0.0"))
-    float LocomotionSpeedThreshold = 5.0f; // ËÙ¶ÈĞ¡ÓÚ¸ÃãĞÖµÊ±Ç¿ÖÆIdle
+    float LocomotionSpeedThreshold = 5.0f; // é€Ÿåº¦å°äºè¯¥é˜ˆå€¼æ—¶å¼ºåˆ¶Idle
 
-    // ¸ĞÖªË¢ĞÂÆµÂÊ£¨Ö»¸üĞÂ Target/Alert£¬²»×ö×´Ì¬ÇĞ»»£©
+    // æ„ŸçŸ¥åˆ·æ–°é¢‘ç‡ï¼ˆåªæ›´æ–° Target/Alertï¼Œä¸åšçŠ¶æ€åˆ‡æ¢ï¼‰
     UPROPERTY(EditAnywhere, Category = "BM|Enemy|Perception")
     float PerceptionInterval = 0.2f;
 
+    // ===== Floating Health Bar =====
+    /** Floating health bar component displayed above enemy head. */
+    UPROPERTY(VisibleAnywhere, Category = "BM|Enemy|UI")
+    TObjectPtr<UBMEnemyHealthBarComponent> FloatingHealthBar = nullptr;
+
+    /** Vertical offset for the floating health bar above capsule top. */
+    UPROPERTY(EditAnywhere, Category = "BM|Enemy|UI", meta = (ClampMin = "0.0"))
+    float FloatingHealthBarOffset = 50.f;
+
 private:
-    void InitEnemyStates();
-    void CachePlayerPawn();
-    void StartPerceptionTimer();
-    void UpdatePerception();
+void InitEnemyStates();
+void CachePlayerPawn();
+void StartPerceptionTimer();
+void UpdatePerception();
+void InitFloatingHealthBar();
 
 
 
@@ -217,12 +247,13 @@ private:
 
     FVector HomeLocation = FVector::ZeroVector;
 
-    // Loop ¶¯»­È¥ÖØ
+    // Loop åŠ¨ç”»å»é‡
     UPROPERTY(Transient)
     TObjectPtr<UAnimSequence> CurrentLoopAnim = nullptr;
     float CurrentLoopRate = 1.0f;
-    // ¹¥»÷ÀäÈ´
+    // æ”»å‡»å†·å´
     float NextAttackAllowedTime = 0.f;
 
     FTimerHandle PerceptionTimerHandle;
 };
+

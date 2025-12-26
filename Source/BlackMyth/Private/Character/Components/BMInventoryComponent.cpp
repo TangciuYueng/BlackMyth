@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Character/Components/BMInventoryComponent.h"
+#include "Character/Components/BMStatsComponent.h"
 #include "Core/BMDataSubsystem.h"
 #include "Data/BMItemData.h"
 #include "Engine/Engine.h"
@@ -235,7 +236,123 @@ bool UBMInventoryComponent::UseItem(FName ItemID, int32 Count)
 		return false;
 	}
 
-	// TODO: 根据物品类型执行具体效果，例如回复生命、增加属性等
+	// 获取角色的Stats组件
+	UBMStatsComponent* StatsComp = nullptr;
+	if (AActor* Owner = GetOwner())
+	{
+		StatsComp = Owner->FindComponentByClass<UBMStatsComponent>();
+	}
+
+	if (!StatsComp)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::UseItem - 无法获取StatsComponent"));
+		return false;
+	}
+
+	// 应用道具效果
+	bool bEffectApplied = false;
+
+	// 1. 最大生命值临时提升（MaxHp字段：15秒内临时提升到该值）
+	if (ItemData->MaxHp > 0.f)
+	{
+		// 计算当前HP百分比
+		const float CurrentMaxHp = StatsComp->GetStatBlock().MaxHP;
+		const float CurrentHp = StatsComp->GetStatBlock().HP;
+		const float HpPercentage = (CurrentMaxHp > 0.f) ? (CurrentHp / CurrentMaxHp) : 1.0f;
+
+		// 添加临时最大生命值加成（15秒）
+		constexpr float MaxHpBoostDuration = 15.f;
+		const float NewMaxHp = ItemData->MaxHp;
+		
+		// Value 存储的是提升后的最大生命值
+		StatsComp->AddBuff(EBMBuffType::MaxHpBoost, NewMaxHp, MaxHpBoostDuration);
+		
+		// 立即调整当前HP以保持百分比不变
+		FBMStatBlock& Stats = StatsComp->GetStatBlockMutable();
+		Stats.HP = NewMaxHp * HpPercentage;
+		
+		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - %s 临时提升最大生命值 %.1f -> %.1f (持续 %.1fs)，当前HP调整为 %.1f (%.1f%%)"), 
+			*ItemID.ToString(), CurrentMaxHp, NewMaxHp, MaxHpBoostDuration, Stats.HP, HpPercentage * 100.f);
+		
+		bEffectApplied = true;
+	}
+
+	// 2. 立即回复HP（Hp字段：一次回复的血量百分比）
+	if (ItemData->Hp > 0.f)
+	{
+		StatsComp->HealByPercent(ItemData->Hp);
+		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - %s 恢复 %.1f%% HP"), 
+			*ItemID.ToString(), ItemData->Hp);
+		bEffectApplied = true;
+	}
+
+	// 2. 立即回复HP（Hp字段：一次回复的血量百分比）
+	if (ItemData->Hp > 0.f)
+	{
+		StatsComp->HealByPercent(ItemData->Hp);
+		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - %s 恢复 %.1f%% HP"), 
+			*ItemID.ToString(), ItemData->Hp);
+		bEffectApplied = true;
+	}
+
+	// 3. 攻击力加成（AttackPower字段：持续15秒的百分比攻击力加成）
+	if (ItemData->AttackPower > 0.f)
+	{
+		// 攻击力加成持续15秒
+		constexpr float AttackBoostDuration = 15.f;
+		StatsComp->AddBuff(EBMBuffType::AttackBoost, ItemData->AttackPower, AttackBoostDuration);
+		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - %s 添加 %.1f%% 攻击力加成，持续 %.1fs"), 
+			*ItemID.ToString(), ItemData->AttackPower, AttackBoostDuration);
+		bEffectApplied = true;
+	}
+
+	// 4. 处理额外功能（AdditionalFunction字段）
+	switch (ItemData->AdditionalFunction)
+	{
+		case EBMItemFunction::Stamina:
+		{
+			// 加速回复耐力：2倍恢复速度，持续15秒
+			constexpr float StaminaBoostDuration = 15.f;
+			constexpr float StaminaBoostMultiplier = 2.0f;
+			StatsComp->AddBuff(EBMBuffType::StaminaRegenBoost, StaminaBoostMultiplier, StaminaBoostDuration);
+			UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - %s 添加耐力恢复加速 (%.1fx)，持续 %.1fs"), 
+				*ItemID.ToString(), StaminaBoostMultiplier, StaminaBoostDuration);
+			bEffectApplied = true;
+			break;
+		}
+		case EBMItemFunction::Invulnerability:
+		{
+			// 无敌状态：持续5秒
+			constexpr float InvulnerabilityDuration = 5.f;
+			StatsComp->AddBuff(EBMBuffType::Invulnerability, 1.0f, InvulnerabilityDuration);
+			UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - %s 添加无敌状态，持续 %.1fs"), 
+				*ItemID.ToString(), InvulnerabilityDuration);
+			bEffectApplied = true;
+			break;
+		}
+		case EBMItemFunction::HP:
+		{
+			// 持续回血：15秒内恢复50%血量
+			constexpr float HPRegenDuration = 15.f;
+			constexpr float HPRegenPercent = 50.f;
+			StatsComp->AddBuff(EBMBuffType::HealthRegenOverTime, HPRegenPercent, HPRegenDuration);
+			UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - %s 添加持续回血 (%.1f%% over %.1fs)"), 
+				*ItemID.ToString(), HPRegenPercent, HPRegenDuration);
+			bEffectApplied = true;
+			break;
+		}
+		case EBMItemFunction::None:
+		default:
+			// 无额外效果
+			break;
+	}
+
+	if (!bEffectApplied)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::UseItem - %s 没有可应用的效果"), *ItemID.ToString());
+		// 仍然允许使用，可能是纯消耗品
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - 使用物品 %s x%d"), *ItemID.ToString(), Count);
 
 	OnItemUsed.Broadcast(ItemID, Count);

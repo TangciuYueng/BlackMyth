@@ -53,7 +53,7 @@ ABMPlayerCharacter* UBMSaveGameSubsystem::GetPlayerCharacter() const
  * @param Slot 存档槽位编号
  * @return 存档存在返回 true，否则返回 false
  */
-bool UBMSaveGameSubsystem::DoesSaveExist(int32 Slot)
+bool UBMSaveGameSubsystem::DoesSaveExist(int32 Slot) const
 {
     if (Slot < 0)
     {
@@ -172,9 +172,10 @@ bool UBMSaveGameSubsystem::SaveGame(int32 Slot)
  * 从指定槽位加载游戏
  * 
  * @param Slot 存档槽位编号
+ * @param bRestorePosition 是否恢复玩家位置（默认 true）
  * @return 加载成功返回 true，失败返回 false
  */
-bool UBMSaveGameSubsystem::LoadGame(int32 Slot)
+bool UBMSaveGameSubsystem::LoadGame(int32 Slot, bool bRestorePosition)
 {
     if (Slot < 0)
     {
@@ -230,7 +231,7 @@ bool UBMSaveGameSubsystem::LoadGame(int32 Slot)
     }
 
     // 应用数据
-    ApplySaveData(LoadedData, Player);
+    ApplySaveData(LoadedData, Player, bRestorePosition);
     
     // 发送加载成功通知
     if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
@@ -238,14 +239,13 @@ bool UBMSaveGameSubsystem::LoadGame(int32 Slot)
         EventBus->EmitNotify(NSLOCTEXT("BMSave", "Loaded", "Game loaded successfully"));
     }
     
-    UE_LOG(LogBMSave, Log, TEXT("Successfully loaded game from slot %d"), Slot);
+    UE_LOG(LogBMSave, Log, TEXT("Successfully loaded game from slot %d (RestorePosition: %s)"), 
+        Slot, bRestorePosition ? TEXT("true") : TEXT("false"));
     return true;
 }
 
 /**
- * 获取存档元信息（用于UI显示）
- * 
- * 获取存档元信息（用于UI显示）
+ * 获取存档元信息
  * 
  * @param Slot 存档槽位编号
  * @param OutMeta 输出的元信息结构
@@ -468,8 +468,9 @@ void UBMSaveGameSubsystem::WriteSaveData(UBMSaveData* SaveData, ABMPlayerCharact
  * 
  * @param SaveData 要应用的存档数据对象
  * @param Player 玩家角色指针
+ * @param bRestorePosition 是否恢复位置（默认 true）
  */
-void UBMSaveGameSubsystem::ApplySaveData(UBMSaveData* SaveData, ABMPlayerCharacter* Player)
+void UBMSaveGameSubsystem::ApplySaveData(UBMSaveData* SaveData, ABMPlayerCharacter* Player, bool bRestorePosition)
 {
     if (!SaveData || !Player)
     {
@@ -477,10 +478,18 @@ void UBMSaveGameSubsystem::ApplySaveData(UBMSaveData* SaveData, ABMPlayerCharact
         return;
     }
 
-    // 1. 恢复位置和旋转
-    // TODO: 如果有 NavMesh 或碰撞，直接 SetLocation 可能会导致穿模，通常建议加检测
-    Player->SetActorLocation(SaveData->Location, false, nullptr, ETeleportType::TeleportPhysics);
-    Player->SetActorRotation(SaveData->Rotation, ETeleportType::TeleportPhysics);
+    // 1. 恢复位置和旋转（可选）
+    if (bRestorePosition)
+    {
+        Player->SetActorLocation(SaveData->Location, false, nullptr, ETeleportType::TeleportPhysics);
+        Player->SetActorRotation(SaveData->Rotation, ETeleportType::TeleportPhysics);
+        UE_LOG(LogBMSave, Log, TEXT("ApplySaveData: Restored position (%.1f, %.1f, %.1f)"), 
+            SaveData->Location.X, SaveData->Location.Y, SaveData->Location.Z);
+    }
+    else
+    {
+        UE_LOG(LogBMSave, Log, TEXT("ApplySaveData: Skipped position restore (using PlayerStart)"));
+    }
 
     // 2. 恢复完整 Stats
     if (UBMStatsComponent* Stats = Player->GetStats())
@@ -596,4 +605,35 @@ void UBMSaveGameSubsystem::StartNewGame()
             EventBus->EmitNotify(NSLOCTEXT("BMSave", "StartNewGameFailed", "Failed to start new game"));
         }
     }
+}
+
+// ===== 手动存档便捷方法 =====
+
+bool UBMSaveGameSubsystem::SaveGameManual()
+{
+    UE_LOG(LogBMSave, Log, TEXT("Manual save requested (Slot 1)"));
+    return SaveGame(MANUAL_SAVE_SLOT);
+}
+
+bool UBMSaveGameSubsystem::LoadGameManual()
+{
+    UE_LOG(LogBMSave, Log, TEXT("Manual load requested (Slot 1)"));
+    
+    if (!HasManualSave())
+    {
+        UE_LOG(LogBMSave, Warning, TEXT("LoadGameManual: No manual save found"));
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "NoManualSave", "No save file found"));
+        }
+        return false;
+    }
+    
+    // 手动读档恢复位置（回到存档点）
+    return LoadGame(MANUAL_SAVE_SLOT, true);
+}
+
+bool UBMSaveGameSubsystem::HasManualSave() const
+{
+    return DoesSaveExist(MANUAL_SAVE_SLOT);
 }

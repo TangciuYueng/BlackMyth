@@ -6,6 +6,7 @@
 #include "Character/Components/BMAnimEventComponent.h"
 #include "Character/Components/BMHitBoxComponent.h"
 #include "Character/Components/BMHurtBoxComponent.h"
+#include "Camera/BMCameraShakeSubsystem.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -85,10 +86,23 @@ FVector ABMCharacterBase::GetForwardVector() const
 
 bool ABMCharacterBase::CanBeDamagedBy(const FBMDamageInfo& Info) const
 {
-    // 默认：不吃自己打自己的伤害
-    if (Info.InstigatorActor.Get() == this) return false;
+    // 不吃自己打自己的伤害
+    if (Info.InstigatorActor.Get() == this)
+    {
+        return false;
+    }
 
-    // 默认不做阵营过滤
+    // 同阵营不互相伤害
+    const ABMCharacterBase* TempInstigator = Cast<ABMCharacterBase>(Info.InstigatorActor.Get());
+    if (TempInstigator)
+    {
+        // 如果攻击者和受害者是同一阵营,则不造成伤害
+        if (TempInstigator->Team == this->Team && this->Team != EBMTeam::Neutral)
+        {
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -106,24 +120,23 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
         InOutInfo.DamageValue = 0.f;
         return 0.f;
     }
-    if (TryEvadeIncomingHit(InOutInfo))
-    {
-        InOutInfo.DamageValue = 0.f;
-        return 0.f;
-    }
+
     // 确保 TargetActor 合理
     if (!InOutInfo.TargetActor)
     {
         InOutInfo.TargetActor = this;
     }
-
     // 基础过滤
     if (!CanBeDamagedBy(InOutInfo))
     {
         InOutInfo.DamageValue = 0.f;
         return 0.f;
     }
-
+    if (TryEvadeIncomingHit(InOutInfo))
+    {
+        InOutInfo.DamageValue = 0.f;
+        return 0.f;
+    }
     UBMHurtBoxComponent* MatchedHB = nullptr;
     if (UPrimitiveComponent* HitComp = InOutInfo.HitComponent.Get())
     {
@@ -151,6 +164,28 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
         LastAppliedDamageInfo = InOutInfo;
         HandleDamageTaken(InOutInfo);
         OnCharacterDamaged.Broadcast(this, InOutInfo);
+
+        // 触发相机震动
+        if (UWorld* World = GetWorld())
+        {
+            if (UBMCameraShakeSubsystem* ShakeSubsystem = World->GetSubsystem<UBMCameraShakeSubsystem>())
+            {
+                // 根据角色类型选择不同强度的震动
+                switch (CharacterType)
+                {
+                case EBMCharacterType::Player:
+                    ShakeSubsystem->PlayPlayerHitShake(InOutInfo);
+                    break;
+                case EBMCharacterType::Boss:
+                    ShakeSubsystem->PlayBossHitShake(InOutInfo);
+                    break;
+                case EBMCharacterType::Enemy:
+                default:
+                    ShakeSubsystem->PlayEnemyHitShake(InOutInfo);
+                    break;
+                }
+            }
+        }
     }
 
     return Applied;

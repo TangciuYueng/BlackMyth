@@ -156,9 +156,9 @@ protected:
 	float TestAutoAddCurrencyIntervalSeconds = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Test", meta = (ClampMin = "1"))
-	int32 TestAutoAddCurrencyAmount = 100;
+	int32 TestAutoAddCurrencyAmount = 1000;
 
-	// 临时：强制所有道具价格（用于购买逻辑测试，后续可关闭或移除）
+	// 临时：强制所有道具价格
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Test")
 	bool bTestForceItemPrice = false;
 

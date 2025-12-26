@@ -14,9 +14,13 @@ class BLACKMYTH_API ABMEnemyBoss : public ABMEnemyBase
     GENERATED_BODY()
 
 public:
-    ABMEnemyBoss();
-    virtual void BeginPlay() override;
-    void EnterPhase2();
+ABMEnemyBoss();
+virtual void BeginPlay() override;
+    
+// Override to return enemy data identifier
+virtual FName GetEnemyDataID() const override { return FName("EnemyBoss"); }
+    
+void EnterPhase2();
     void SetPhaseTransition(bool bIn) { bInPhaseTransition = bIn; }
     bool IsInPhaseTransition() const { return bInPhaseTransition; }
     float PlayEnergizeOnce();
@@ -25,6 +29,8 @@ public:
     float GetPhase2DeathReversePlayRate() const { return Phase2DeathReversePlayRate; }
     float GetPhase2DeathReverseMaxTime() const { return Phase2DeathReverseMaxTime; }
     virtual void SetAlertState(bool bAlert) override;
+
+    virtual bool ShouldShowFloatingHealthBar() const override { return false; }
 
 protected:
     void ApplyConfiguredAssets();

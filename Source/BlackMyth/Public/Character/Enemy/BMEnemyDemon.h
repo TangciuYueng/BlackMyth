@@ -14,14 +14,18 @@ class BLACKMYTH_API ABMEnemyDemon : public ABMEnemyBase
     GENERATED_BODY()
 
 public:
-    ABMEnemyDemon();
-    virtual void BeginPlay() override;
+ABMEnemyDemon();
+virtual void BeginPlay() override;
+    
+// Override to return enemy data identifier
+virtual FName GetEnemyDataID() const override { return FName("EnemyDemon"); }
 
 protected:
     void ApplyConfiguredAssets();
     void BuildAttackSpecs();
     void BuildHitBoxes();
     void BuildHurtBoxes();
+    void BuildLootTable();
     virtual float PlayDodgeOnce() override;
 
 protected:
@@ -80,9 +84,6 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, Category = "BM|Demon|Tuning")
     float DemonChaseSpeed = 420.f;
-
-    UPROPERTY(EditDefaultsOnly, Category = "BM|Demon|Tuning")
-    float DemonBaseDamage = 12.f;
 
     UPROPERTY(EditAnywhere, Category = "BM|Demon|Dodge")
     float DemonDodgeDistance = 420.f;

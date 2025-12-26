@@ -46,10 +46,34 @@ public:
     /**
      * 保存游戏到指定槽位
      * 
-     * @param Slot 存档槽位编号（0 为自动存档槽位）
+     * @param Slot 存档槽位编号（0 为自动存档，1 为手动存档）
      * @return 保存成功返回 true，失败返回 false
      */
     bool SaveGame(int32 Slot);
+
+    /**
+     * 保存游戏到手动存档槽位（槽位1）
+     * 
+     * @return 保存成功返回 true，失败返回 false
+     */
+    UFUNCTION(BlueprintCallable, Category = "BM|Save")
+    bool SaveGameManual();
+
+    /**
+     * 从手动存档槽位（槽位1）加载游戏
+     * 
+     * @return 加载成功返回 true，失败返回 false
+     */
+    UFUNCTION(BlueprintCallable, Category = "BM|Save")
+    bool LoadGameManual();
+
+    /**
+     * 检查是否存在手动存档
+     * 
+     * @return 存在返回 true，否则返回 false
+     */
+    UFUNCTION(BlueprintCallable, Category = "BM|Save")
+    bool HasManualSave() const;
 
     /**
      * 保存游戏到当前槽位
@@ -62,9 +86,10 @@ public:
      * 从指定槽位加载游戏
      * 
      * @param Slot 存档槽位编号
+     * @param bRestorePosition 是否恢复玩家位置（默认 true）
      * @return 加载成功返回 true，失败返回 false
      */
-    bool LoadGame(int32 Slot);
+    bool LoadGame(int32 Slot, bool bRestorePosition = true);
 
     /**
      * 自动保存到默认槽位（槽位 0）
@@ -77,7 +102,7 @@ public:
      * @param Slot 存档槽位编号
      * @return 存档存在返回 true，否则返回 false
      */
-    bool DoesSaveExist(int32 Slot);
+    bool DoesSaveExist(int32 Slot) const;
 
     /**
      * 获取存档元信息（用于UI显示）
@@ -141,15 +166,16 @@ protected:
      * 内部逻辑：将 SaveData 对象的数据应用回游戏世界
      * 
      * 恢复玩家角色的所有保存的数据，包括：
-     * - 位置和旋转
+     * - 位置和旋转（可选）
      * - 完整属性
      * - 经验和等级
      * - 背包物品
      * 
      * @param SaveData 要应用的存档数据对象
      * @param Player 玩家角色指针
+     * @param bRestorePosition 是否恢复位置（默认 true）
      */
-    void ApplySaveData(UBMSaveData* SaveData, ABMPlayerCharacter* Player);
+    void ApplySaveData(UBMSaveData* SaveData, ABMPlayerCharacter* Player, bool bRestorePosition = true);
 
     /**
      * 验证存档数据有效性
@@ -169,6 +195,10 @@ protected:
 private:
     /** 默认自动存档槽位编号 */
     static const int32 AUTO_SAVE_SLOT = 0;
-    /** 最大存档槽位数 */
+    
+    /** 手动存档槽位编号 */
+    static const int32 MANUAL_SAVE_SLOT = 1;
+    
+    /** 最大存档槽位数（仅用于兼容旧代码） */
     static const int32 MAX_SAVE_SLOTS = 50;
 };

@@ -2,6 +2,7 @@
 #include "Character/Enemy/BMEnemyBase.h"
 #include "Character/Components/BMStateMachineComponent.h"
 #include "Character/Components/BMCombatComponent.h"
+#include "Character/Components/BMHitBoxComponent.h"
 #include "Core/BMTypes.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -98,6 +99,10 @@ void UBMEnemyState_Attack::OnExit(float)
     {
         Combat->ClearActiveHitBoxWindowContext();
         Combat->SetActionLock(false);
+    }
+    if (UBMHitBoxComponent* HB = E->GetHitBox())
+    {
+        HB->DeactivateAllHitBoxes();  
     }
     E->GetWorldTimerManager().ClearTimer(AttackFinishHandle);
     E->ClearActiveAttackSpec();
