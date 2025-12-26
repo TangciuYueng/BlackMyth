@@ -302,8 +302,10 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
         return;
     }
 
-    // -------- 6) 计算基础伤害 --------
+    // -------- 6) 计算基础伤害（应用攻击力加成） --------
     float BaseAttack = 0.f;
+    float AttackMultiplier = 1.0f;
+
     if (Damage > 0.f)
     {
         BaseAttack = Damage;
@@ -311,7 +313,12 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
     else if (UBMStatsComponent* S = Attacker->GetStats())
     {
         BaseAttack = S->GetStatBlock().Attack;
+        // 获取攻击力加成倍率（来自增益效果）
+        AttackMultiplier = S->GetAttackMultiplier();
     }
+
+    // 应用攻击力加成
+    BaseAttack *= AttackMultiplier;
 
     // -------- 7) 构造 FBMDamageInfo --------
     FBMDamageInfo Info;

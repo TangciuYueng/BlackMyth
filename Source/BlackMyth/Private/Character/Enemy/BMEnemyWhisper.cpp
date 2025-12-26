@@ -25,26 +25,6 @@ ABMEnemyWhisper::ABMEnemyWhisper()
     BuildHurtBoxes();
     BuildHitBoxes();
 
-    MeshAsset = TSoftObjectPtr<USkeletalMesh>(FSoftObjectPath(
-        TEXT("/Script/Engine.SkeletalMesh'/Game/Whisper/Base_Mesh/SK_Whisper.SK_Whisper'")));
-
-    AnimIdleAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/Whisper/Animations/Anim_Whisper_Idle1.Anim_Whisper_Idle1'")));
-    AnimWalkAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/Whisper/Animations/Anim_Whisper_Walk1.Anim_Whisper_Walk1'")));
-    AnimRunAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/Whisper/Animations/Anim_Whisper_Run.Anim_Whisper_Run'")));
-
-    AnimHitLightAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/Whisper/Animations/Anim_Whisper_Taking_Damage1.Anim_Whisper_Taking_Damage1'")));
-    AnimHitHeavyAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/Whisper/Animations/Anim_Whisper_Taking_Damage2.Anim_Whisper_Taking_Damage2'")));
-    AnimDeathAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/Whisper/Animations/Anim_Whisper_Death.Anim_Whisper_Death'")));
-
-    AnimDodgeAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Flip_Bwd.Q_Flip_Bwd'")));
-
     AttackLight1Asset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
         TEXT("/Script/Engine.AnimSequence'/Game/Whisper/Animations/Anim_Whisper_Attack1.Anim_Whisper_Attack1'")));
     AttackLight2Asset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
@@ -55,8 +35,10 @@ ABMEnemyWhisper::ABMEnemyWhisper()
 
 void ABMEnemyWhisper::BeginPlay()
 {
+    // 优先从 DataTable 读取配置
+    LoadStatsFromDataTable();
 
-    ApplyConfiguredAssets();
+    // ApplyConfiguredAssets();
     BuildAttackSpecs();
 
     // 调试可视化
@@ -256,11 +238,47 @@ void ABMEnemyWhisper::BuildAttackSpecs()
         if (S.Anim) AttackSpecs.Add(S);
     }
 
-    // 伤害基值
-    if (UBMHitBoxComponent* HB = GetHitBox())
+    // 伤害基值（已废弃，通过 DataTable 设置）
+    // if (UBMHitBoxComponent* HB = GetHitBox())
+    // {
+    //     HB->SetDamage(WhisperBaseDamage);
+    // }
+}
+
+void ABMEnemyWhisper::BuildLootTable()
+{
+    LootTable.Reset();
+
+
     {
-        HB->SetDamage(WhisperBaseDamage);
+        FBMLootItem Item;
+        Item.ItemID = TEXT("Item_JiuZhuanJinDan");
+        Item.ItemType = EBMItemType::Consumable;
+        Item.Rarity = EBMItemRarity::Common;
+        Item.Probability = 0.80f;
+        Item.MinQuantity = 1;
+        Item.MaxQuantity = 3;
+        Item.Weight = 1.0f;
+
+        LootTable.Add(Item);
     }
+
+
+    {
+        FBMLootItem Item;
+        Item.ItemID = TEXT("Item_TaiYiZiJinDan");
+        Item.ItemType = EBMItemType::Consumable;
+        Item.Rarity = EBMItemRarity::Legendary;
+        Item.Probability = 0.2f;
+        Item.MinQuantity = 1;
+        Item.MaxQuantity = 1;
+        Item.Weight = 1.0f;
+
+        LootTable.Add(Item);
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("[%s] BuildLootTable: Configured %d loot items"),
+        *GetName(), LootTable.Num());
 }
 
 float ABMEnemyWhisper::PlayDodgeOnce()

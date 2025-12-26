@@ -14,6 +14,7 @@
 #include "Character/States/BMPlayerState_Hit.h"
 #include "Character/States/BMPlayerState_Death.h"
 #include "Character/States/BMPlayerState_Dodge.h"
+#include "System/Save/BMSaveGameSubsystem.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/InputComponent.h"
@@ -33,6 +34,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
 #include "BMGameInstance.h"
+#include "Engine/GameInstance.h"
 
 
 ABMPlayerCharacter::ABMPlayerCharacter()
@@ -251,8 +253,6 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         HB->RegisterDefinition(Heavy);
     }
     BuildAttackSteps();
-
-    Stats->GetStatBlockMutable().Attack = 40.0f;
 }
 
 void ABMPlayerCharacter::BeginPlay()
@@ -271,15 +271,62 @@ void ABMPlayerCharacter::BeginPlay()
     // 初始动画
     PlayIdleLoop();
 
-	Stats->GetStatBlockMutable().MaxHP = 1000.f;
-	Stats->GetStatBlockMutable().HP = 1000.f;
-
 	// 调试：启用 HitBox/HurtBox 可视化
     if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
     for (UBMHurtBoxComponent* HB : HurtBoxes)
     {
         if (!HB) continue;
         HB->bDebugDraw = true;
+    }
+
+    // ===== 切换关卡后自动加载存档 =====
+    if (UWorld* World = GetWorld())
+    {
+        if (UGameInstance* GameInstance = World->GetGameInstance())
+        {
+            if (UBMSaveGameSubsystem* SaveSystem = GameInstance->GetSubsystem<UBMSaveGameSubsystem>())
+            {
+                // 检查是否存在自动存档（槽位0）
+                if (SaveSystem->DoesSaveExist(0))
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("[BMPlayerCharacter] Auto-save found, loading player data (without position)..."));
+                    
+                    FTimerHandle LoadDelayTimer;
+                    World->GetTimerManager().SetTimerForNextTick([this, SaveSystem]()
+                    {
+                        // 加载自动存档（不恢复位置）
+                        bool bLoadSuccess = SaveSystem->LoadGame(0, false);
+                        
+                        if (bLoadSuccess)
+                        {
+                            UE_LOG(LogTemp, Warning, TEXT("[BMPlayerCharacter] Player data loaded successfully (position from PlayerStart)!"));
+                            
+                            // 加载后立即删除自动存档
+                            SaveSystem->DeleteSave(0);
+                            UE_LOG(LogTemp, Warning, TEXT("[BMPlayerCharacter] Auto-save deleted (only for level transition)."));
+                        }
+                        else
+                        {
+                            UE_LOG(LogTemp, Error, TEXT("[BMPlayerCharacter] Failed to load player data!"));
+                        }
+                    });
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Log, TEXT("[BMPlayerCharacter] No auto-save found, applying default level growth data."));
+                    
+                    // 没有存档时，应用当前等级的成长数据
+                    if (Experience)
+                    {
+                        const int32 CurrentLevel = Experience->GetLevel();
+                        UE_LOG(LogTemp, Log, TEXT("[BMPlayerCharacter] Applying growth data for level %d"), CurrentLevel);
+                        
+                        // 通过 SetLevel 应用成长数据
+                        Experience->SetLevel(CurrentLevel, true);
+                    }
+                }
+            }
+        }
     }
 }
 

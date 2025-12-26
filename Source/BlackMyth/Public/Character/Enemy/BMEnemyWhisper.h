@@ -18,14 +18,18 @@ class BLACKMYTH_API ABMEnemyWhisper : public ABMEnemyBase
     GENERATED_BODY()
 
 public:
-    ABMEnemyWhisper();
-    virtual void BeginPlay() override;
+ABMEnemyWhisper();
+virtual void BeginPlay() override;
+    
+// Override to return enemy data identifier
+virtual FName GetEnemyDataID() const override { return FName("EnemyWhisper"); }
 
 protected:
     void ApplyConfiguredAssets();
     void BuildAttackSpecs();
     void BuildHitBoxes();
     void BuildHurtBoxes();
+    void BuildLootTable();
     virtual float PlayDodgeOnce() override;
 
 protected:
@@ -97,7 +101,7 @@ protected:
     float WhisperDodgeDistance = 220.f;
 
     UPROPERTY(EditAnywhere, Category = "BM|Whisper|Dodge")
-    float WhisperDodgeOnHitChance = 0.55f;
+    float WhisperDodgeOnHitChance = 0.50f;
 
     UPROPERTY(EditAnywhere, Category = "BM|Whisper|Dodge")
     float WhisperDodgeCooldown = 2.0f;

@@ -1,10 +1,10 @@
-Row Name,Name,MaxStack,MaxHp,Hp,Attack Power,Attack speed,speed,Price,additional fuction,IconPath
-Item_JiuZhuanJinDan,九转金丹,100,0,100,0,30,0,300,"无","Game/Content/csv/items/JiuZhuanJinDan.png"
-Item_TaiYiZiJinDan,太乙紫金丹,100,0,0,20,0,0,300,"每秒额外回复二点能量","Game/Content/csv/items/TaiYiZiJinDan.png"
-Item_CheDianWei,掣电尾,1,0,0,20,0,0,275,"无","Game/Content/csv/items/Item_CheDianWei.png"
-Item_TieShiXin,铁石心,1,0,0,0,10%,0,300,"无","Game/Content/csv/items/Item_TieShiXin.png"
-Item_ChuBaiQiangTou,楮白枪头,1,0,0,75,0,0,850,"无","Game/Content/csv/items/Item_ChuBaiQiangTou.png"
-Item_JinChenXin,金趁心,1,0,0,120,0,0,2140,"免伤20%","Game/Content/csv/items/Item_JinChenXin.png"
-Item_JinGuangYanMou,金光眼眸,1,500,0,110,15%,0,2060,"获得1秒无敌状态","Game/Content/csv/items/Item_JinGuangYanMou.png"
-Item_YinXingWuJiao,银星雾角,1,0,0,20,35%,8%,2040,"每秒额外回复五点能量","Game/Content/csv/items/Item_YinXingWuJiao.png"
-Item_YaoShengJiao,妖生角,1,0,0,0,20%,10%,1500,"每秒额外回复五点血量","Game/Content/csv/items/Item_YaoShengJiao.png"请你给每个道具来上不多于二十个字的描述
+Row Name,Name,MaxStack,MaxHp,Hp,Attack Power,Price,Additional Function,IconPath
+Item_JiuZhuanJinDan,九转金丹,100,0,30,0,300,"None","Game/Content/csv/items/JiuZhuanJinDan.png"
+Item_TaiYiZiJinDan,太乙紫金丹,100,0,0,20,300,"Stamina","Game/Content/csv/items/TaiYiZiJinDan.png"
+Item_CheDianWei,掣电尾,1,0,0,20,275,"None","Game/Content/csv/items/Item_CheDianWei.png"
+Item_TieShiXin,铁石心,1,0,10,20,300,"None","Game/Content/csv/items/Item_TieShiXin.png"
+Item_ChuBaiQiangTou,楮白枪头,1,0,0,75,850,"None","Game/Content/csv/items/Item_ChuBaiQiangTou.png"
+Item_JinChenXin,金趁心,1,0,0,120,2140,"None","Game/Content/csv/items/Item_JinChenXin.png"
+Item_JinGuangYanMou,金光眼眸,1,500,0,110,2060,"Invulnerability","Game/Content/csv/items/Item_JinGuangYanMou.png"
+Item_YinXingWuJiao,银星雾角,1,0,0,80,2040,"Stamina","Game/Content/csv/items/Item_YinXingWuJiao.png"
+Item_YaoShengJiao,妖生角,1,0,0,0,1500,"HP","Game/Content/csv/items/Item_YaoShengJiao.png"

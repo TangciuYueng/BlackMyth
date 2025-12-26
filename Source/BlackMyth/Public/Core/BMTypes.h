@@ -240,6 +240,18 @@ enum class EBMItemType : uint8
 };
 
 /**
+ * 物品额外效果（Additional Function）
+ */
+UENUM(BlueprintType)
+enum class EBMItemFunction : uint8
+{
+    None            UMETA(DisplayName = "None"),
+    Stamina         UMETA(DisplayName = "Stamina"),      // 恢复耐力
+    HP              UMETA(DisplayName = "HP"),           // 恢复生命值
+    Invulnerability UMETA(DisplayName = "Invulnerability") // 无敌状态
+};
+
+/**
  * 属性块（Stats）—— Player / Enemy / Boss 公用
  */
 USTRUCT(BlueprintType)
@@ -266,7 +278,7 @@ struct FBMStatBlock
     float Stamina = 100.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float Attack = 100.f;
+    float Attack = 10.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float Defense = 0.f;

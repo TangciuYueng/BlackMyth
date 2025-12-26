@@ -40,27 +40,6 @@ ABMEnemyBoss::ABMEnemyBoss()
     BuildHurtBoxes();
     BuildHitBoxes();
 
-    // ===== 资产路径占位）=====
-    MeshAsset = TSoftObjectPtr<USkeletalMesh>(FSoftObjectPath(
-        TEXT("/Script/Engine.SkeletalMesh'/Game/ParagonRampage/Characters/Heroes/Rampage/Meshes/Rampage.Rampage'")));
-
-    AnimIdleAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/Idle_Biped.Idle_Biped'")));
-    AnimWalkAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/Jog_Biped_Fwd.Jog_Biped_Fwd'")));
-    AnimRunAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/TravelMode_Fwd_Start.TravelMode_Fwd_Start'")));
-
-    AnimHitLightAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/HitReact_Front.HitReact_Front'")));
-    AnimHitHeavyAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/Stun_Start.Stun_Start'")));
-    AnimDeathAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/Whisper/Animations/Anim_Whisper_Death.Anim_Whisper_Death'")));
-
-    AnimDodgeAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
-        TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/TravelMode_Bwd_Downhill.TravelMode_Bwd_Downhill'")));
-
     AttackLight1Asset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
         TEXT("/Script/Engine.AnimSequence'/Game/ParagonRampage/Characters/Heroes/Rampage/Animations/Attack_Biped_Melee_A.Attack_Biped_Melee_A'")));
     AttackLight2Asset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(
@@ -101,7 +80,10 @@ void ABMEnemyBoss::ApplyBossBodyTuning()
 
 void ABMEnemyBoss::BeginPlay()
 {
-    ApplyConfiguredAssets();
+    // 优先从 DataTable 读取配置
+    LoadStatsFromDataTable();
+    
+    // ApplyConfiguredAssets();
     BuildAttackSpecs();
 
 	// 注册二阶段转换状态
@@ -221,7 +203,7 @@ void ABMEnemyBoss::BuildHitBoxes()
         Def.Name = TEXT("boss_hand_r_light");
         Def.Type = EBMHitBoxType::LightAttack;
         Def.AttachSocketOrBone = TEXT("hand_r");
-        Def.BoxExtent = FVector(45.f, 45.f, 45.f);
+        Def.BoxExtent = FVector(60.f, 60.f, 60.f);
 
         Def.DamageType = EBMDamageType::Melee;
         Def.ElementType = EBMElementType::Physical;
@@ -253,7 +235,7 @@ void ABMEnemyBoss::BuildHitBoxes()
         Def.Name = TEXT("boss_hand_l_light");
         Def.Type = EBMHitBoxType::LightAttack;
         Def.AttachSocketOrBone = TEXT("hand_l");
-        Def.BoxExtent = FVector(45.f, 45.f, 45.f);
+        Def.BoxExtent = FVector(60.f, 60.f, 60.f);
 
         Def.DamageType = EBMDamageType::Melee;
         Def.ElementType = EBMElementType::Physical;

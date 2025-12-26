@@ -19,8 +19,11 @@ class BLACKMYTH_API ABMEnemyDummy : public ABMEnemyBase
     GENERATED_BODY()
 
 public:
-    ABMEnemyDummy();
-    virtual void BeginPlay() override;
+ABMEnemyDummy();
+virtual void BeginPlay() override;
+    
+// Override to return enemy data identifier
+virtual FName GetEnemyDataID() const override { return FName("EnemyDummy"); }
 
 protected:
     void ApplyConfiguredAssets();

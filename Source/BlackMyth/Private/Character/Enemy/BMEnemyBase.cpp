@@ -1,4 +1,4 @@
-#include "Character/Enemy/BMEnemyBase.h"
+ï»¿#include "Character/Enemy/BMEnemyBase.h"
 
 #include "Character/Enemy/BMEnemyAIController.h"
 #include "Character/Components/BMStateMachineComponent.h"
@@ -16,6 +16,9 @@
 #include "Character/Enemy/States/BMEnemyState_Hit.h"
 #include "Character/Enemy/States/BMEnemyState_Death.h"
 #include "Character/Enemy/States/BMEnemyState_Dodge.h"
+
+#include "System/BMEnemyManagerSubsystem.h"
+#include "Core/BMDataSubsystem.h"
 
 #include "Animation/AnimSingleNodeInstance.h"
 #include "Animation/AnimSequence.h"
@@ -53,13 +56,22 @@ void ABMEnemyBase::BeginPlay()
 
     InitEnemyStates();
     InitFloatingHealthBar();
+
+    // æ³¨å†Œåˆ°æ•Œäººç®¡ç†å­ç³»ç»Ÿ
+    if (UWorld* World = GetWorld())
+    {
+        if (UBMEnemyManagerSubsystem* EnemyManager = World->GetSubsystem<UBMEnemyManagerSubsystem>())
+        {
+            EnemyManager->RegisterEnemy(this);
+        }
+    }
 }
 
 void ABMEnemyBase::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
-    // ·ÀÖ¹¡°¿¨×¡/Ã»Â·¾¶/AcceptanceRadius¹ı´ó¡±µÈµ¼ÖÂÔ­µØ²¥Walk/Run
+    // é˜²æ­¢â€œå¡ä½/æ²¡è·¯å¾„/AcceptanceRadiusè¿‡å¤§â€ç­‰å¯¼è‡´åŸåœ°æ’­Walk/Run
     // UpdateLocomotionLoop();
 }
 
@@ -144,7 +156,7 @@ bool ABMEnemyBase::DetectPlayer() const
     }
     if (!PlayerPawn || AggroRange <= 0.f) return false;
 
-    // Íæ¼ÒËÀÍö
+    // ç©å®¶æ­»äº¡
     if (const ABMCharacterBase* PlayerChar = Cast<ABMCharacterBase>(PlayerPawn))
     {
         if (PlayerChar->GetStats()->IsDead()) return false;   
@@ -167,7 +179,7 @@ void ABMEnemyBase::SetAlertState(bool bAlert)
 
 void ABMEnemyBase::DropLoot()
 {
-    // »ñÈ¡Íæ¼Ò
+    // è·å–ç©å®¶
     APawn* PlayerPawn = CachedPlayer.Get();
     if (!PlayerPawn)
     {
@@ -183,7 +195,7 @@ void ABMEnemyBase::DropLoot()
         return;
     }
 
-    // »ñÈ¡Íæ¼ÒµÄ Inventory ºÍ Experience ×é¼ş
+    // è·å–ç©å®¶çš„ Inventory å’Œ Experience ç»„ä»¶
     UBMInventoryComponent* PlayerInventory = PlayerPawn->FindComponentByClass<UBMInventoryComponent>();
     UBMExperienceComponent* PlayerExperience = PlayerPawn->FindComponentByClass<UBMExperienceComponent>();
 
@@ -191,7 +203,7 @@ void ABMEnemyBase::DropLoot()
     float TotalExp = 0.0f;
     TArray<FString> DroppedItems;
 
-    // µôÂä½ğ±Ò
+    // æ‰è½é‡‘å¸
     if (PlayerInventory && CurrencyDropMax > 0)
     {
         const int32 Currency = FMath::RandRange(FMath::Max(0, CurrencyDropMin), FMath::Max(0, CurrencyDropMax));
@@ -205,7 +217,7 @@ void ABMEnemyBase::DropLoot()
         }
     }
 
-    // µôÂä¾­Ñé
+    // æ‰è½ç»éªŒ
     if (PlayerExperience && ExpDropMax > 0.0f)
     {
         const float Exp = FMath::FRandRange(FMath::Max(0.0f, ExpDropMin), FMath::Max(0.0f, ExpDropMax));
@@ -218,19 +230,19 @@ void ABMEnemyBase::DropLoot()
         }
     }
 
-    // µôÂäÎïÆ·
+    // æ‰è½ç‰©å“
     if (PlayerInventory && LootTable.Num() > 0)
     {
         for (const FBMLootItem& LootItem : LootTable)
         {
-            // ¸ÅÂÊÅĞ¶¨
+            // æ¦‚ç‡åˆ¤å®š
             const float Roll = FMath::FRand();
             if (Roll > LootItem.Probability)
             {
-                continue; // Î´Í¨¹ı¸ÅÂÊ¼ì²é
+                continue; // æœªé€šè¿‡æ¦‚ç‡æ£€æŸ¥
             }
 
-            // È·¶¨µôÂäÊıÁ¿
+            // ç¡®å®šæ‰è½æ•°é‡
             const int32 Quantity = FMath::RandRange(
                 FMath::Max(0, LootItem.MinQuantity),
                 FMath::Max(0, LootItem.MaxQuantity)
@@ -241,7 +253,7 @@ void ABMEnemyBase::DropLoot()
                 continue;
             }
 
-            // ³¢ÊÔÌí¼ÓÎïÆ·
+            // å°è¯•æ·»åŠ ç‰©å“
             if (PlayerInventory->AddItem(LootItem.ItemID, Quantity))
             {
                 DroppedItems.Add(FString::Printf(TEXT("%s x%d"), *LootItem.ItemID.ToString(), Quantity));
@@ -256,7 +268,7 @@ void ABMEnemyBase::DropLoot()
         }
     }
 
-    // »ã×ÜÈÕÖ¾Êä³ö
+    // æ±‡æ€»æ—¥å¿—è¾“å‡º
     FString SummaryLog = FString::Printf(TEXT("===== [%s] Loot Summary ====="), *GetName());
 
     if (TotalCurrency > 0)
@@ -293,13 +305,13 @@ bool ABMEnemyBase::IsInAttackRange() const
     if (!T) return false;
 
     float Dist2D = FVector::Dist2D(T->GetActorLocation(), GetActorLocation());
-	Dist2D += 5.0f; // Èİ²î
+	Dist2D += 5.0f; // å®¹å·®
     if (AttackRangeOverride >= 0.f)
     {
         return Dist2D <= AttackRangeOverride;
     }
 
-    // ÎŞ override£ºÖ»Òª´æÔÚÒ»¸ö attack spec ÄÜ¸²¸Çµ±Ç°¾àÀë¼´¿É
+    // æ—  overrideï¼šåªè¦å­˜åœ¨ä¸€ä¸ª attack spec èƒ½è¦†ç›–å½“å‰è·ç¦»å³å¯
     for (const FBMEnemyAttackSpec& S : AttackSpecs)
     {
         if (!S.Anim) continue;
@@ -335,7 +347,7 @@ bool ABMEnemyBase::CanStartAttack() const
         if (!S.Anim) continue;
         if (Dist2D < S.MinRange || Dist2D > S.MaxRange) continue;
 
-        // ÀäÈ´¹ıÂË
+        // å†·å´è¿‡æ»¤
         if (Combat && !Combat->IsCooldownReady(S.Id)) continue;
         return true;
     }
@@ -346,7 +358,7 @@ bool ABMEnemyBase::CanStartAttack() const
 void ABMEnemyBase::CommitAttackCooldown(float CooldownSeconds)
 {
     const float Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
-    // ¼ÆËãËæ»ú¼ä¸ô
+    // è®¡ç®—éšæœºé—´éš”
     const float RandomDev = FMath::FRandRange(-GlobalAttackIntervalDeviation, GlobalAttackIntervalDeviation);
     const float ActualInterval = FMath::Max(0.f, GlobalAttackInterval + RandomDev);
 
@@ -360,7 +372,7 @@ bool ABMEnemyBase::SelectRandomAttackForCurrentTarget(FBMEnemyAttackSpec& OutSpe
 
     const float Dist2D = FVector::Dist2D(T->GetActorLocation(), GetActorLocation());
 
-    // ¹ıÂË¿ÉÓÃ¹¥»÷
+    // è¿‡æ»¤å¯ç”¨æ”»å‡»
     TArray<const FBMEnemyAttackSpec*> Candidates;
     float TotalW = 0.f;
 
@@ -413,7 +425,7 @@ void ABMEnemyBase::PlayLoop(UAnimSequence* Seq, float PlayRate)
     const bool bSameAnim = (CurrentLoopAnim == Seq);
     const bool bSameRate = FMath::IsNearlyEqual(CurrentLoopRate, PlayRate, 0.001f);
 
-    // Í¬Ò»¶¯»­ + Í¬Ò»ËÙÂÊ£º²»ÖØ¸´ÏÂ·¢
+    // åŒä¸€åŠ¨ç”» + åŒä¸€é€Ÿç‡ï¼šä¸é‡å¤ä¸‹å‘
     if (bSameAnim && bSameRate)
     {
         return;
@@ -436,13 +448,13 @@ float ABMEnemyBase::PlayOnce(UAnimSequence* Seq, float PlayRate, float StartTime
 
     CurrentLoopAnim = nullptr;
 
-    // È·±£ÊÇµ¥½ÚµãÄ£Ê½
+    // ç¡®ä¿æ˜¯å•èŠ‚ç‚¹æ¨¡å¼
     GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
 
-    // ÓÃ SingleNodeInstance ¿ØÖÆÆğÊ¼Ê±¼ä/²¥·ÅÂÊ
+    // ç”¨ SingleNodeInstance æ§åˆ¶èµ·å§‹æ—¶é—´/æ’­æ”¾ç‡
     UAnimSingleNodeInstance* Inst = GetMesh()->GetSingleNodeInstance();
 
-    // µÚÒ»´ÎÃ»´´½¨ Instance£¬ÏÈ PlayAnimation Ò»´Î
+    // ç¬¬ä¸€æ¬¡æ²¡åˆ›å»º Instanceï¼Œå…ˆ PlayAnimation ä¸€æ¬¡
     if (!Inst)
     {
         GetMesh()->PlayAnimation(Seq, false);
@@ -455,7 +467,7 @@ float ABMEnemyBase::PlayOnce(UAnimSequence* Seq, float PlayRate, float StartTime
     const float ClampedStart = FMath::Clamp(StartTime, 0.f, Len);
     const float Remaining = FMath::Max(0.f, Len - ClampedStart);
 
-    // MaxPlayTime <= 0 ±íÊ¾²¥ÍêÕûÊ£Óà¶Î£¬·ñÔò²Ã¼ô
+    // MaxPlayTime <= 0 è¡¨ç¤ºæ’­å®Œæ•´å‰©ä½™æ®µï¼Œå¦åˆ™è£å‰ª
     const float EffectivePlayTime = (MaxPlayTime > 0.f) ? FMath::Min(Remaining, MaxPlayTime) : Remaining;
 
     if (Inst)
@@ -467,12 +479,12 @@ float ABMEnemyBase::PlayOnce(UAnimSequence* Seq, float PlayRate, float StartTime
     }
     else
     {
-        // ÈôÎŞ·¨¿ØÖÆÆğÊ¼Ê±¼ä/²Ã¼ô
+        // è‹¥æ— æ³•æ§åˆ¶èµ·å§‹æ—¶é—´/è£å‰ª
         GetMesh()->PlayAnimation(Seq, false);
         return Len / SafePlayRate;
     }
 
-    // ·µ»ØÊ±³¤
+    // è¿”å›æ—¶é•¿
     return EffectivePlayTime / SafePlayRate;
 }
 
@@ -580,7 +592,7 @@ bool ABMEnemyBase::ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) c
     {
         UE_LOG(LogTemp, Warning, TEXT("[%s] InterruptCheck: No ActiveAttackSpec while attacking. Default=Interruptible."),
             *GetName());
-        return true; // Ã»ÓĞÕĞÊ½ĞÅÏ¢£ºÄ¬ÈÏ¿É´ò¶Ï
+        return true; // æ²¡æœ‰æ‹›å¼ä¿¡æ¯ï¼šé»˜è®¤å¯æ‰“æ–­
     }
 
     const FBMEnemyAttackSpec& Spec = ActiveAttackSpec;
@@ -588,7 +600,7 @@ bool ABMEnemyBase::ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) c
     {
         UE_LOG(LogTemp, Log, TEXT("[%s] InterruptCheck: Spec is Uninterruptible. Attack will NOT be interrupted."),
             *GetName());
-        return false; // °ÔÌå£º²»¿É´ò¶Ï
+        return false; // éœ¸ä½“ï¼šä¸å¯æ‰“æ–­
     }
 
     const float P = BMCombatUtils::IsHeavyIncoming(Incoming) ? Spec.InterruptChanceOnHeavyHit : Spec.InterruptChance;
@@ -596,7 +608,7 @@ bool ABMEnemyBase::ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) c
     const float R = FMath::FRand();
     const bool bWillInterrupt = (R < ClampedP);
 
-    // ËµÃ÷µ±Ç°ÊÇÊ²Ã´ÕĞÊ½¡¢´ò¶Ï¸ÅÂÊ¶àÉÙ£¬Õâ´ÎÊÇ·ñ´ò¶Ï³É¹¦
+    // è¯´æ˜å½“å‰æ˜¯ä»€ä¹ˆæ‹›å¼ã€æ‰“æ–­æ¦‚ç‡å¤šå°‘ï¼Œè¿™æ¬¡æ˜¯å¦æ‰“æ–­æˆåŠŸ
     UE_LOG(
         LogTemp,
         Log,
@@ -619,7 +631,7 @@ void ABMEnemyBase::RequestHitState(const FBMDamageInfo& FinalInfo)
     UBMStateMachineComponent* Machine = GetFSM();
     if (!Machine) return;
 
-    // ËÀÍö×´Ì¬ÓÅÏÈ
+    // æ­»äº¡çŠ¶æ€ä¼˜å…ˆ
     if (Machine->GetCurrentStateName() == BMEnemyStateNames::Death)
     {
         return;
@@ -627,19 +639,19 @@ void ABMEnemyBase::RequestHitState(const FBMDamageInfo& FinalInfo)
 
     const FName Cur = Machine->GetCurrentStateName();
 
-    // ·Ç¹¥»÷£º±Ø½øÊÜ»÷
+    // éæ”»å‡»ï¼šå¿…è¿›å—å‡»
     if (Cur != BMEnemyStateNames::Attack)
     {
         Machine->ChangeStateByName(BMEnemyStateNames::Hit);
         return;
     }
 
-    // ¹¥»÷ÖĞ£º¿´µ±Ç°ÕĞÊ½ÊÇ·ñ¿É´ò¶Ï
+    // æ”»å‡»ä¸­ï¼šçœ‹å½“å‰æ‹›å¼æ˜¯å¦å¯æ‰“æ–­
     if (ShouldInterruptCurrentAttack(FinalInfo))
     {
         Machine->ChangeStateByName(BMEnemyStateNames::Hit);
     }
-    // ·ñÔò±£³Ö¹¥»÷£¨Ö»¿ÛÑª²»²¥ÊÜ»÷£©
+    // å¦åˆ™ä¿æŒæ”»å‡»ï¼ˆåªæ‰£è¡€ä¸æ’­å—å‡»ï¼‰
 }
 
 void ABMEnemyBase::RequestDeathState(const FBMDamageInfo& LastHitInfo)
@@ -665,7 +677,7 @@ void ABMEnemyBase::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
 {
     Super::HandleDamageTaken(FinalInfo);
 
-    // ÈôÒÑ¾­ËÀÁË£¬HandleDeath »á½Ó¹Ü
+    // è‹¥å·²ç»æ­»äº†ï¼ŒHandleDeath ä¼šæ¥ç®¡
     if (UBMStatsComponent* S = GetStats())
     {
         if (S->IsDead()) return;
@@ -676,7 +688,7 @@ void ABMEnemyBase::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
 
 void ABMEnemyBase::HandleDeath(const FBMDamageInfo& LastHitInfo)
 {
-    // ÏÈÇĞ Death ×´Ì¬£¬ÔÙ×öÍ¨ÓÃÂß¼­
+    // å…ˆåˆ‡ Death çŠ¶æ€ï¼Œå†åšé€šç”¨é€»è¾‘
     RequestDeathState(LastHitInfo);
 
     Super::HandleDeath(LastHitInfo);
@@ -699,7 +711,7 @@ bool ABMEnemyBase::ResolveHitBoxWindow(
 
     static const FName DefaultWindowId(TEXT("HitWindow"));
 
-    // Ä¿Ç°Äã Enemy Spec Ò²½¨ÒéÓÃ¡°µ¥´°¿Ú¡±×Ö¶Î£¨HitBoxNames/HitBoxParams£©
+    // ç›®å‰ä½  Enemy Spec ä¹Ÿå»ºè®®ç”¨â€œå•çª—å£â€å­—æ®µï¼ˆHitBoxNames/HitBoxParamsï¼‰
     if (WindowId.IsNone() || WindowId == DefaultWindowId)
     {
         OutHitBoxNames = ActiveAttackSpec.HitBoxNames;
@@ -707,7 +719,7 @@ bool ABMEnemyBase::ResolveHitBoxWindow(
         return OutHitBoxNames.Num() > 0;
     }
 
-    // ºóĞøÈç¹û×ö¶à´°¿Ú£¨ActiveAttackSpec.Windows£©£¬ÔÚÕâÀï²¹ WindowId ²éÕÒ¼´¿É
+    // åç»­å¦‚æœåšå¤šçª—å£ï¼ˆActiveAttackSpec.Windowsï¼‰ï¼Œåœ¨è¿™é‡Œè¡¥ WindowId æŸ¥æ‰¾å³å¯
     return false;
 }
 
@@ -721,29 +733,29 @@ bool ABMEnemyBase::TryEvadeIncomingHit(const FBMDamageInfo& InInfo)
 
     if (!Combat) return false;
 
-    // ÀäÈ´¼ì²é
+    // å†·å´æ£€æŸ¥
     if (!Combat->IsCooldownReady(DodgeCooldownKey))
     {
         return false;
     }
 
-    // ¸ÅÂÊÅĞ¶¨
+    // æ¦‚ç‡åˆ¤å®š
     const float P = FMath::Clamp(DodgeOnHitChance, 0.f, 1.f);
     if (FMath::FRand() > P)
     {
         return false;
     }
 
-    // ´¥·¢ÉÁ±Ü£º±¾´ÎÃüÖĞ²»ÊÜÉËº¦£¨Ö±½Ó·µ»Ø true£©
+    // è§¦å‘é—ªé¿ï¼šæœ¬æ¬¡å‘½ä¸­ä¸å—ä¼¤å®³ï¼ˆç›´æ¥è¿”å› trueï¼‰
     Combat->CommitCooldown(DodgeCooldownKey, DodgeCooldown);
 
-    // Ëø¶¨ÉÁ±Ü·½Ïò£ºÏò¡°Ô¶Àë¹¥»÷Õß¡±µÄ·½Ïòºó³·
+    // é”å®šé—ªé¿æ–¹å‘ï¼šå‘â€œè¿œç¦»æ”»å‡»è€…â€çš„æ–¹å‘åæ’¤
     DodgeLockedDir = ComputeBackwardDodgeDirFromHit(InInfo);
 
-    // ÇĞ Dodge ×´Ì¬
+    // åˆ‡ Dodge çŠ¶æ€
     M->ChangeStateByName(BMEnemyStateNames::Dodge);
 
-    return true; // ²»½áËãÉËº¦
+    return true; // ä¸ç»“ç®—ä¼¤å®³
 }
 
 FVector ABMEnemyBase::ComputeBackwardDodgeDirFromHit(const FBMDamageInfo& InInfo) const
@@ -793,5 +805,122 @@ void ABMEnemyBase::InitFloatingHealthBar()
     UE_LOG(LogTemp, Log, TEXT("[%s] InitFloatingHealthBar: Created at offset %.1f (CapsuleHalf=%.1f + Custom=%.1f), InitialVisible=%s"),
         *GetName(), TotalOffset, CapsuleHalfHeight, FloatingHealthBarOffset, bIsAlert ? TEXT("true") : TEXT("false"));
 }
+
+void ABMEnemyBase::LoadStatsFromDataTable()
+{
+    const FName EnemyID = GetEnemyDataID();
+    if (EnemyID.IsNone())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[%s] LoadStatsFromDataTable: GetEnemyDataID() returned None, using default stats"), *GetName());
+        return;
+    }
+
+    UBMDataSubsystem* DataSys = GetGameInstance()->GetSubsystem<UBMDataSubsystem>();
+    if (!DataSys)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[%s] LoadStatsFromDataTable: BMDataSubsystem not found, using default stats"), *GetName());
+        return;
+    }
+
+    const FBMEnemyData* Data = DataSys->GetEnemyData(EnemyID);
+    if (!Data)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[%s] LoadStatsFromDataTable: EnemyData not found for ID '%s', using default stats"), 
+            *GetName(), *EnemyID.ToString());
+        return;
+    }
+
+    // åº”ç”¨æ•°æ®åˆ° Stats
+    if (UBMStatsComponent* MyStatsComp = GetStats())
+    {
+        FBMStatBlock& MyStats = MyStatsComp->GetStatBlockMutable();
+        MyStats.MaxHP = Data->MaxHP;
+        MyStats.HP = Data->MaxHP;
+        MyStats.Attack = Data->AttackPower;
+        MyStats.Defense = Data->Defense;
+        MyStats.MoveSpeed = Data->MoveSpeed;
+    }
+
+    // AI å‚æ•°
+    AggroRange = Data->AggroRange;
+    PatrolRadius = Data->PatrolRadius;
+    PatrolSpeed = Data->PatrolSpeed;
+    ChaseSpeed = Data->ChaseSpeed;
+    
+    // æˆ˜æ–—å‚æ•°
+    DodgeDistance = Data->DodgeDistance;
+    DodgeOnHitChance = Data->DodgeOnHitChance;
+    DodgeCooldown = Data->DodgeCooldown;
+    DodgePlayRate = Data->DodgePlayRate;
+    
+    // Apply loot parameters
+    CurrencyDropMin = Data->CurrencyDropMin;
+    CurrencyDropMax = Data->CurrencyDropMax;
+    ExpDropMin = Data->ExpDropMin;
+    ExpDropMax = Data->ExpDropMax;
+
+    // Load assets from DataTable
+    LoadAssetsFromDataTable(Data);
+
+    UE_LOG(LogTemp, Log, TEXT("[%s] LoadStatsFromDataTable: Loaded stats for '%s' - HP=%.0f, Attack=%.0f, Defense=%.0f"), 
+        *GetName(), *EnemyID.ToString(), Data->MaxHP, Data->AttackPower, Data->Defense);
+}
+
+void ABMEnemyBase::LoadAssetsFromDataTable(const FBMEnemyData* Data)
+{
+    if (!Data)
+    {
+        return;
+    }
+
+    // Load Skeletal Mesh
+    if (!Data->MeshPath.IsNull())
+    {
+        if (USkeletalMesh* LoadedMesh = Cast<USkeletalMesh>(Data->MeshPath.TryLoad()))
+        {
+            GetMesh()->SetSkeletalMesh(LoadedMesh);
+            UE_LOG(LogTemp, Log, TEXT("[%s] Loaded Mesh from DataTable: %s"), *GetName(), *Data->MeshPath.ToString());
+        }
+    }
+
+    // Load Animation Assets
+    if (!Data->AnimIdlePath.IsNull())
+    {
+        AnimIdle = Cast<UAnimSequence>(Data->AnimIdlePath.TryLoad());
+    }
+    
+    if (!Data->AnimWalkPath.IsNull())
+    {
+        AnimWalk = Cast<UAnimSequence>(Data->AnimWalkPath.TryLoad());
+    }
+    
+    if (!Data->AnimRunPath.IsNull())
+    {
+        AnimRun = Cast<UAnimSequence>(Data->AnimRunPath.TryLoad());
+    }
+    
+    if (!Data->AnimHitLightPath.IsNull())
+    {
+        AnimHitLight = Cast<UAnimSequence>(Data->AnimHitLightPath.TryLoad());
+    }
+    
+    if (!Data->AnimHitHeavyPath.IsNull())
+    {
+        AnimHitHeavy = Cast<UAnimSequence>(Data->AnimHitHeavyPath.TryLoad());
+    }
+    
+    if (!Data->AnimDeathPath.IsNull())
+    {
+        AnimDeath = Cast<UAnimSequence>(Data->AnimDeathPath.TryLoad());
+    }
+    
+    if (!Data->AnimDodgePath.IsNull())
+    {
+        AnimDodge = Cast<UAnimSequence>(Data->AnimDodgePath.TryLoad());
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("[%s] Loaded animations from DataTable"), *GetName());
+}
+
 
 
