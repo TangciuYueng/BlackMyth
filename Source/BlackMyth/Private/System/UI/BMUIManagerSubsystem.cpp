@@ -11,6 +11,7 @@
 #include "UI/BMSaveLoadMenuWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "System/Event/BMEventBusSubsystem.h"
+#include "BMGameInstance.h"
 
 namespace
 {
@@ -100,6 +101,14 @@ void UBMUIManagerSubsystem::ShowMainMenu(TSubclassOf<UBMMainWidget> MainClass)
 {
     UWorld* World = GetWorld();
     if (!World) return;
+    // Stop level music when main menu is shown
+    if (UGameInstance* GI = GetGameInstance())
+    {
+        if (UBMGameInstance* BMGI = Cast<UBMGameInstance>(GI))
+        {
+            BMGI->StopLevelMusic();
+        }
+    }
     if (!MainMenu.IsValid())
     {
         if (UUserWidget* W = CreateAndAdd(MainClass, World))
