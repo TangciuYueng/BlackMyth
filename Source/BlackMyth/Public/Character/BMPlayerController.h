@@ -33,6 +33,8 @@ private:
     void ShowMainMenu();
     void TogglePauseMenu();
     void ApplyHalfHPDamage();
+    // Show a test notification message via UBMNotifications subsystem
+    void DebugShowNotification();
     void ConsumeStaminaTest(); // [TEST] Consume 25 stamina for testing
 
     // Skill cooldown testing
@@ -55,6 +57,9 @@ private:
     FTimerHandle Skill3CooldownTimer;
     float Skill3Remaining = 0.f;
 
+    // Editable test message for notification
+    UPROPERTY(EditAnywhere, Category="BM|Debug")
+    FString MessageTest = TEXT("Test Notification");
     // Book UI
     UPROPERTY(EditDefaultsOnly, Category = "BM|UI")
     TSubclassOf<UBMBookWidget> BookWidgetClass;

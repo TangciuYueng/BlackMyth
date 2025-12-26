@@ -29,6 +29,7 @@ void UBMGameInstance::CapturePlayerPersistentData(APlayerController* PC)
         PersistentItems = Inv->GetAllItems();
         PersistentItemCount = PersistentItems.Num();
     }
+
     if (UBMExperienceComponent* XP = Pawn->FindComponentByClass<UBMExperienceComponent>())
     {
         PersistentExp = static_cast<int32>(XP->GetCurrentXP());
@@ -69,6 +70,9 @@ void UBMGameInstance::RestorePlayerPersistentData(APlayerController* PC)
 void UBMGameInstance::Init()
 {
     Super::Init();
+    // Optional: earlier implementation used a dedicated UBMNotifications subsystem.
+    // Now notifications are handled via UBMUIManagerSubsystem + UBMEventBusSubsystem
+    // and the DefaultNotificationWidgetClass can be set in editor via UBMGameInstance.NotificationClass
     PostLoadMapHandle = FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &UBMGameInstance::HandlePostLoadMap);
     PreLoadMapHandle = FCoreUObjectDelegates::PreLoadMap.AddUObject(this, &UBMGameInstance::HandlePreLoadMap);
 }
