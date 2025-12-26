@@ -22,7 +22,8 @@ public class BlackMyth : ModuleRules
             "GameplayTasks",
 			"NavigationSystem",
 			"SlateCore",
-            "DeveloperSettings"
+            "DeveloperSettings",
+            "MoviePlayer"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
