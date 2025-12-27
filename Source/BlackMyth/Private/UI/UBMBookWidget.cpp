@@ -128,6 +128,7 @@ void UBMBookWidget::NativeOnInitialized()
         "键位设置\n"
         "W 向前移动                                                                    A 向左移动\n"
         "S 向后移动                                                                     D 向右移动\n"
+        "Crtl 向后闪避                                                                 Shift 奔跑\n"
         "鼠标左键 普通攻击                                                       鼠标右键 技能1\n"
         "Q 技能2                                                                          E 技能3\n"
         "Tab 暂停菜单                                                                I 背包\n"
