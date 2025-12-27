@@ -68,7 +68,7 @@ void UBMHurtBoxComponent::CreateOrUpdateCollision()
     CollisionBox->SetBoxExtent(BoxExtent);
     CollisionBox->SetRelativeTransform(RelativeTransform);
 
-    // 只参与 Overlap（不阻挡移动）
+    // 只参与 Overlap
     CollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     CollisionBox->SetGenerateOverlapEvents(true);
 
@@ -84,10 +84,8 @@ void UBMHurtBoxComponent::CreateOrUpdateCollision()
 
 void UBMHurtBoxComponent::ModifyIncomingDamage(FBMDamageInfo& InOutInfo) const
 {
-    // 1) 部位倍率
     InOutInfo.DamageValue *= DamageMultiplier;
 
-    // 2) 弱点/抗性
     if (WeaknessTypes.Contains(InOutInfo.ElementType))
     {
         InOutInfo.DamageValue *= 1.25f;
@@ -118,8 +116,8 @@ void UBMHurtBoxComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
         Extent,
         Rot,
         DebugColor,
-        false,   // bPersistentLines
-        0.0f,    // LifeTime = 0 表示仅一帧
+        false,   
+        0.0f,    
         0,
         DebugLineThickness
     );

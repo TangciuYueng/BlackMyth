@@ -16,7 +16,7 @@ void UBMEnemyState_Dodge::OnEnter(float)
 
     bFinished = false;
 
-    // 停止 AI 路径移动（
+    // 停止 AI 路径移动
     E->RequestStopMovement();
 
     // 锁动作
@@ -25,10 +25,10 @@ void UBMEnemyState_Dodge::OnEnter(float)
         C->SetActionLock(true);
     }
 
-    // Dodge 状态：关闭所有 HurtBox（
+    // Dodge 状态关闭所有 HurtBox
     E->SetAllHurtBoxesEnabled(false);
 
-    // 锁定方向：优先向后闪避
+    // 锁定方向优先向后闪避
     FVector Dir = -E->GetActorForwardVector();
     if (const AActor* Inst = E->GetLastDamageInfo().InstigatorActor.Get())
     {
@@ -130,7 +130,7 @@ void UBMEnemyState_Dodge::StepDodge()
     const FVector Delta = LockedDir * Step;
     const FVector Next = Cur + Delta;
 
-    // 平台边缘保护：下一步脚下没地就停止位移
+    // 平台边缘保护
     if (!HasWalkableFloorAt(Next, E))
     {
         E->GetWorldTimerManager().ClearTimer(TimerHandleStep);
@@ -184,7 +184,7 @@ void UBMEnemyState_Dodge::FinishDodge()
 
     bFinished = true;
 
-    // 退出 Dodge 后回到 Idle 或 Chase（
+    // 退出 Dodge 后回到 Idle 或 Chase
     if (UBMStateMachineComponent* FSM = E->GetFSM())
     {
         FSM->ChangeStateByName(E->IsAlerted() ? BMEnemyStateNames::Chase : BMEnemyStateNames::Idle);

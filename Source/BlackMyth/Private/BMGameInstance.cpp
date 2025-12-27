@@ -6,6 +6,9 @@
 #include "GameFramework/PlayerController.h"
 #include "Character/Components/BMInventoryComponent.h"
 #include "Character/Components/BMExperienceComponent.h"
+#include "Character/Components/BMStatsComponent.h"
+#include "System/UI/BMUIManagerSubsystem.h"
+#include "UI/BMMainWidget.h"
 #include "BlackMyth.h"
 #include "Engine/World.h"
 #include "UObject/Package.h"
@@ -15,7 +18,6 @@
 #include "MoviePlayer.h"
 #include "Misc/Paths.h"
 #include "HAL/FileManager.h"
-#include "Character/Components/BMStatsComponent.h"
 
 void UBMGameInstance::CapturePlayerPersistentData(APlayerController* PC)
 {
@@ -110,6 +112,10 @@ void UBMGameInstance::HandlePostLoadMap(UWorld* LoadedWorld)
     const FString TargetMapPackage2 = TEXT("/Game/Stylized_Spruce_Forest/Demo/Maps/STZD_Demo_01");
     const FString TargetMapBaseName2 = TEXT("STZD_Demo_01");
 
+    // Emptymap (main menu level)
+    const FString EmptymapPackage = TEXT("/Game/emptymap/emptymap");
+    const FString EmptymapBaseName = TEXT("emptymap");
+
     const FString WorldPathName = LoadedWorld->GetPathName();               // e.g. "World /Game/.../Map.Map"
     const FString PackageName = LoadedWorld->GetOutermost()->GetName();     // e.g. "/Game/.../Map"
     const FString Combined = PackageName + TEXT(".") + LoadedWorld->GetName(); // e.g. "/Game/.../Map.Map"
@@ -126,6 +132,56 @@ void UBMGameInstance::HandlePostLoadMap(UWorld* LoadedWorld)
         Combined.Equals(TargetMapFullPath2, ESearchCase::IgnoreCase) ||
         PackageName.Equals(TargetMapPackage2, ESearchCase::IgnoreCase) ||
         BaseLevelName.Equals(TargetMapBaseName2, ESearchCase::IgnoreCase);
+
+    const bool bIsEmptymap =
+        PackageName.Contains(EmptymapPackage, ESearchCase::IgnoreCase) ||
+        BaseLevelName.Equals(EmptymapBaseName, ESearchCase::IgnoreCase);
+
+    // Handle emptymap (main menu) loading
+    if (bIsEmptymap)
+    {
+        UE_LOG(LogBlackMyth, Log, TEXT("HandlePostLoadMap: Loaded emptymap (main menu), showing main menu UI"));
+        
+        // Delay showing main menu by one frame to ensure everything is ready
+        LoadedWorld->GetTimerManager().SetTimerForNextTick([this]()
+        {
+            if (UWorld* World = GetWorld())
+            {
+                if (UBMUIManagerSubsystem* UIManager = GetSubsystem<UBMUIManagerSubsystem>())
+                {
+                    // Resolve main menu class from GameInstance or fallback paths
+                    TSubclassOf<UBMMainWidget> MainClass = nullptr;
+                    if (MainMenuClass.IsValid())
+                    {
+                        MainClass = MainMenuClass.Get();
+                    }
+                    if (!MainClass)
+                    {
+                        MainClass = LoadClass<UBMMainWidget>(nullptr, TEXT("/Game/UI/WBP_MainMenu.WBP_MainMenu_C"));
+                    }
+                    if (!MainClass)
+                    {
+                        MainClass = LoadClass<UBMMainWidget>(nullptr, TEXT("/Game//UI/WBP_MainMenu.WBP_MainMenu_C"));
+                    }
+                    if (MainClass)
+                    {
+                        UIManager->ShowMainMenu(MainClass);
+                    }
+                }
+
+                // Ensure UI input mode for main menu
+                if (APlayerController* PC = World->GetFirstPlayerController())
+                {
+                    FInputModeUIOnly InputMode;
+                    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+                    PC->SetInputMode(InputMode);
+                    PC->bShowMouseCursor = true;
+                }
+            }
+        });
+        
+        return;
+    }
 
     const bool bIsTarget = bIsTarget1 || bIsTarget2;
 

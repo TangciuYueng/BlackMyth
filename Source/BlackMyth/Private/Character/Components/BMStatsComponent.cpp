@@ -67,7 +67,6 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
 
     InOutInfo.DamageValue = Applied;
 
-    // Emit HP change to UI for player-controlled pawn OR boss
     if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))
     {
         if (OwnerPawn->IsPlayerControlled())
@@ -83,7 +82,6 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
         }
         else
         {
-            // Check if this is a boss character
             if (OwnerPawn->ActorHasTag(TEXT("Boss")))
             {
                 if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
@@ -182,7 +180,7 @@ void UBMStatsComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
     // 处理持续回血效果
     TickHealthRegen(DeltaTime);
 
-    // 耐力恢复（应用耐力恢复加成）
+    // 耐力恢复
     if (Stats.MaxStamina > 0.f && Stats.Stamina < Stats.MaxStamina)
     {
         const float OldStamina = Stats.Stamina;
@@ -234,12 +232,11 @@ void UBMStatsComponent::InitializeFromBlock(const FBMStatBlock& In)
     Stats.Stamina = FMath::Clamp(Stats.Stamina, 0.f, Stats.MaxStamina);
 }
 
-// Restore HP to MaxHP and clear death flag; do not touch coins/exp/etc.
 void UBMStatsComponent::Revive()
 {
     bDeathBroadcasted = false;
     Stats.HP = Stats.MaxHP;
-    // Notify HUD (player only)
+    // Notify HUD 
     if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))
     {
         if (OwnerPawn->IsPlayerControlled())
@@ -311,7 +308,7 @@ void UBMStatsComponent::AddBuff(EBMBuffType Type, float Value, float Duration)
         return;
     }
 
-    // 移除同类型的旧效果（刷新机制）
+    // 移除同类型的旧效果
     RemoveBuff(Type);
 
     FBMBuffInstance NewBuff(Type, Value, Duration);
@@ -349,7 +346,7 @@ float UBMStatsComponent::GetAttackMultiplier() const
     {
         if (Buff.Type == EBMBuffType::AttackBoost && !Buff.IsExpired())
         {
-            // Value 是百分比加成，例如 20 表示 +20%
+            // 百分比加成
             Multiplier += Buff.Value / 100.f;
         }
     }
@@ -363,7 +360,7 @@ float UBMStatsComponent::GetStaminaRegenMultiplier() const
     {
         if (Buff.Type == EBMBuffType::StaminaRegenBoost && !Buff.IsExpired())
         {
-            // Value 是倍率加成，例如 2.0 表示 2倍恢复速度
+            // 倍率加成
             Multiplier *= Buff.Value;
         }
     }
@@ -417,7 +414,7 @@ void UBMStatsComponent::TickBuffs(float DeltaTime)
     {
         const float OldEffectiveMaxHp = GetEffectiveMaxHp();
         
-        // 移除已过期的增益效果（仅移除过期的）
+        // 移除已过期的增益效果
         TArray<FBMBuffInstance> TempExpiredBuffs;
         for (const FBMBuffInstance& Buff : ActiveBuffs)
         {

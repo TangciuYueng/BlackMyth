@@ -92,6 +92,23 @@ public:
     bool LoadGame(int32 Slot, bool bRestorePosition = true);
 
     /**
+     * 从指定槽位加载游戏（从主菜单调用，会先切换地图）
+     * 
+     * @param Slot 存档槽位编号
+     * @return 加载成功返回 true，失败返回 false
+     */
+    bool LoadGameFromMainMenu(int32 Slot);
+
+    /**
+     * 获取存档中保存的地图名称
+     * 
+     * @param Slot 存档槽位编号
+     * @param OutMapName 输出的地图名称
+     * @return 成功获取返回 true，失败返回 false
+     */
+    bool GetSaveMapName(int32 Slot, FName& OutMapName);
+
+    /**
      * 自动保存到默认槽位（槽位 0）
      */
     void AutoSave();
@@ -201,4 +218,16 @@ private:
     
     /** 最大存档槽位数（仅用于兼容旧代码） */
     static const int32 MAX_SAVE_SLOTS = 50;
+
+    /** 待恢复的存档槽位（地图切换后使用） */
+    int32 PendingLoadSlot = -1;
+
+    /** 待恢复的目标地图名称（用于验证地图切换是否正确） */
+    FName PendingLoadMapName = NAME_None;
+
+    /** 地图切换完成后的回调句柄 */
+    FDelegateHandle PostLoadMapDelegateHandle;
+
+    /** 处理地图切换完成后的存档恢复 */
+    void HandlePostLoadMapForSave(UWorld* LoadedWorld);
 };

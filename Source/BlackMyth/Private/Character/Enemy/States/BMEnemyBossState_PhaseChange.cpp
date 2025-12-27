@@ -15,13 +15,13 @@ void UBMEnemyBossState_PhaseChange::OnEnter(float)
 
     Boss->GetWorldTimerManager().ClearTimer(StepTimer);
 
-    // 1) 锁动作，防止其它状态抢占
+    // 锁动作，防止其它状态抢占
     if (UBMCombatComponent* C = Boss->GetCombat())
     {
         C->SetActionLock(true);
     }
 
-    // 2) 停止移动 + 禁止移动
+    // 停止移动 + 禁止移动
     Boss->RequestStopMovement();
     if (UCharacterMovementComponent* Move = Boss->GetCharacterMovement())
     {
@@ -29,10 +29,10 @@ void UBMEnemyBossState_PhaseChange::OnEnter(float)
         Move->DisableMovement();
     }
 
-    // 3) 过渡期间无敌
+    // 过渡期间无敌
     Boss->SetPhaseTransition(true);
 
-    // 4) 先播死亡动画
+    // 先播死亡动画
     const float DeathDur = Boss->PlayDeathOnce();
     if (DeathDur <= 0.f)
     {
@@ -133,7 +133,7 @@ void UBMEnemyBossState_PhaseChange::FinishPhaseChange()
     ABMEnemyBoss* Boss = Cast<ABMEnemyBoss>(GetContext());
     if (!Boss) return;
 
-    // 进入二阶段（复活、加血、加伤害、加招式）
+    // 进入二阶段
     Boss->EnterPhase2();
 
     // 恢复移动

@@ -38,7 +38,6 @@ void ABMEnemyWhisper::BeginPlay()
     // 优先从 DataTable 读取配置
     LoadStatsFromDataTable();
 
-    // ApplyConfiguredAssets();
     BuildAttackSpecs();
     BuildLootTable();
 
@@ -117,10 +116,8 @@ void ABMEnemyWhisper::BuildHitBoxes()
         Def.BoxExtent = FVector(8.f, 8.f, 8.f);
 
         Def.DamageType = EBMDamageType::Melee;
-        Def.ElementType = EBMElementType::Physical;
         Def.DamageScale = 1.0f;
         Def.DefaultReaction = EBMHitReaction::Light;
-        Def.KnockbackStrength = 90.f;
 
         HB->RegisterDefinition(Def);
     }
@@ -134,10 +131,8 @@ void ABMEnemyWhisper::BuildHitBoxes()
         Def.BoxExtent = FVector(8.f, 8.f, 8.f);
 
         Def.DamageType = EBMDamageType::Melee;
-        Def.ElementType = EBMElementType::Physical;
         Def.DamageScale = 1.05f;
         Def.DefaultReaction = EBMHitReaction::Heavy;
-        Def.KnockbackStrength = 95.f;
 
         HB->RegisterDefinition(Def);
     }
@@ -238,12 +233,6 @@ void ABMEnemyWhisper::BuildAttackSpecs()
 
         if (S.Anim) AttackSpecs.Add(S);
     }
-
-    // 伤害基值（已废弃，通过 DataTable 设置）
-    // if (UBMHitBoxComponent* HB = GetHitBox())
-    // {
-    //     HB->SetDamage(WhisperBaseDamage);
-    // }
 }
 
 void ABMEnemyWhisper::BuildLootTable()
@@ -284,6 +273,5 @@ void ABMEnemyWhisper::BuildLootTable()
 
 float ABMEnemyWhisper::PlayDodgeOnce()
 {
-    // 与 Dummy 一致的裁剪方式
     return PlayOnce(AnimDodge, DodgePlayRate, 0.0, 0.7);
 }

@@ -44,7 +44,6 @@ public:
      * 部位伤害倍率
      *
      * - 头部/弱点：> 1
-     * - 护甲部位：< 1
      */
     UPROPERTY(EditAnywhere, Category = "BM|HurtBox")
     float DamageMultiplier = 1.0f;
@@ -105,7 +104,7 @@ public:
      *
      * 由 ABMCharacterBase 在 TakeDamageFromHit 结算完成并确认实际扣血后调用
      *
-     * @param AppliedDamage 本次实际生效的伤害值（最终扣减 HP）
+     * @param AppliedDamage 本次实际生效的伤害值
      */
     virtual void OnHit(float AppliedDamage);
 
@@ -199,9 +198,8 @@ private:
      *
      * 行为：
      * - 若 CollisionBox 尚未创建，则在 Owner 上 NewObject<UBoxComponent> 并注册为实例组件
-     * - 挂接到 Owner 的 SkeletalMesh（AttachSocketOrBone）
+     * - 挂接到 Owner 的 SkeletalMesh
      * - 设置 QueryOnly / Overlap 的碰撞配置
-     * - 设置 Tag（"BM_HurtBox"）供 HitBox 命中过滤使用
      * - 缓存 BoundComponent 供外部快速匹配
      */
     void CreateOrUpdateCollision();

@@ -127,7 +127,7 @@ void UBMCameraShakeSubsystem::ExecuteShake(const FBMCameraShakeParams& Params, f
     CurrentShakeDuration = Params.Duration;
 
     // 启动定时器，每帧更新震动
-    const float TickInterval = 1.f / 60.f; // 60fps 更新
+    const float TickInterval = 1.f / 60.f; 
     World->GetTimerManager().SetTimer(
         ShakeTimerHandle,
         this,
@@ -153,7 +153,7 @@ void UBMCameraShakeSubsystem::TickShake()
         return;
     }
 
-    // 计算衰减因子（从1到0）
+    // 计算衰减因子
     const float NormalizedTime = CurrentShakeTime / CurrentShakeDuration;
     const float Falloff = FMath::Pow(1.0f - NormalizedTime, CurrentShakeParams.FalloffExponent);
 
@@ -162,7 +162,7 @@ void UBMCameraShakeSubsystem::TickShake()
     const float Amplitude = CurrentShakeParams.Amplitude * CurrentShakeScale * Falloff;
     const float RotAmplitude = CurrentShakeParams.RotationAmplitude * CurrentShakeScale * Falloff;
 
-    // 使用 Perlin 噪声风格的震动（多个正弦波叠加）
+    // 使用 Perlin 噪声风格的震动
     FVector NewOffset;
     NewOffset.X = Amplitude * (FMath::Sin(Time * 1.0f) * 0.5f + FMath::Sin(Time * 2.3f) * 0.3f + FMath::Sin(Time * 4.1f) * 0.2f);
     NewOffset.Y = Amplitude * (FMath::Sin(Time * 1.3f + 1.5f) * 0.5f + FMath::Sin(Time * 2.7f) * 0.3f + FMath::Sin(Time * 3.9f) * 0.2f);

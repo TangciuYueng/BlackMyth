@@ -36,9 +36,6 @@ void ABMEnemyDemon::BeginPlay()
     // 优先从 DataTable 读取配置
     LoadStatsFromDataTable();
     
-    // 先加载资产并写入基类 Anim 指针
-    // ApplyConfiguredAssets();
-    // 组件/配置（HurtBox/HitBox/AttackSpecs）
     BuildAttackSpecs();
     BuildLootTable();
     // 调试：启用 HitBox/HurtBox 可视化
@@ -78,7 +75,7 @@ void ABMEnemyDemon::BuildAttackSpecs()
     auto MakeWindowParams = [](float DamageMul, EBMHitReaction OverrideReaction)
         {
             FBMHitBoxActivationParams P;
-            P.bResetHitRecords = true;                 // 每次进入攻击窗口都清命中记录（常用）
+            P.bResetHitRecords = true;                 // 每次进入攻击窗口都清命中记录
             P.DedupPolicy = EBMHitDedupPolicy::PerWindow;
             P.MaxHitsPerTarget = 1;
             P.DamageMultiplier = DamageMul;
@@ -88,7 +85,7 @@ void ABMEnemyDemon::BuildAttackSpecs()
             return P;
         };
 
-    // 轻攻击（可被打断）
+    // 轻攻击
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Demon_Light_01");
@@ -105,14 +102,13 @@ void ABMEnemyDemon::BuildAttackSpecs()
         S.bStopPathFollowingOnEnter = true;
         S.bFaceTargetOnEnter = true;
 
-        // 关键：按 Name 指定要开的盒子（可多个）
         S.HitBoxNames = { TEXT("hand_r") };
         S.HitBoxParams = MakeWindowParams(/*DamageMul=*/1.0f, EBMHitReaction::Light);
 
         if (S.Anim) AttackSpecs.Add(S);
     }
 
-    // 重攻击1（霸体：不可打断）
+    // 重攻击1
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Demon_Heavy_01");
@@ -135,7 +131,7 @@ void ABMEnemyDemon::BuildAttackSpecs()
         if (S.Anim) AttackSpecs.Add(S);
     }
 
-    // 重攻击2（“重但可打断”：轻受击小概率打断，重受击大概率打断）
+    // 重攻击2
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Demon_Heavy_02");
@@ -157,12 +153,6 @@ void ABMEnemyDemon::BuildAttackSpecs()
 
         if (S.Anim) AttackSpecs.Add(S);
     }
-
-    // 伤害基值（已废弃，通过 DataTable 设置）
-    // if (UBMHitBoxComponent* HB = GetHitBox())
-    // {
-    //     HB->SetDamage(DemonBaseDamage);
-    // }
 }
 
 void ABMEnemyDemon::BuildHurtBoxes()
@@ -202,10 +192,8 @@ void ABMEnemyDemon::BuildHitBoxes()
         Def.BoxExtent = FVector(8.f, 8.f, 8.f);
 
         Def.DamageType = EBMDamageType::Melee;
-        Def.ElementType = EBMElementType::Physical;
         Def.DamageScale = 1.0f;
         Def.DefaultReaction = EBMHitReaction::Light;
-        Def.KnockbackStrength = 90.f;
 
         HB->RegisterDefinition(Def);
     }
@@ -218,10 +206,8 @@ void ABMEnemyDemon::BuildHitBoxes()
         Def.BoxExtent = FVector(12.f, 12.f, 12.f);
 
         Def.DamageType = EBMDamageType::Melee;
-        Def.ElementType = EBMElementType::Physical;
         Def.DamageScale = 1.35f;
         Def.DefaultReaction = EBMHitReaction::Heavy;
-        Def.KnockbackStrength = 140.f;
 
         HB->RegisterDefinition(Def);
     }
@@ -234,10 +220,8 @@ void ABMEnemyDemon::BuildHitBoxes()
         Def.BoxExtent = FVector(12.f, 12.f, 12.f);
 
         Def.DamageType = EBMDamageType::Melee;
-        Def.ElementType = EBMElementType::Physical;
         Def.DamageScale = 1.35f;
         Def.DefaultReaction = EBMHitReaction::Heavy;
-        Def.KnockbackStrength = 140.f;
 
         HB->RegisterDefinition(Def);
     }

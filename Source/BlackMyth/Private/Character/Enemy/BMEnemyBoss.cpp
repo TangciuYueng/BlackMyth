@@ -20,7 +20,6 @@
 
 ABMEnemyBoss::ABMEnemyBoss()
 {
-    // ===== 基类可调参数（AI/移动/闪避）=====
     AggroRange = BossAggroRange;
     PatrolRadius = BossPatrolRadius;
     PatrolSpeed = BossPatrolSpeed;
@@ -36,10 +35,10 @@ ABMEnemyBoss::ABMEnemyBoss()
 
 
 
-    // ===== 体型/碰撞 =====
+    // 体型/碰撞 
     ApplyBossBodyTuning();
 
-    // ===== 先创建 HurtBox/HitBox 定义 =====
+    // 先创建 HurtBox/HitBox 定义
     BuildHurtBoxes();
     BuildHitBoxes();
 
@@ -204,10 +203,8 @@ void ABMEnemyBoss::BuildHitBoxes()
         Def.BoxExtent = FVector(60.f, 60.f, 60.f);
 
         Def.DamageType = EBMDamageType::Melee;
-        Def.ElementType = EBMElementType::Physical;
         Def.DamageScale = 1.0f;
         Def.DefaultReaction = EBMHitReaction::Light;
-        Def.KnockbackStrength = 120.f;
 
         HB->RegisterDefinition(Def);
     }
@@ -220,10 +217,8 @@ void ABMEnemyBoss::BuildHitBoxes()
         Def.BoxExtent = FVector(50.f, 100.f, 18.f);
 
         Def.DamageType = EBMDamageType::Melee;
-        Def.ElementType = EBMElementType::Physical;
         Def.DamageScale = 1.0f;
         Def.DefaultReaction = EBMHitReaction::Heavy;
-        Def.KnockbackStrength = 120.f;
 
         HB->RegisterDefinition(Def);
     }
@@ -236,10 +231,8 @@ void ABMEnemyBoss::BuildHitBoxes()
         Def.BoxExtent = FVector(60.f, 60.f, 60.f);
 
         Def.DamageType = EBMDamageType::Melee;
-        Def.ElementType = EBMElementType::Physical;
         Def.DamageScale = 1.10f;
         Def.DefaultReaction = EBMHitReaction::Light;
-        Def.KnockbackStrength = 180.f;
 
         HB->RegisterDefinition(Def);
     }
@@ -252,10 +245,8 @@ void ABMEnemyBoss::BuildHitBoxes()
         Def.BoxExtent = FVector(50.f, 100.f, 18.f);
 
         Def.DamageType = EBMDamageType::Melee;
-        Def.ElementType = EBMElementType::Physical;
         Def.DamageScale = 1.0f;
         Def.DefaultReaction = EBMHitReaction::Heavy;
-        Def.KnockbackStrength = 120.f;
 
         HB->RegisterDefinition(Def);
     }
@@ -365,7 +356,6 @@ void ABMEnemyBoss::BuildAttackSpecs()
 
 float ABMEnemyBoss::PlayDodgeOnce()
 {
-    // 你 Dummy 用的是 PlayOnce(AnimDodge, DodgePlayRate, 0, 0.7)
     return PlayOnce(AnimDodge, DodgePlayRate, 0.0, 0.75f);
 }
 

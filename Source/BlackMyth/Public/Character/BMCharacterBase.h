@@ -181,15 +181,51 @@ public:
     UPROPERTY(EditAnywhere, Category = "BM|Identity")
     EBMCharacterType CharacterType = EBMCharacterType::Enemy;
 
+    /**
+     * 获取当前激活的 HitBox 窗口配置
+     *
+     * @param OutHitBoxNames 输出 HitBox 名称列表
+     * @param OutParams 输出 HitBox 激活参数
+     * @return 有激活窗口返回 true
+     */
     bool GetActiveHitWindow(TArray<FName>& OutHitBoxNames, FBMHitBoxActivationParams& OutParams) const;
+    
+    /**
+     * 设置当前激活的 HitBox 窗口配置
+     *
+     * @param InHitBoxNames HitBox 名称列表
+     * @param InParams HitBox 激活参数
+     */
     void SetActiveHitWindow(const TArray<FName>& InHitBoxNames, const FBMHitBoxActivationParams& InParams);
+    
+    /**
+     * 清除当前激活的 HitBox 窗口
+     */
     void ClearActiveHitWindow();
 
+    /**
+     * 解析 HitBox 窗口配置
+     *
+     * 根据窗口 ID 获取对应的 HitBox 配置，派生类可重写以提供自定义解析逻辑
+     *
+     * @param WindowId 窗口 ID
+     * @param OutHitBoxNames 输出 HitBox 名称列表
+     * @param OutParams 输出 HitBox 激活参数
+     * @return 成功解析返回 true
+     */
     virtual bool ResolveHitBoxWindow(
         FName WindowId,
         TArray<FName>& OutHitBoxNames,
         FBMHitBoxActivationParams& OutParams
     ) const;
+    
+    /**
+     * 启用或禁用所有 HurtBox
+     *
+     * 用于实现无敌帧
+     *
+     * @param bEnabled true 启用，false 禁用
+     */
     void SetAllHurtBoxesEnabled(bool bEnabled);
 
 protected:
@@ -216,6 +252,14 @@ protected:
      */
     virtual void HandleDeath(const FBMDamageInfo& LastHitInfo);
 
+    /**
+     * 尝试闪避传入的攻击
+     *
+     * 派生类可重写以实现闪避逻辑
+     *
+     * @param InInfo 传入的伤害信息
+     * @return 成功闪避返回 true，失败返回 false
+     */
     virtual bool TryEvadeIncomingHit(const FBMDamageInfo& InInfo);
 protected:
     /**
@@ -266,12 +310,15 @@ protected:
     UPROPERTY(VisibleAnywhere, Category = "BM|Components")
     TArray<TObjectPtr<UBMHurtBoxComponent>> HurtBoxes;
 
+    /** 当前激活的 HitBox 名称列表 */
     UPROPERTY(Transient)
     TArray<FName> ActiveHitWindowHitBoxes;
 
+    /** 当前激活的 HitBox 参数 */
     UPROPERTY(Transient)
     FBMHitBoxActivationParams ActiveHitWindowParams;
 
+    /** 是否有激活的 HitBox 窗口 */
     UPROPERTY(Transient)
     bool bHasActiveHitWindow = false;
 

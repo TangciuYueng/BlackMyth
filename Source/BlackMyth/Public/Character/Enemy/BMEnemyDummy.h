@@ -11,7 +11,7 @@ class UBMHurtBoxComponent;
 /**
  * 基础小怪（Dummy）
  * - 复用 ABMEnemyBase 的 FSM（Idle/Patrol/Chase/Attack/Hit/Death）
- * - 只负责“配置”：网格/动画/攻击Spec/HitBox/HurtBox
+ * - 只负责配置
  */
 UCLASS()
 class BLACKMYTH_API ABMEnemyDummy : public ABMEnemyBase
@@ -19,18 +19,70 @@ class BLACKMYTH_API ABMEnemyDummy : public ABMEnemyBase
     GENERATED_BODY()
 
 public:
-ABMEnemyDummy();
-virtual void BeginPlay() override;
+    /**
+     * 构造函数
+     *
+     * 创建 HurtBox 组件并初始化 Dummy 特有参数
+     */
+    ABMEnemyDummy();
     
-// Override to return enemy data identifier
-virtual FName GetEnemyDataID() const override { return FName("EnemyDummy"); }
+    /**
+     * 开始游戏生命周期
+     *
+     * 应用资产、构建攻击规格、HitBox、HurtBox 和掉落物表
+     */
+    virtual void BeginPlay() override;
+    
+    /**
+     * 获取敌人数据 ID
+     *
+     * @return 返回 "EnemyDummy" 用于 DataTable 查找
+     */
+    virtual FName GetEnemyDataID() const override { return FName("EnemyDummy"); }
 
 protected:
+    /**
+     * 应用配置的资产
+     *
+     * 加载并应用骨骼网格和动画资产
+     */
     void ApplyConfiguredAssets();
+    
+    /**
+     * 构建攻击规格
+     *
+     * 根据配置的攻击动画创建攻击规格列表（1轻2重）
+     */
     void BuildAttackSpecs();
+    
+    /**
+     * 构建 HitBox
+     *
+     * 为攻击动画配置 HitBox 组件
+     */
     void BuildHitBoxes();
+    
+    /**
+     * 构建 HurtBox
+     *
+     * 配置身体和头部的 HurtBox 受击判定
+     */
     void BuildHurtBoxes();
+    
+    /**
+     * 构建掉落物品表
+     *
+     * 配置敌人死亡后的掉落物品列表
+     */
 	void BuildLootTable();
+	
+	/**
+     * 播放闪避动画一次
+     *
+     * Dummy 敌人支持闪避
+     *
+     * @return 动画时长（秒）
+     */
     virtual float PlayDodgeOnce() override;
 
 protected:

@@ -25,37 +25,9 @@ void UBMPauseMenuWidget::NativeConstruct()
     {
         SaveButton->OnClicked.AddDynamic(this, &UBMPauseMenuWidget::OnSaveClicked);
     }
-    if (SkillTreeButton)
-    {
-        SkillTreeButton->OnClicked.AddDynamic(this, &UBMPauseMenuWidget::OnSkillTreeClicked);
-    }
-    if (EquipmentUpgradeButton)
-    {
-        EquipmentUpgradeButton->OnClicked.AddDynamic(this, &UBMPauseMenuWidget::OnEquipmentUpgradeClicked);
-    }
-    if (SettingsButton)
-    {
-        SettingsButton->OnClicked.AddDynamic(this, &UBMPauseMenuWidget::OnSettingsClicked);
-    }
     if (ReturnToMainButton)
     {
         ReturnToMainButton->OnClicked.AddDynamic(this, &UBMPauseMenuWidget::OnReturnToMainClicked);
-    }
-
-    // Proactive refresh: read current player HP/MaxHP and update text immediately
-    if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
-    {
-        APawn* Pawn = PC->GetPawn();
-        if (Pawn)
-        {
-            if (UBMStatsComponent* Stats = Pawn->FindComponentByClass<UBMStatsComponent>())
-            {
-                const float MaxHP = FMath::Max(1.f, Stats->GetStatBlockMutable().MaxHP);
-                const float HP = FMath::Clamp(Stats->GetStatBlockMutable().HP, 0.f, MaxHP);
-                const float Normalized = HP / MaxHP;
-                UpdateHealthText(Normalized);
-            }
-        }
     }
 }
 
@@ -68,18 +40,6 @@ void UBMPauseMenuWidget::NativeDestruct()
     if (SaveButton)
     {
         SaveButton->OnClicked.RemoveAll(this);
-    }
-    if (SkillTreeButton)
-    {
-        SkillTreeButton->OnClicked.RemoveAll(this);
-    }
-    if (EquipmentUpgradeButton)
-    {
-        EquipmentUpgradeButton->OnClicked.RemoveAll(this);
-    }
-    if (SettingsButton)
-    {
-        SettingsButton->OnClicked.RemoveAll(this);
     }
     if (ReturnToMainButton)
     {
@@ -150,37 +110,26 @@ void UBMPauseMenuWidget::OnReturnToMainClicked()
 {
     if (UBMEventBusSubsystem* Bus = GetEventBus())
     {
-        Bus->EmitNotify(LOCTEXT("ReturnMain", "Return to main menu"));
+        Bus->EmitNotify(LOCTEXT("ReturnMain", "Returning to main menu..."));
     }
-    // Hide pause and show main menu
+    
     UWorld* World = GetWorld();
     if (!World) return;
+
+    // Hide pause menu first
     if (UBMUIManagerSubsystem* UI = GetUIManager())
     {
         UI->HidePauseMenu();
-
-        // Resolve main menu class from GameInstance or fallback paths
-        UBMGameInstance* BMGI = Cast<UBMGameInstance>(World->GetGameInstance());
-        TSubclassOf<UBMMainWidget> MainClass = nullptr;
-        if (BMGI && BMGI->MainMenuClass.IsValid())
-        {
-            MainClass = BMGI->MainMenuClass.Get();
-        }
-        if (!MainClass)
-        {
-            MainClass = LoadClass<UBMMainWidget>(nullptr, TEXT("/Game/UI/WBP_MainMenu.WBP_MainMenu_C"));
-        }
-        if (!MainClass)
-        {
-            MainClass = LoadClass<UBMMainWidget>(nullptr, TEXT("/Game/BlackMyth/UI/WBP_MainMenu.WBP_MainMenu_C"));
-        }
-        if (MainClass)
-        {
-            UI->ShowMainMenu(MainClass);
-        }
+        UI->HideAllMenus();
     }
 
-    // Switch to UI only for main menu interaction
+    // Stop any background music if needed
+    if (UBMGameInstance* BMGI = Cast<UBMGameInstance>(World->GetGameInstance()))
+    {
+        BMGI->StopLevelMusic();
+    }
+
+    // Switch to UI input mode before loading the main menu level
     if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
     {
         FInputModeUIOnly InputMode;
@@ -188,6 +137,9 @@ void UBMPauseMenuWidget::OnReturnToMainClicked()
         PC->SetInputMode(InputMode);
         PC->bShowMouseCursor = true;
     }
+
+    // Load the main menu level (emptymap)
+    UGameplayStatics::OpenLevel(World, FName(TEXT("emptymap")));
 }
 
 void UBMPauseMenuWidget::OnSkillTreeClicked()
@@ -209,14 +161,6 @@ void UBMPauseMenuWidget::OnEquipmentUpgradeClicked()
 void UBMPauseMenuWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
 {
     if (!EventBus) return;
-    if (!HealthChangedHandle.IsValid())
-    {
-        HealthChangedHandle = EventBus->OnPlayerHealthChanged.AddLambda([this](float Normalized)
-        {
-            UpdateHealthText(Normalized);
-        });
-    }
-    // Initial refresh if needed (status texts can be filled by future events)
 }
 
 void UBMPauseMenuWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
@@ -227,16 +171,6 @@ void UBMPauseMenuWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
         EventBus->OnPlayerHealthChanged.Remove(HealthChangedHandle);
         HealthChangedHandle.Reset();
     }
-}
-
-void UBMPauseMenuWidget::UpdateHealthText(float Normalized)
-{
-    if (!HealthText) return;
-    // Assume max 500 for demo; in real case bind to player state/attributes
-    const int32 MaxHealth = 500;
-    const int32 CurHealth = FMath::RoundToInt(Normalized * MaxHealth);
-    const FText Txt = FText::Format(LOCTEXT("PauseHealthFmt", "{0}/{1}"), CurHealth, MaxHealth);
-    HealthText->SetText(Txt);
 }
 
 #undef LOCTEXT_NAMESPACE

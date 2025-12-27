@@ -20,15 +20,6 @@ public:
     UPROPERTY(meta = (BindWidget))
     UButton* Slot1;
 
-    UPROPERTY(meta = (BindWidget))
-    UButton* Slot2;
-
-    UPROPERTY(meta = (BindWidget))
-    UButton* Slot3;
-
-    UPROPERTY(meta = (BindWidget))
-    UButton* Slot4;
-
 protected:
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
