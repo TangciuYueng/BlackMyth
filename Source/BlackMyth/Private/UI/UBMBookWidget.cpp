@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "UI/UBMBookWidget.h"
 #include "Components/TextBlock.h"
@@ -10,104 +10,121 @@ void UBMBookWidget::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
 
-    // Split the narrative into pages of roughly six short lines each
+    // Split the narrative into pages of roughly six short lines each (Chinese localized content)
     Pages.Add(FText::FromString(TEXT(
-        "Five hundred years ago, in the Thunder Sound Hall of Lingshan,\n"
-        "the precious light of Liantai gradually extinguished.\n\n"
-        "I kowtowed and was honored with the title 'Fighting to Overcome Buddha'.\n"
-        "The golden hoop fell from my head with a crack of metal and stone.\n\n"
-        "The Buddhas chanted; Sanskrit rolled like the sea."
+        "五百年前，灵山雷音殿，莲台宝光渐次熄灭。\n"
+        "我叩首，受封“斗战胜佛”。金箍从头顶自然脱落，发出金石断裂之音。\n"
+        "诸佛颂唱，梵音如海。师父眼中最后一点属于金蝉子的灵光，在那片金色汪洋里彻底沉没。\n"
+        "那是我一生功成的顶点，也是真相溺毙的时刻。\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "他们都说，我护送玄奘法师取得真经，普渡众生。"
+        "却无人知晓，灵山赐下的经卷其实无字。\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "阿傩、伽叶递过经书时，唇角有慈悲的笑意。包袱展开的刹那，\n"
+        "我火眼金睛看见经文如退潮般消失，只留满纸空白。\n"
+        "师父的手在颤抖——他早就知道。或者说，金蝉子的那一部分知道。\n"
+        "西行十万八千里，九死一生，取回的是一场空。\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "八戒忽然笑出声来，笑得涕泪横流，被护法金刚冷眼按下。\n"
+        "沙僧把头埋进经卷，肩胛骨耸动如将崩的山峦。\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "如来声如洪钟：“法不可轻传，亦不可空取。无字是真经\n"
+        "需以因果为墨，岁月为笔，自行书写。”\n"
+        "那一刻我明白了，我们取的不是经，是“取经”这件事本身。\n"
+        "我们的苦难、我们的战斗、我们的名号，就是他们要的“真经”。\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "一场演给三界看的大戏，证明佛法无边，证明叛逆者可被驯服。\n"
+        "紧箍咒念的不是约束，是遗忘。\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "观音说此咒制我凶心。可每当金箍收紧，我打杀的“妖魔”临死前的眼神就会模糊。\n"
+        "他们的脸孔在记忆里融化，变成故事书里千篇一律的狰狞模样。\n"
+        "直到成佛那日，封印松动，无数真实碎片倒灌回脑海：\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "我打死的第一个“妖精”——那位白衣姑娘，她根本不是要吃师父。\n"
+        "她跪在悟空面前，摊开手掌，掌心是用血画出的星图与古神文。\n"
+        "她嘶喊着：“大圣！看看这天地真正的脉络！他们用香火愿力编织罗网，我们都在网中！”\n"
+        "金箍骤然收紧。\n"
+        "我抬手，金箍棒落下时，她化作一缕青烟，最后的声音是：‘你也会被……忘记……’\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "是的，我忘记了。直到此刻才想起。"
+        "那些所谓的劫难，多半是灭口。\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "火焰山炼的不是我的神通，是要烧毁埋在八百里地下、记载着“上一次天地劫难”的玉简。\n"
+        "牛魔王拼死守护的不是罗刹女，是祖先传承的、关于“世界如何被重置”的记忆。\n"
+        "黄风怪的三昧神风，本是为了吹散灵山脚下堆积的、写满罪业的愿力尘埃……\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "我们每过一难，就将一部分真实世界“涂抹”成该有的样子。\n"
+        "而我自己，就是那支蘸满了谎言的笔。\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "如今，佛光开始腐朽。\n"
+        "三百年过去了。我从斗战胜佛的金身里醒来，发现灵山赐予的果位是一个精致的囚笼。\n"
+        "佛国寂静无声，诸佛垂目如泥塑，周身散发出的不是檀香，而是铁锈与枯萎莲花的气味。\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "人间异动：寺庙佛像流泪，诵经声会腐蚀血肉，曾被抹去的残影重现人间。\n"
+        "那些被我们亲手埋葬的真相，正在尸变。\n"
+        "它们从故事的坟墓里爬出来，带着强烈的执念与怨恨，要找回自己的名字。\n"
+        "我剥下这身灿烂的佛衣，露出底下五百年前未被驯服的皮毛。\n"
+        "金箍棒在手中苏醒，发出饥渴的嗡鸣。它记得每一滴真正该流的血。\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "我要重新走一遍西行路。这次不是取经，是掘坟。\n"
+        "挖开每一处我们曾“降妖除魔”的圣地，把里面埋藏的秘密、谎言与罪恶，统统挖出来。\n"
+        "让该成佛的成佛。让该下地狱的下地狱。\n"
+        "而我，齐天大圣孙悟空，要在这成佛与地狱之间——\n"
+        "为那些被我们亲手写进鬼故事里的亡魂，讨一个公道。\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "第一关的山地，是我棒杀第一位“真相诉说者”的故地。风中的呜咽，是她未散的执念。\n"
+        "第二关的巨石阵，是上古遗民观测天庭轨迹的祭坛，也是灵山镇压“天外之音”的封印。\n"
+        "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "这一次，我的金箍棒不为护法，只为打碎这尊他们为我塑造的、名为‘斗战胜佛’的琉璃金身。\n"
+        "\n"
+        "(按 Enter 退出)"
     )));
 
-    Pages.Add(FText::FromString(TEXT(
-        "The last light in my master's eyes was that of the Golden Cicada,\n"
-        "which sank into the golden ocean.\n\n"
-        "That was the pinnacle of my life, and the moment the truth drowned.\n"
-        "They said we retrieved the true scriptures to save all beings.\n\n"
-        "But the scriptures from Lingshan were wordless."
-    )));
-
-    Pages.Add(FText::FromString(TEXT(
-        "When Anu and Jiaye handed over the bundle, they smiled with compassion.\n"
-        "When it opened, my eyes saw the text vanish like a receding tide,\n\n"
-        "leaving only blank paper. My master's hands trembled; he had known.\n"
-        "We had traveled 108,000 miles to retrieve nothing.\n\n"
-        "It was the act of taking that mattered."
-    )));
-
-    Pages.Add(FText::FromString(TEXT(
-        "Bajie burst into laughter, tears streaming; King Kong forced him down.\n"
-        "Sha Monk buried his head in the scroll, shoulders heaving like mountains.\n\n"
-        "The Tathagata's voice rang out like a bell:\n"
-        "'The Dharma cannot be transmitted lightly, nor taken empty.'\n\n"
-        "'Without words, it must be written with cause and effect and time.'"
-    )));
-
-    Pages.Add(FText::FromString(TEXT(
-        "I understood then: the pilgrimage itself was the scripture.\n"
-        "Our suffering, our battles, and our names were their proof.\n\n"
-        "A play for the Three Realms to assert authority and obedience.\n"
-        "The tightening mantra did not bind the body so much as erase memory.\n\n"
-        "Guanyin said it curbed my fierce heart."
-    )));
-
-    Pages.Add(FText::FromString(TEXT(
-        "Whenever the hoop tightened, faces of those I struck blurred in memory.\n"
-        "Their true shapes melted into grotesque figures in storybooks.\n\n"
-        "On the day the seal loosened, shards of reality returned to me.\n"
-        "Memories I had been forced to forget flooded back.\n\n"
-        "I remembered the first 'fairy' I killed."
-    )));
-
-    Pages.Add(FText::FromString(TEXT(
-        "She wore white and did not seek to devour our master. She knelt and opened her palm,\n"
-        "revealing a star chart and ancient script written in blood.\n\n"
-        "'Great Saint! See the veins of this world! They weave a web with incense and vows!'\n"
-        "The golden hoop tightened; my cudgel fell and she became smoke.\n\n"
-        "Her last words: 'You too will be forgotten.'"
-    )));
-
-    Pages.Add(FText::FromString(TEXT(
-        "Yes��I had forgotten until now. Many 'calamities' were silencing the truth.\n"
-        "Flame Mountain burned jade slips buried deep that recorded the last calamity.\n\n"
-        "The Bull Demon King guarded ancestral memories, not a single rakshasi.\n"
-        "The Yellow Wind's Samadhi Wind cleared the vow-dust that hid karmic ledgers.\n\n"
-        "Each trial painted over a piece of reality."
-    )));
-
-    Pages.Add(FText::FromString(TEXT(
-        "I was the pen dipped in lies. Now the Buddha's light decays.\n\n"
-        "Three hundred years later I woke from the golden body to find a cage.\n"
-        "The Buddha realm was silent; statues hung like clay and smelled of rust.\n\n"
-        "Temples wept blood; chanting could rot flesh in places."
-    )));
-
-    Pages.Add(FText::FromString(TEXT(
-        "Remnants of the 'demons' we erased were re-forming in the world.\n\n"
-        "Truths we buried were mutating, crawling from story-graves with rage.\n"
-        "They demanded names returned and histories untampered.\n\n"
-        "I tore off the Buddha robe and revealed untamed fur beneath."
-    )));
-
-    Pages.Add(FText::FromString(TEXT(
-        "My golden cudgel awoke with a hungry hum; it remembered rightful blood.\n\n"
-        "I would retrace the westward route��not to save, but to exhume.\n"
-        "Open every holy site where we 'conquered demons' and unearth the lies within.\n\n"
-        "Let those who should be Buddhas become Buddhas; let the guilty burn."
-    )));
-
-    Pages.Add(FText::FromString(TEXT(
-        "I, Sun Wukong, will seek justice for the souls we wrote into ghost stories.\n\n"
-        "The first level's mountain is where I silenced the first truth-teller.\n"
-        "The wind's sobbing is her lingering obsession.\n\n"
-        "The Stonehenge of the second level is a seal against voices from beyond."
-    )));
-
-    Pages.Add(FText::FromString(TEXT(
-        "This time my golden cudgel is not to protect but to shatter the glass-gilded idol\n"
-        "they made called 'Fighting to Overcome Buddha.'\n\n"
-        "(Press Enter to advance)"
-    )));
 }
 
 void UBMBookWidget::NativeConstruct()
