@@ -63,7 +63,7 @@ void UBMAnimNotifyState_HitBoxWindow::NotifyEnd(
 
     if (UBMHitBoxComponent* HB = OwnerChar->GetHitBox())
     {
-        // 工程化兜底：不依赖上下文（因为攻击可能已被打断并清空 Spec）
+        // 不依赖上下文
         HB->DeactivateAllHitBoxes();
     }
 }

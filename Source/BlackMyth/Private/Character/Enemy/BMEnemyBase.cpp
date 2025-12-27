@@ -71,9 +71,6 @@ void ABMEnemyBase::BeginPlay()
 void ABMEnemyBase::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
-
-    // 防止“卡住/没路径/AcceptanceRadius过大”等导致原地播Walk/Run
-    // UpdateLocomotionLoop();
 }
 
 void ABMEnemyBase::InitEnemyStates()
@@ -324,7 +321,6 @@ bool ABMEnemyBase::IsInAttackRange() const
         return Dist2D <= AttackRangeOverride;
     }
 
-    // 无 override：只要存在一个 attack spec 能覆盖当前距离即可
     for (const FBMEnemyAttackSpec& S : AttackSpecs)
     {
         if (!S.Anim) continue;
@@ -416,7 +412,7 @@ bool ABMEnemyBase::SelectRandomAttackForCurrentTarget(FBMEnemyAttackSpec& OutSpe
         }
     }
 
-    // 容错：返回最后一个
+    // 容错返回最后一个
     OutSpec = *Candidates.Last();
     return true;
 }
@@ -442,7 +438,7 @@ void ABMEnemyBase::PlayLoop(UAnimSequence* Seq, float PlayRate)
     const bool bSameAnim = (CurrentLoopAnim == Seq);
     const bool bSameRate = FMath::IsNearlyEqual(CurrentLoopRate, PlayRate, 0.001f);
 
-    // 同一动画 + 同一速率：不重复下发
+    // 同一动画 + 同一速率不重复下发
     if (bSameAnim && bSameRate)
     {
         return;
@@ -609,7 +605,7 @@ bool ABMEnemyBase::ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) c
     {
         UE_LOG(LogTemp, Warning, TEXT("[%s] InterruptCheck: No ActiveAttackSpec while attacking. Default=Interruptible."),
             *GetName());
-        return true; // 没有招式信息：默认可打断
+        return true; // 没有招式信息默认可打断
     }
 
     const FBMEnemyAttackSpec& Spec = ActiveAttackSpec;
@@ -617,7 +613,7 @@ bool ABMEnemyBase::ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) c
     {
         UE_LOG(LogTemp, Log, TEXT("[%s] InterruptCheck: Spec is Uninterruptible. Attack will NOT be interrupted."),
             *GetName());
-        return false; // 霸体：不可打断
+        return false; // 霸体不可打断
     }
 
     const float P = BMCombatUtils::IsHeavyIncoming(Incoming) ? Spec.InterruptChanceOnHeavyHit : Spec.InterruptChance;
@@ -656,19 +652,18 @@ void ABMEnemyBase::RequestHitState(const FBMDamageInfo& FinalInfo)
 
     const FName Cur = Machine->GetCurrentStateName();
 
-    // 非攻击：必进受击
+    // 非攻击必进受击
     if (Cur != BMEnemyStateNames::Attack)
     {
         Machine->ChangeStateByName(BMEnemyStateNames::Hit);
         return;
     }
 
-    // 攻击中：看当前招式是否可打断
+    // 攻击中看当前招式是否可打断
     if (ShouldInterruptCurrentAttack(FinalInfo))
     {
         Machine->ChangeStateByName(BMEnemyStateNames::Hit);
     }
-    // 否则保持攻击（只扣血不播受击）
 }
 
 void ABMEnemyBase::RequestDeathState(const FBMDamageInfo& LastHitInfo)
@@ -728,7 +723,6 @@ bool ABMEnemyBase::ResolveHitBoxWindow(
 
     static const FName DefaultWindowId(TEXT("HitWindow"));
 
-    // 目前你 Enemy Spec 也建议用“单窗口”字段（HitBoxNames/HitBoxParams）
     if (WindowId.IsNone() || WindowId == DefaultWindowId)
     {
         OutHitBoxNames = ActiveAttackSpec.HitBoxNames;
@@ -736,7 +730,6 @@ bool ABMEnemyBase::ResolveHitBoxWindow(
         return OutHitBoxNames.Num() > 0;
     }
 
-    // 后续如果做多窗口（ActiveAttackSpec.Windows），在这里补 WindowId 查找即可
     return false;
 }
 
@@ -763,10 +756,10 @@ bool ABMEnemyBase::TryEvadeIncomingHit(const FBMDamageInfo& InInfo)
         return false;
     }
 
-    // 触发闪避：本次命中不受伤害（直接返回 true）
+    // 触发闪避本次命中不受伤害
     Combat->CommitCooldown(DodgeCooldownKey, DodgeCooldown);
 
-    // 锁定闪避方向：向“远离攻击者”的方向后撤
+    // 锁定闪避方向
     DodgeLockedDir = ComputeBackwardDodgeDirFromHit(InInfo);
 
     // 切 Dodge 状态

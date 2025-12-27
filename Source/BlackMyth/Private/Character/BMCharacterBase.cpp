@@ -151,7 +151,7 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
         }
     }
 
-    // 3) Stats ×îÖÕ½áËã£¨·ÀÓù/¿ÛÑª/ËÀÍö£©
+    // Stats ×îÖÕ½áËã
     const float Applied = Stats->ApplyDamage(InOutInfo);
 
     if (Applied > 0.f)

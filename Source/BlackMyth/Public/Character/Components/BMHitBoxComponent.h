@@ -18,13 +18,21 @@ class ABMCharacterBase;
  */
 DECLARE_LOG_CATEGORY_EXTERN(LogBMHitBox, Log, All);
 
+/**
+ * 命中记录结构
+ *
+ * 用于跟踪当前攻击窗口内对同一目标的命中次数，实现去重机制
+ */
 USTRUCT()
 struct FBMHitRecord
 {
     GENERATED_BODY()
 
-    int32 TotalHits = 0;                 // 当前窗口该目标总命中次数
-    TMap<FName, int32> HitBoxHits;       // 当前窗口该目标按 HitBoxName 的命中次数
+    /** 当前窗口该目标总命中次数 */
+    int32 TotalHits = 0;
+
+    /** 当前窗口该目标按 HitBoxName 的命中次数 */
+    TMap<FName, int32> HitBoxHits;
 };
 
 
@@ -86,21 +94,9 @@ struct FBMHitBoxDefinition
     UPROPERTY(EditAnywhere, Category = "BM|HitBox|Damage")
     EBMDamageType DamageType = EBMDamageType::Melee;
 
-    /** 元素类型（物理/火焰等） */
-    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Damage")
-    EBMElementType ElementType = EBMElementType::Physical;
-
     /** 默认受击反馈类型 */
     UPROPERTY(EditAnywhere, Category = "BM|HitBox|Damage")
     EBMHitReaction DefaultReaction = EBMHitReaction::Light;
-
-    /**
-     * 击退强度
-     *
-     * 用于构建 Knockback 向量：Dir * KnockbackStrength
-     */
-    UPROPERTY(EditAnywhere, Category = "BM|HitBox|Damage")
-    float KnockbackStrength = 0.f;
 };
 
 
@@ -108,8 +104,8 @@ struct FBMHitBoxDefinition
  * 攻击判定组件（HitBox）
  *
  * 负责：
- * 根据 FBMHitBoxDefinition 创建并维护多个 UBoxComponent 判定盒（HitBoxes）
- * 在指定攻击窗口内启用某个 HitBox（ActivateHitBox/DeactivateHitBox）
+ * 根据 FBMHitBoxDefinition 创建并维护多个 UBoxComponent 判定盒
+ * 在指定攻击窗口内启用某个 HitBox
  * 处理 Overlap 命中，将命中事件转换为 FBMDamageInfo，并调用 Victim->TakeDamageFromHit 结算
  */
 UCLASS(ClassGroup = (BM), meta = (BlueprintSpawnableComponent))
@@ -125,7 +121,6 @@ public:
      * 真实 HitBox 碰撞体在 BeginPlay 阶段创建
      */
     UBMHitBoxComponent();
-
 
     /**
      * 基础伤害覆盖值
@@ -165,58 +160,50 @@ public:
     float DebugLineThickness = 2.0f;
 
 public:
-    // 新：按名字列表激活多个 HitBox（一次攻击窗口）
+    /**
+     * 按名称列表激活多个 HitBox
+     *
+     * 在政击窗口开始时调用，根据参数启用指定的 HitBox 并设置去重策略
+     *
+     * @param HitBoxNames 要激活的 HitBox 名称列表
+     * @param Params 激活参数
+     */
     void ActivateHitBoxesByNames(const TArray<FName>& HitBoxNames, const FBMHitBoxActivationParams& Params);
 
-    // 新：关闭指定名字列表的 HitBox（窗口结束）
+    /**
+     * 按名称列表关闭多个 HitBox
+     *
+     * 在攻击窗口结束时调用，禁用指定的 HitBox 碰撞检测
+     *
+     * @param HitBoxNames 要关闭的 HitBox 名称列表
+     */
     void DeactivateHitBoxesByNames(const TArray<FName>& HitBoxNames);
 
-    // 新：关闭全部 HitBox（保险用）
+    /**
+     * 关闭所有 HitBox
+     *
+     * 立即禁用所有 HitBox 的碰撞检测并清空状态，用于强制重置或攻击被打断
+     */
     void DeactivateAllHitBoxes();
 
-
-
-    ///**
-    // * 启用指定类型的 HitBox
-    // *
-    // * 行为：
-    // * - 根据 Type 查找定义（FindDefByType），若不存在则回退 Default
-    // * - 确保对应 UBoxComponent 已创建并附着到 Mesh（EnsureCreated）
-    // * - 清空本次挥砍命中列表（HitActorsThisSwing）
-    // * - 将 HitBox 碰撞启用为 QueryOnly
-    // *
-    // * @param Type 要启用的 HitBox 类型（轻击/重击/技能等）
-    // */
-    //void ActivateHitBox(EBMHitBoxType Type);
-
-    ///**
-    // * 禁用当前激活的 HitBox
-    // *
-    // * 行为：
-    // * - 将 ActiveHitBox 的碰撞关闭为 NoCollision
-    // * - 清空 ActiveHitBox/ActiveHitBoxName 并重置命中列表
-    // *
-    // * 该函数应在攻击窗口结束时调用
-    // */
-    //void DeactivateHitBox();
-
-    /** 设置基础伤害覆盖值 */
+    /**
+     * 设置基础伤害覆盖值
+     *
+     * @param NewDamage 新的基础伤害值；若 > 0 则使用该值，否则从攻击者 Stats 读取
+     */
     void SetDamage(float NewDamage) { Damage = NewDamage; }
 
     /**
-     * 重置本次挥砍的命中列表
+     * 重置本次窗口的命中列表
      *
-     * 用于控制同一攻击窗口内只结算一次的行为
+     * 清空当前攻击窗口的所有命中记录，允许相同目标再次被命中
      */
     void ResetHitList();
 
     /**
-     * 注册一个 HitBox 定义
+     * 注册 HitBox 定义
      *
-     * 该函数仅记录配置，不立即创建碰撞体；BeginPlay/ActivateHitBox 时才会 EnsureCreated
-     * 在构造函数或 BeginPlay 之前调用
-     *
-     * @param Def HitBox 定义配置
+     * @param Def HitBox 定义配置，包含名称、类型、尺寸、伤害参数等
      */
     void RegisterDefinition(const FBMHitBoxDefinition& Def);
 
@@ -248,64 +235,65 @@ protected:
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
-    /**
-     * 获取 Owner 的 SkeletalMeshComponent
-     *
-     * 约定 Owner 为 ACharacter 派生类，使用 ACharacter::GetMesh()
-     * @return Owner 的 Mesh；若 Owner 非 ACharacter 或 Mesh 不存在则返回 nullptr
-     */
-    USkeletalMeshComponent* ResolveOwnerMesh() const;
+/**
+ * 获取 Owner 的骨骼网格组件
+ *
+ * @return Owner 的 SkeletalMeshComponent；若解析失败则返回 nullptr
+ */
+USkeletalMeshComponent* ResolveOwnerMesh() const;
 
-    /**
-     * 将 Owner 解析为 ABMCharacterBase
-     *
-     * 用于构造 FBMDamageInfo 的 InstigatorActor，并读取 Stats.Attack 等数据
-     * @return Owner 的 ABMCharacterBase 指针；失败返回 nullptr
-     */
-    ABMCharacterBase* ResolveOwnerCharacter() const;
+/**
+ * 将 Owner 解析为 ABMCharacterBase
+ *
+ * @return Owner 的 ABMCharacterBase 指针；解析失败返回 nullptr
+ */
+ABMCharacterBase* ResolveOwnerCharacter() const;
 
-    /**
-     * 将 HitBox 类型映射为默认的 FName Key
-     *
-     * @param Type HitBox 类型
-     * @return 对应的默认名称
-     */
-    static FName TypeToName(EBMHitBoxType Type);
+/**
+ * 将 HitBox 类型映射为默认名称
+ *
+ * @param Type HitBox 类型
+ * @return 对应的默认 FName
+ */
+static FName TypeToName(EBMHitBoxType Type);
 
-    /**
-     * 确保指定定义对应的 UBoxComponent 已创建并完成初始化
-     *
-     * 初始化内容
-     * - NewObject 创建并注册到 Owner
-     * - 附着到 Mesh 的 Socket/Bone
-     * - 设置形状与相对变换
-     * - 设置碰撞为 NoCollision + Overlap
-     * - 绑定 OnComponentBeginOverlap 到 OnHitBoxOverlap
-     *
-     * @param Def HitBox 配置定义
-     */
-    void EnsureCreated(const FBMHitBoxDefinition& Def);
+/**
+ * 确保指定定义对应的 UBoxComponent 已创建并完成初始化
+ *
+ * @param Def HitBox 配置定义
+ */
+void EnsureCreated(const FBMHitBoxDefinition& Def);
 
-    /**
-     * 根据 HitBox 类型查找定义
-     *
-     * 返回第一个 Type 匹配的定义
-     * 若不存在，则回退查找 Default
-     *
-     * @param Type HitBox 类型
-     * @return 定义指针；若不存在任何可用定义则返回 nullptr
-     */
-    const FBMHitBoxDefinition* FindDefByType(EBMHitBoxType Type) const;
+/**
+ * 根据 HitBox 类型查找定义
+ *
+ * @param Type HitBox 类型
+ * @return 定义指针；不存在则返回 nullptr
+ */
+const FBMHitBoxDefinition* FindDefByType(EBMHitBoxType Type) const;
 
-    void SetHitBoxCollisionEnabled(FName HitBoxName, bool bEnabled);
-    TArray<FName> FindNamesByType(EBMHitBoxType Type) const;
+/**
+ * 设置 HitBox 碰撞启用状态
+ *
+ * @param HitBoxName HitBox 名称
+ * @param bEnabled 是否启用碰撞
+ */
+void SetHitBoxCollisionEnabled(FName HitBoxName, bool bEnabled);
+
+/**
+ * 按类型查找所有匹配的 HitBox 名称
+ *
+ * @param Type HitBox 类型
+ * @return 匹配的 HitBox 名称列表
+ */
+TArray<FName> FindNamesByType(EBMHitBoxType Type) const;
 
     /**
      * HitBox Overlap 回调：命中处理入口
      *
      * 过滤规则：
      * - 仅在 ActiveHitBox 存在且启用时处理
-     * - 忽略 Owner 自身与重复命中目标（HitActorsThisSwing）
+     * - 忽略 Owner 自身与重复命中目标
      * - 要求 OtherActor 可转换为 ABMCharacterBase
      * - 要求 OtherComp 带有 "BM_HurtBox" Tag
      *
@@ -315,8 +303,8 @@ private:
      *
      * @param OverlappedComponent 发生 Overlap 的 HitBox 组件
      * @param OtherActor 被命中的 Actor
-     * @param OtherComp 被命中的组件（应为 HurtBox）
-     * @param OtherBodyIndex 组件 Body Index（未使用）
+     * @param OtherComp 被命中的组件
+     * @param OtherBodyIndex 组件 Body Index
      * @param bFromSweep 是否由 Sweep 导致
      * @param SweepResult Sweep 命中信息
      */
@@ -338,21 +326,21 @@ private:
     UPROPERTY(EditAnywhere, Category = "BM|HitBox|Definitions")
     TArray<FBMHitBoxDefinition> Definitions;
 
-    // 当前窗口激活的 HitBox 名字集合（支持多开）
+    // 当前窗口激活的 HitBox 名字集合
     UPROPERTY(Transient)
     TSet<FName> ActiveHitBoxNames;
 
-    // 组件 -> HitBoxName 的反查表（Overlap 时 O(1) 找到属于哪个定义）
+    // 组件 -> HitBoxName 的反查表
     UPROPERTY(Transient)
     TMap<TObjectPtr<UPrimitiveComponent>, FName> ComponentToHitBoxName;
 
-    // Name -> Definitions 下标，加速 Def 查找（避免每次 overlap 遍历）
+    // Name -> Definitions 下标
     UPROPERTY(Transient)
     TMap<FName, int32> NameToDefIndex;
     
     // 当前攻击窗口参数
     FBMHitBoxActivationParams ActiveWindowParams;
 
-    // 命中记录（去重/多段命中用）
+    // 命中记录
     TMap<TWeakObjectPtr<AActor>, FBMHitRecord> HitRecordsThisWindow;
 };

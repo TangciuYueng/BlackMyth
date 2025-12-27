@@ -52,38 +52,16 @@ ABMPlayerCharacter::ABMPlayerCharacter()
 		Inventory->SetInventoryWidgetClass(InventoryWidgetClassFinder.Class);
 	}
 
-    // 经验组件
     Experience = CreateDefaultSubobject<UBMExperienceComponent>(TEXT("ExperienceComponent"));
     if (Experience)
     {
-        Experience->SetIsReplicated(false); // 单机/本地玩家
+        Experience->SetIsReplicated(false); 
     }
 
-    // === 相机臂（跟随旋转来自 Controller） ===
-    CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
-    CameraBoom->SetupAttachment(RootComponent);
-    CameraBoom->TargetArmLength = 350.f;
-    CameraBoom->bUsePawnControlRotation = true;   
-    CameraBoom->bEnableCameraLag = true;
-    CameraBoom->CameraLagSpeed = 12.f;
-    CameraBoom->bDoCollisionTest = true;
-    CameraBoom->ProbeChannel = ECC_GameTraceChannel1; // 只让墙/地形影响相机
-    CameraBoom->ProbeSize = 12.f;
-
-    CameraBoom->bEnableCameraLag = true;
-    CameraBoom->bUseCameraLagSubstepping = true;
-    CameraBoom->CameraLagMaxTimeStep = 1.f / 60.f;
-    // === 跟随相机 ===
-    FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-    FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-    FollowCamera->bUsePawnControlRotation = false; // 相机本身不转，用 Boom 转
-
-    // 角色本体不跟着 Controller 直接转
     bUseControllerRotationYaw = false;
     bUseControllerRotationPitch = false;
     bUseControllerRotationRoll = false;
 
-    // 角色面向随移动方向
     if (UCharacterMovementComponent* Move = GetCharacterMovement())
     {
         Move->bOrientRotationToMovement = true;
@@ -92,114 +70,141 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         Move->AirControl = 0.25f;
     }
 
-    // === 绑定模型/动画资产 ===
+    SetupCamera();
+    SetupMesh();
+    SetupAnimations();
+    SetupHurtBoxes();
+    SetupHitBoxes();
+    
+    BuildAttackSteps();
+}
+
+void ABMPlayerCharacter::SetupCamera()
+{
+    CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
+    CameraBoom->SetupAttachment(RootComponent);
+    CameraBoom->TargetArmLength = 350.f;
+    CameraBoom->bUsePawnControlRotation = true;   
+    CameraBoom->bEnableCameraLag = true;
+    CameraBoom->CameraLagSpeed = 12.f;
+    CameraBoom->bDoCollisionTest = true;
+    CameraBoom->ProbeChannel = ECC_GameTraceChannel1;
+    CameraBoom->ProbeSize = 12.f;
+    CameraBoom->bUseCameraLagSubstepping = true;
+    CameraBoom->CameraLagMaxTimeStep = 1.f / 60.f;
+
+    FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
+    FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+    FollowCamera->bUsePawnControlRotation = false;
+}
+
+void ABMPlayerCharacter::SetupMesh()
+{
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshFinder(
+        TEXT("/Script/Engine.SkeletalMesh'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Meshes/Wukong.Wukong'")
+    );
+    if (MeshFinder.Succeeded())
     {
-        // 1) SkeletalMesh
-        static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshFinder(
-            TEXT("/Script/Engine.SkeletalMesh'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Meshes/Wukong.Wukong'")
-        );
-        if (MeshFinder.Succeeded())
-        {
-            CharacterMeshAsset = MeshFinder.Object;
-            GetMesh()->SetSkeletalMesh(CharacterMeshAsset);
-        }
-
-        // 2) 动画（AnimSequence）
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> IdleFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Idle_AO_CC.Idle_AO_CC'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> WalkFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/Stylized_Spruce_Forest/Demo/Game_Mode/Mannequin/Animations/ThirdPersonWalk.ThirdPersonWalk'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> RunFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Jog_Fwd.Jog_Fwd'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttack1Finder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_A_Slow_MSA.Primary_Melee_A_Slow_MSA'")
-		);
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttack2Finder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_B_Slow_MSA.Primary_Melee_B_Slow_MSA'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttack3Finder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_C_Slow_MSA.Primary_Melee_C_Slow_MSA'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttack4Finder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_D_Slow_MSA.Primary_Melee_D_Slow_MSA'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttackRecover1Finder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_A_Slow_Recovery.Primary_Melee_A_Slow_Recovery'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttackRecover2Finder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_B_Slow_Recovery.Primary_Melee_B_Slow_Recovery'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttackRecover3Finder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_C_Slow_Recovery.Primary_Melee_C_Slow_Recovery'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttackRecover4Finder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_D_Slow_REcovery.Primary_Melee_D_Slow_REcovery'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> Skill1Finder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/RMB_Hit.RMB_Hit'")
-		);
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> Skill2Finder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Primary_Melee_E_Slow.Primary_Melee_E_Slow'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> Skill3Finder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/RMB_Push.RMB_Push'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> JumpStartFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Flip_Fwd.Q_Flip_Fwd'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> FallLoopFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Fall_Loop.Q_Fall_Loop'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> HitLightFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/HitReact_Front.HitReact_Front'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> HitHeavyFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/HitReact_Front.HitReact_Front'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> DeathFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Death.Death'")
-        );
-        static ConstructorHelpers::FObjectFinder<UAnimSequence> DodgeFinder(
-            TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Flip_Fwd.Q_Flip_Fwd'")
-        );
-
-        if (IdleFinder.Succeeded())                     AnimIdle = IdleFinder.Object;
-		if (WalkFinder.Succeeded())                     AnimWalk = WalkFinder.Object;
-		if (RunFinder.Succeeded())                      AnimRun = RunFinder.Object;
-		if (NormalAttack1Finder.Succeeded())            AnimNormalAttack1 = NormalAttack1Finder.Object;
-		if (NormalAttack2Finder.Succeeded())            AnimNormalAttack2 = NormalAttack2Finder.Object;
-		if (NormalAttack3Finder.Succeeded())            AnimNormalAttack3 = NormalAttack3Finder.Object;
-		if (NormalAttack4Finder.Succeeded())            AnimNormalAttack4 = NormalAttack4Finder.Object;
-		if (NormalAttackRecover1Finder.Succeeded())     AnimNormalAttackRecover1 = NormalAttackRecover1Finder.Object;
-		if (NormalAttackRecover2Finder.Succeeded())     AnimNormalAttackRecover2 = NormalAttackRecover2Finder.Object;
-		if (NormalAttackRecover3Finder.Succeeded())     AnimNormalAttackRecover3 = NormalAttackRecover3Finder.Object;
-		if (NormalAttackRecover4Finder.Succeeded())     AnimNormalAttackRecover4 = NormalAttackRecover4Finder.Object;
-		if (Skill1Finder.Succeeded())                   AnimSkill1 = Skill1Finder.Object;
-		if (Skill2Finder.Succeeded())                   AnimSkill2 = Skill2Finder.Object;
-		if (Skill3Finder.Succeeded())                   AnimSkill3 = Skill3Finder.Object;
-        if (JumpStartFinder.Succeeded())                AnimJumpStart = JumpStartFinder.Object;
-        if (FallLoopFinder.Succeeded())                 AnimFallLoop = FallLoopFinder.Object;
-        if (HitLightFinder.Succeeded())                 AnimHitLight = HitLightFinder.Object;
-        if (HitHeavyFinder.Succeeded())                 AnimHitHeavy = HitHeavyFinder.Object;
-        if (DeathFinder.Succeeded())                    AnimDeath = DeathFinder.Object;
-        if (DodgeFinder.Succeeded())                    AnimDodge = DodgeFinder.Object;
+        CharacterMeshAsset = MeshFinder.Object;
+        GetMesh()->SetSkeletalMesh(CharacterMeshAsset);
     }
 
-    // === Mesh 位置/朝向 ===
     GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -90.f));
     GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
-
-    // 纯C++动画模式：单节点
     GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+}
 
-    // === HurtBoxes ===
+void ABMPlayerCharacter::SetupAnimations()
+{
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> IdleFinder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Idle_AO_CC.Idle_AO_CC'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> WalkFinder(
+        TEXT("/Script/Engine.AnimSequence'/Game/Stylized_Spruce_Forest/Demo/Game_Mode/Mannequin/Animations/ThirdPersonWalk.ThirdPersonWalk'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> RunFinder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Jog_Fwd.Jog_Fwd'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttack1Finder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_A_Slow_MSA.Primary_Melee_A_Slow_MSA'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttack2Finder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_B_Slow_MSA.Primary_Melee_B_Slow_MSA'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttack3Finder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_C_Slow_MSA.Primary_Melee_C_Slow_MSA'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttack4Finder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_D_Slow_MSA.Primary_Melee_D_Slow_MSA'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttackRecover1Finder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_A_Slow_Recovery.Primary_Melee_A_Slow_Recovery'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttackRecover2Finder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_B_Slow_Recovery.Primary_Melee_B_Slow_Recovery'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttackRecover3Finder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_C_Slow_Recovery.Primary_Melee_C_Slow_Recovery'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> NormalAttackRecover4Finder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/Primary_Melee_D_Slow_REcovery.Primary_Melee_D_Slow_REcovery'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> Skill1Finder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/RMB_Hit.RMB_Hit'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> Skill2Finder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Primary_Melee_E_Slow.Primary_Melee_E_Slow'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> Skill3Finder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/RMB_Push.RMB_Push'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> JumpStartFinder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Flip_Fwd.Q_Flip_Fwd'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> FallLoopFinder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Fall_Loop.Q_Fall_Loop'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> HitLightFinder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/HitReact_Front.HitReact_Front'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> HitHeavyFinder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/useful/HitReact_Front.HitReact_Front'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> DeathFinder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Death.Death'")
+    );
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> DodgeFinder(
+        TEXT("/Script/Engine.AnimSequence'/Game/ParagonSunWukong/Characters/Heroes/Wukong/Animations/Q_Flip_Fwd.Q_Flip_Fwd'")
+    );
+
+    if (IdleFinder.Succeeded())                     AnimIdle = IdleFinder.Object;
+    if (WalkFinder.Succeeded())                     AnimWalk = WalkFinder.Object;
+    if (RunFinder.Succeeded())                      AnimRun = RunFinder.Object;
+    if (NormalAttack1Finder.Succeeded())            AnimNormalAttack1 = NormalAttack1Finder.Object;
+    if (NormalAttack2Finder.Succeeded())            AnimNormalAttack2 = NormalAttack2Finder.Object;
+    if (NormalAttack3Finder.Succeeded())            AnimNormalAttack3 = NormalAttack3Finder.Object;
+    if (NormalAttack4Finder.Succeeded())            AnimNormalAttack4 = NormalAttack4Finder.Object;
+    if (NormalAttackRecover1Finder.Succeeded())     AnimNormalAttackRecover1 = NormalAttackRecover1Finder.Object;
+    if (NormalAttackRecover2Finder.Succeeded())     AnimNormalAttackRecover2 = NormalAttackRecover2Finder.Object;
+    if (NormalAttackRecover3Finder.Succeeded())     AnimNormalAttackRecover3 = NormalAttackRecover3Finder.Object;
+    if (NormalAttackRecover4Finder.Succeeded())     AnimNormalAttackRecover4 = NormalAttackRecover4Finder.Object;
+    if (Skill1Finder.Succeeded())                   AnimSkill1 = Skill1Finder.Object;
+    if (Skill2Finder.Succeeded())                   AnimSkill2 = Skill2Finder.Object;
+    if (Skill3Finder.Succeeded())                   AnimSkill3 = Skill3Finder.Object;
+    if (JumpStartFinder.Succeeded())                AnimJumpStart = JumpStartFinder.Object;
+    if (FallLoopFinder.Succeeded())                 AnimFallLoop = FallLoopFinder.Object;
+    if (HitLightFinder.Succeeded())                 AnimHitLight = HitLightFinder.Object;
+    if (HitHeavyFinder.Succeeded())                 AnimHitHeavy = HitHeavyFinder.Object;
+    if (DeathFinder.Succeeded())                    AnimDeath = DeathFinder.Object;
+    if (DodgeFinder.Succeeded())                    AnimDodge = DodgeFinder.Object;
+}
+
+void ABMPlayerCharacter::SetupHurtBoxes()
+{
     UBMHurtBoxComponent* Head = CreateDefaultSubobject<UBMHurtBoxComponent>(TEXT("HB_Head"));
     Head->AttachSocketOrBone = TEXT("head");
     Head->BoxExtent = FVector(20, 20, 20);
-    Head->DamageMultiplier = 1.6f; // 头部更疼
+    Head->DamageMultiplier = 1.6f;
 
     UBMHurtBoxComponent* Abdomen = CreateDefaultSubobject<UBMHurtBoxComponent>(TEXT("HB_Abdomen"));
     Abdomen->AttachSocketOrBone = TEXT("spine_01");
@@ -215,8 +220,10 @@ ABMPlayerCharacter::ABMPlayerCharacter()
     Body->AttachSocketOrBone = TEXT("spine_03");
     Body->BoxExtent = FVector(20, 25, 30);
     Body->DamageMultiplier = 1.0f;
+}
 
-    // === HitBox 定义 ===
+void ABMPlayerCharacter::SetupHitBoxes()
+{
     if (UBMHitBoxComponent* HB = GetHitBox())
     {
         FBMHitBoxDefinition Light;
@@ -225,11 +232,9 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         Light.AttachSocketOrBone = TEXT("weapon_r");  
         Light.BoxExtent = FVector(8, 130, 8);
         Light.DamageType = EBMDamageType::Melee;
-        Light.ElementType = EBMElementType::Physical;
         Light.DamageScale = 1.0f;
         Light.AdditiveDamage = 0.f;
         Light.DefaultReaction = EBMHitReaction::Light;
-        Light.KnockbackStrength = 120.f;
 
         HB->RegisterDefinition(Light);
 
@@ -245,15 +250,12 @@ ABMPlayerCharacter::ABMPlayerCharacter()
         );
 
         Heavy.DamageType = EBMDamageType::Melee;
-        Heavy.ElementType = EBMElementType::Physical;
         Heavy.DamageScale = 1.35f;
         Heavy.AdditiveDamage = 0.f;
         Heavy.DefaultReaction = EBMHitReaction::Heavy;
-        Heavy.KnockbackStrength = 180.f;
 
         HB->RegisterDefinition(Heavy);
     }
-    BuildAttackSteps();
 }
 
 void ABMPlayerCharacter::BeginPlay()
@@ -487,7 +489,7 @@ void ABMPlayerCharacter::InitFSMStates()
     UBMStateMachineComponent* Machine = GetFSM();
     if (!Machine) return;
 
-    // 创建并注册状态（Outer 用 FSM，确保生命周期跟随组件）
+    // 创建并注册状态
     auto* SIdle = NewObject<UBMPlayerState_Idle>(Machine);
     auto* SMove = NewObject<UBMPlayerState_Move>(Machine);
     auto* SJump = NewObject<UBMPlayerState_Jump>(Machine);
@@ -840,7 +842,7 @@ void ABMPlayerCharacter::OnActionRequested(EBMCombatAction Action)
         return;
     }
 
-    // 技能：单段，要求冷却就绪
+    // 技能单段，要求冷却就绪
     if (BMCombatUtils::IsSkillAction(Action))
     {
         if (CurState == BMStateNames::Attack || CurState == BMStateNames::Dodge)
@@ -876,7 +878,7 @@ void ABMPlayerCharacter::OnActionRequested(EBMCombatAction Action)
         return;
     }
 
-    // Dodge：不允许空中
+    // 不允许空中闪避
     if (Action == EBMCombatAction::Dodge)
     {
         if (UCharacterMovementComponent* Move = GetCharacterMovement())
@@ -1113,19 +1115,19 @@ void ABMPlayerCharacter::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
 
     const FName Cur = Machine->GetCurrentStateName();
 
-    // 非攻击：必进 Hit
+    // 非攻击必进 Hit
     if (Cur != BMStateNames::Attack)
     {
         Machine->ChangeStateByName(BMStateNames::Hit);
         return;
     }
 
-    // 攻击中：按当前招式规则决定是否打断
+    // 攻击中按当前招式规则决定是否打断
     if (ShouldInterruptCurrentAttack(FinalInfo))
     {
         Machine->ChangeStateByName(BMStateNames::Hit);
     }
-    // 否则：只扣血，不切状态、不播受击
+    // 否则只扣血，不切状态、不播受击
 }
 
 void ABMPlayerCharacter::HandleDeath(const FBMDamageInfo& LastHitInfo)

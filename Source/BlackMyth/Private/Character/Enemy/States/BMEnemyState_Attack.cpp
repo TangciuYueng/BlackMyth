@@ -16,14 +16,14 @@ void UBMEnemyState_Attack::OnEnter(float)
     E->GetWorldTimerManager().ClearTimer(AttackFinishHandle);
     E->ClearActiveAttackSpec();
 
-    // 不允许空中出手：直接回追击
+    // 不允许空中出手
     if (auto* Move = E->GetCharacterMovement(); Move && Move->IsFalling())
     {
         if (E->GetFSM()) E->GetFSM()->ChangeStateByName(BMEnemyStateNames::Chase);
         return;
     }
 
-    // 出手时停止路径移动（保留惯性，不用 StopMovementImmediately）
+    // 出手时停止路径移动，保留惯性
     E->RequestStopMovement();
 
     // 选择随机攻击
@@ -33,7 +33,7 @@ void UBMEnemyState_Attack::OnEnter(float)
         return;
     }
 
-    // 1) 写入 Combat 上下文
+    // 写入 Combat 上下文
     if (UBMCombatComponent* Combat = E->GetCombat())
     {
         FBMHitBoxActivationParams Params;
@@ -46,7 +46,7 @@ void UBMEnemyState_Attack::OnEnter(float)
         Combat->SetActiveHitBoxWindowContext(ActiveAttack.HitBoxNames, Params);
     }
 
-    // 2) 同步 EnemyBase 当前招式
+    // 同步 EnemyBase 当前招式
     E->SetActiveAttackSpec(ActiveAttack);
 
     if (UBMCombatComponent* Combat = E->GetCombat())
@@ -114,7 +114,7 @@ void UBMEnemyState_Attack::OnUpdate(float DeltaTime)
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());
     if (!E) return;
 
-    // 攻击期间也可以持续转向（可选）
+    // 攻击期间也可以持续转向
     E->FaceTarget(DeltaTime);
 }
 

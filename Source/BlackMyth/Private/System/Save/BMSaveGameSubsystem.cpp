@@ -624,3 +624,175 @@ bool UBMSaveGameSubsystem::HasManualSave() const
 {
     return DoesSaveExist(MANUAL_SAVE_SLOT);
 }
+
+bool UBMSaveGameSubsystem::GetSaveMapName(int32 Slot, FName& OutMapName)
+{
+    if (Slot < 0)
+    {
+        UE_LOG(LogBMSave, Error, TEXT("GetSaveMapName Failed: Invalid slot number %d"), Slot);
+        return false;
+    }
+
+    if (!DoesSaveExist(Slot))
+    {
+        UE_LOG(LogBMSave, Warning, TEXT("GetSaveMapName Failed: Slot %d does not exist"), Slot);
+        return false;
+    }
+
+    FString SlotName = GetSlotName(Slot);
+    UBMSaveData* LoadedData = Cast<UBMSaveData>(
+        UGameplayStatics::LoadGameFromSlot(SlotName, 0)
+    );
+
+    if (!LoadedData)
+    {
+        UE_LOG(LogBMSave, Error, TEXT("GetSaveMapName Failed: Failed to load SaveData from slot %d"), Slot);
+        return false;
+    }
+
+    OutMapName = LoadedData->MapName;
+    return true;
+}
+
+bool UBMSaveGameSubsystem::LoadGameFromMainMenu(int32 Slot)
+{
+    if (Slot < 0)
+    {
+        UE_LOG(LogBMSave, Error, TEXT("LoadGameFromMainMenu Failed: Invalid slot number %d"), Slot);
+        return false;
+    }
+
+    if (!DoesSaveExist(Slot))
+    {
+        UE_LOG(LogBMSave, Warning, TEXT("LoadGameFromMainMenu Failed: Slot %d does not exist"), Slot);
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "SlotNotExist", "Save slot does not exist"));
+        }
+        return false;
+    }
+
+    // 获取存档中的地图名称
+    FName MapName;
+    if (!GetSaveMapName(Slot, MapName))
+    {
+        UE_LOG(LogBMSave, Error, TEXT("LoadGameFromMainMenu Failed: Could not get map name from slot %d"), Slot);
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "NoMapInSave", "Save file does not contain map information"));
+        }
+        return false;
+    }
+
+    // 检查地图名称是否有效
+    if (MapName == NAME_None || MapName.ToString().IsEmpty())
+    {
+        UE_LOG(LogBMSave, Error, TEXT("LoadGameFromMainMenu Failed: Map name is empty in slot %d"), Slot);
+        if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+        {
+            EventBus->EmitNotify(NSLOCTEXT("BMSave", "InvalidMapName", "Save file has invalid map information"));
+        }
+        return false;
+    }
+
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        UE_LOG(LogBMSave, Error, TEXT("LoadGameFromMainMenu Failed: World is null"));
+        return false;
+    }
+
+    // 保存待恢复的槽位和目标地图名称
+    PendingLoadSlot = Slot;
+    PendingLoadMapName = MapName;
+    CurrentSlotIndex = Slot;
+
+    // 注册地图切换完成的回调
+    if (PostLoadMapDelegateHandle.IsValid())
+    {
+        FCoreUObjectDelegates::PostLoadMapWithWorld.Remove(PostLoadMapDelegateHandle);
+    }
+    PostLoadMapDelegateHandle = FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &UBMSaveGameSubsystem::HandlePostLoadMapForSave);
+
+    // 发送加载通知
+    if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
+    {
+        EventBus->EmitNotify(NSLOCTEXT("BMSave", "LoadingMap", "Loading saved game..."));
+    }
+
+    // 切换到存档中的地图
+    FString MapNameStr = MapName.ToString();
+    UE_LOG(LogBMSave, Log, TEXT("LoadGameFromMainMenu: Opening level '%s' for slot %d"), *MapNameStr, Slot);
+    UGameplayStatics::OpenLevel(World, FName(*MapNameStr));
+
+    return true;
+}
+
+void UBMSaveGameSubsystem::HandlePostLoadMapForSave(UWorld* LoadedWorld)
+{
+    // 移除回调，只执行一次
+    if (PostLoadMapDelegateHandle.IsValid())
+    {
+        FCoreUObjectDelegates::PostLoadMapWithWorld.Remove(PostLoadMapDelegateHandle);
+        PostLoadMapDelegateHandle.Reset();
+    }
+
+    if (PendingLoadSlot < 0)
+    {
+        UE_LOG(LogBMSave, Warning, TEXT("HandlePostLoadMapForSave: No pending load slot"));
+        return;
+    }
+
+    if (!LoadedWorld)
+    {
+        UE_LOG(LogBMSave, Error, TEXT("HandlePostLoadMapForSave: LoadedWorld is null"));
+        PendingLoadSlot = -1;
+        PendingLoadMapName = NAME_None;
+        return;
+    }
+
+    // 验证加载的地图是否是我们期望的地图
+    FString LoadedMapName = UGameplayStatics::GetCurrentLevelName(LoadedWorld, true);
+    FString ExpectedMapName = PendingLoadMapName.ToString();
+    
+    if (!LoadedMapName.Equals(ExpectedMapName, ESearchCase::IgnoreCase))
+    {
+        UE_LOG(LogBMSave, Warning, TEXT("HandlePostLoadMapForSave: Loaded map '%s' does not match expected map '%s', skipping restore"), 
+            *LoadedMapName, *ExpectedMapName);
+        // 不清除 PendingLoadSlot，等待正确的地图加载
+        return;
+    }
+
+    int32 SlotToLoad = PendingLoadSlot;
+    PendingLoadSlot = -1;
+    PendingLoadMapName = NAME_None;
+
+    // 延迟一帧执行，确保 PlayerCharacter 已经生成
+    LoadedWorld->GetTimerManager().SetTimerForNextTick([this, SlotToLoad]()
+    {
+        UE_LOG(LogBMSave, Log, TEXT("HandlePostLoadMapForSave: Restoring save data from slot %d"), SlotToLoad);
+        
+        // 加载存档并恢复位置
+        bool bSuccess = LoadGame(SlotToLoad, true);
+        
+        if (bSuccess)
+        {
+            UE_LOG(LogBMSave, Log, TEXT("HandlePostLoadMapForSave: Successfully restored save from slot %d"), SlotToLoad);
+            
+            // 切换到游戏输入模式
+            if (UWorld* World = GetWorld())
+            {
+                if (APlayerController* PC = World->GetFirstPlayerController())
+                {
+                    FInputModeGameOnly InputMode;
+                    PC->SetInputMode(InputMode);
+                    PC->bShowMouseCursor = false;
+                }
+            }
+        }
+        else
+        {
+            UE_LOG(LogBMSave, Error, TEXT("HandlePostLoadMapForSave: Failed to restore save from slot %d"), SlotToLoad);
+        }
+    });
+}

@@ -103,7 +103,6 @@ void UBMCombatComponent::ResetAllCooldowns()
 
 void UBMCombatComponent::ResetHitList()
 {
-    // 命中列表在 HitBoxComponent 内部维护；这里只保留接口
 }
 
 void UBMCombatComponent::SetActiveHitBoxWindowContext(const TArray<FName>& HitBoxNames, const FBMHitBoxActivationParams& Params)

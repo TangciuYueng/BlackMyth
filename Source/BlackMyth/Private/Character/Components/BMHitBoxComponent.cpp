@@ -30,7 +30,6 @@ void UBMHitBoxComponent::BeginPlay()
         Def.AttachSocketOrBone = NAME_None;
         Def.BoxExtent = FVector(8.f);
         Def.DamageType = EBMDamageType::Melee;
-        Def.ElementType = ElementType;
         Definitions.Add(Def);
     }
 
@@ -146,7 +145,7 @@ void UBMHitBoxComponent::EnsureCreated(const FBMHitBoxDefinition& Def)
         return;
     }
 
-    // === Debug: 检查骨骼 / 插槽是否存在 ===
+    // Debug
     if (Def.AttachSocketOrBone != NAME_None && !Mesh->DoesSocketExist(Def.AttachSocketOrBone))
     {
         UE_LOG(
@@ -172,7 +171,7 @@ void UBMHitBoxComponent::EnsureCreated(const FBMHitBoxDefinition& Def)
     Box->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Box->SetGenerateOverlapEvents(true);
 
-    // 只 Overlap WorldDynamic（避免 Pawn/Capsule 重复触发）
+    // 只 Overlap WorldDynamic
     Box->SetCollisionObjectType(ECC_WorldDynamic);
     Box->SetCollisionResponseToAllChannels(ECR_Ignore);
     Box->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
@@ -199,7 +198,7 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
 {
     (void)OtherBodyIndex;
 
-    // -------- 1) 基础合法性检查 --------
+    // 基础合法性检查
     if (!OverlappedComponent || !OtherActor || OtherActor == GetOwner())
     {
         return;
@@ -211,11 +210,10 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
         return;
     }
 
-    // -------- 2) 通过 OverlappedComponent 找到“这是哪个 HitBox 定义” --------
+    // 通过 OverlappedComponent 找到HitBox
     const FName* HitBoxNamePtr = ComponentToHitBoxName.Find(OverlappedComponent);
     if (!HitBoxNamePtr)
     {
-        // 说明这个 OverlappedComponent 不是我们管理的 HitBox（或缓存没建好）
         return;
     }
 
@@ -225,13 +223,13 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
         return;
     }
 
-    // 关键：只有“当前窗口激活的 HitBoxNames”才允许结算
+    // 当前窗口激活的HitBoxNames
     if (!ActiveHitBoxNames.Contains(HitBoxName))
     {
         return;
     }
 
-    // -------- 3) 解析攻击者/受害者 --------
+    // 解析攻击者/受害者
     ABMCharacterBase* Attacker = ResolveOwnerCharacter();
     ABMCharacterBase* Victim = Cast<ABMCharacterBase>(OtherActor);
     if (!Attacker || !Victim)
@@ -239,11 +237,11 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
         return;
     }
 
-    // -------- 4) 去重：同一攻击窗口内避免对同一目标重复结算 --------
+    // 去重
     TWeakObjectPtr<AActor> TargetKey(OtherActor);
     FBMHitRecord& Record = HitRecordsThisWindow.FindOrAdd(TargetKey);
 
-    // 读取去重策略（默认 PerWindow + MaxHitsPerTarget=1）
+    // 读取去重策略
     switch (ActiveWindowParams.DedupPolicy)
     {
         case EBMHitDedupPolicy::PerWindow:
@@ -273,7 +271,7 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
     Record.TotalHits++;
     Record.HitBoxHits.FindOrAdd(HitBoxName)++;
 
-    // -------- 5) 定位 HitBoxDefinition（用 NameToDefIndex 加速，失败则回退遍历） --------
+    // 定位HitBoxDefinition
     const FBMHitBoxDefinition* Def = nullptr;
 
     if (const int32* DefIndex = NameToDefIndex.Find(HitBoxName))
@@ -286,7 +284,6 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
 
     if (!Def)
     {
-        // 回退：遍历查找
         for (const FBMHitBoxDefinition& D : Definitions)
         {
             if (D.Name == HitBoxName)
@@ -302,7 +299,7 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
         return;
     }
 
-    // -------- 6) 计算基础伤害（应用攻击力加成） --------
+    // 计算基础伤害
     float BaseAttack = 0.f;
     float AttackMultiplier = 1.0f;
 
@@ -313,14 +310,14 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
     else if (UBMStatsComponent* S = Attacker->GetStats())
     {
         BaseAttack = S->GetStatBlock().Attack;
-        // 获取攻击力加成倍率（来自增益效果）
+        // 获取攻击力加成倍率
         AttackMultiplier = S->GetAttackMultiplier();
     }
 
     // 应用攻击力加成
     BaseAttack *= AttackMultiplier;
 
-    // -------- 7) 构造 FBMDamageInfo --------
+    // 构造FBMDamageInfo
     FBMDamageInfo Info;
     Info.InstigatorActor = Attacker;
     Info.TargetActor = Victim;
@@ -328,15 +325,14 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
     Info.RawDamageValue = BaseAttack;
 
     // Def：BaseAttack * DamageScale + AdditiveDamage
-    // Window：再乘以这次攻击窗口倍率
+    // 再乘以这次攻击窗口倍率
     const float DefDamage = BaseAttack * Def->DamageScale + Def->AdditiveDamage;
     Info.DamageValue = DefDamage * FMath::Max(0.f, ActiveWindowParams.DamageMultiplier);
 
 
     Info.DamageType = Def->DamageType;
-    Info.ElementType = Def->ElementType;
 
-    // 受击反馈：允许窗口级别覆写
+    // 受击反馈
     Info.HitReaction = Def->DefaultReaction;
     if (ActiveWindowParams.bOverrideReaction && ActiveWindowParams.OverrideReaction != EBMHitReaction::None)
     {
@@ -356,13 +352,7 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
         Info.HitNormal = FVector::UpVector;
     }
 
-    if (Def->KnockbackStrength > 0.f)
-    {
-        const FVector Dir = (Victim->GetActorLocation() - Attacker->GetActorLocation()).GetSafeNormal();
-        Info.Knockback = Dir * Def->KnockbackStrength;
-    }
-
-    // -------- 8) 结算：由 Victim 侧完成 HurtBox/Stats/死亡/受击状态机等逻辑 --------
+    // 结算
     Victim->TakeDamageFromHit(Info);
 }
 
@@ -460,11 +450,10 @@ void UBMHitBoxComponent::DeactivateHitBoxesByNames(const TArray<FName>& HitBoxNa
         ActiveHitBoxNames.Remove(Name);
     }
 
-    // 如果窗口已经没有任何激活盒子了，可按需清空窗口参数
     if (ActiveHitBoxNames.Num() == 0)
     {
         // ActiveWindowParams = FBMHitBoxActivationParams();
-        // HitRecordsThisWindow.Reset(); // 不建议自动清，留给下一窗口是否 Reset 控制
+        // HitRecordsThisWindow.Reset(); 
     }
 }
 

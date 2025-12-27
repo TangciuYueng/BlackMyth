@@ -100,7 +100,7 @@ bool UBMPlayerState_Dodge::HasWalkableFloorAt(const FVector& WorldPos, const ACh
     if (!W) return false;
 
     const UCharacterMovementComponent* Move = Char->GetCharacterMovement();
-    const float WalkableZ = Move ? Move->GetWalkableFloorZ() : 0.7f; // Ä¬ÈÏÐ±ÂÊãÐÖµ¶µµ×
+    const float WalkableZ = Move ? Move->GetWalkableFloorZ() : 0.7f; 
 
     FCollisionQueryParams Q;
     Q.bTraceComplex = false;

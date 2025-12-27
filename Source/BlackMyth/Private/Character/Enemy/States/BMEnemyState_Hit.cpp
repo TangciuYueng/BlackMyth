@@ -11,7 +11,7 @@ void UBMEnemyState_Hit::OnEnter(float)
     bFinished = false;
     E->GetWorldTimerManager().ClearTimer(HitFinishHandle);
 
-    // 受击时停止路径跟随（不直接清零速度，手感更自然）
+    // 受击时停止路径跟随
     E->RequestStopMovement();
 
     const float Duration = E->PlayHitOnce(E->GetLastDamageInfo());

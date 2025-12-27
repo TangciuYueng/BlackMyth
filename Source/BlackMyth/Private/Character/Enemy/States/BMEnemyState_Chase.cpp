@@ -26,7 +26,7 @@ void UBMEnemyState_Chase::OnUpdate(float DeltaTime)
         return;
     }
 
-    // 进攻击距离：如果能出手 -> Attack；否则停下来面向目标并播Idle（避免原地跑）
+    // 进攻击距离：如果能出手 -> Attack，否则停下来面向目标并播Idle
     if (E->IsInAttackRange())
     {
         E->RequestStopMovement();

@@ -126,8 +126,6 @@ bool UBMPlayerState_Attack::CanTransitionTo(FName StateName) const
     return bFinished;
 }
 
-// ---------------- combo ----------------
-
 void UBMPlayerState_Attack::StartComboStep(int32 StepIndex)
 {
     ABMPlayerCharacter* PC = Cast<ABMPlayerCharacter>(GetContext());
@@ -168,7 +166,7 @@ void UBMPlayerState_Attack::StartComboStep(int32 StepIndex)
     float OpenT = FMath::Max(0.f, Duration - Step.LinkWindowSeconds);
     float CloseT = FMath::Max(OpenT, Duration - Step.LinkWindowEndOffset);
 
-    // 计时器：开/关窗口
+    // 计时器开/关窗口
     PC->GetWorldTimerManager().SetTimer(
         TimerWindowOpen, this, &UBMPlayerState_Attack::OpenLinkWindow, OpenT, false);
 
@@ -199,7 +197,7 @@ void UBMPlayerState_Attack::PollComboInput()
     ABMPlayerCharacter* PC = Cast<ABMPlayerCharacter>(GetContext());
     if (!PC) return;
 
-    // 必须消队列里的 NormalAttack
+    // 消队列里的 NormalAttack
     const bool bPressed = PC->ConsumeOneQueuedNormalAttack();
     if (!bPressed) return;
 
@@ -208,7 +206,6 @@ void UBMPlayerState_Attack::PollComboInput()
     {
         bQueuedNext = true;
     }
-    // else：窗口外按键作废
 }
 
 void UBMPlayerState_Attack::OnStepFinished()
@@ -227,7 +224,6 @@ void UBMPlayerState_Attack::OnStepFinished()
         return;
     }
 
-    // 没有下一段 / 没接上：收招回 Idle
     StartRecoverForStep(ComboIndex);
 }
 
@@ -323,7 +319,6 @@ void UBMPlayerState_Attack::StartSkill(const FBMPlayerAttackSpec& Spec)
         TimerStepEnd, this, &UBMPlayerState_Attack::OnRecoverFinished, Duration, false);
 }
 
-// ---------------- common ----------------
 
 void UBMPlayerState_Attack::FinishAttack(bool)
 {

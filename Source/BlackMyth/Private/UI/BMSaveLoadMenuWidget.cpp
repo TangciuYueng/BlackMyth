@@ -28,21 +28,6 @@ void UBMSaveLoadMenuWidget::NativeConstruct()
         Slot1->OnClicked.AddDynamic(this, &UBMSaveLoadMenuWidget::OnSlot1Clicked);
     }
 
-    if (Slot2)
-    {
-        Slot2->OnClicked.AddDynamic(this, &UBMSaveLoadMenuWidget::OnSlot2Clicked);
-    }
-
-    if (Slot3)
-    {
-        Slot3->OnClicked.AddDynamic(this, &UBMSaveLoadMenuWidget::OnSlot3Clicked);
-    }
-
-    if (Slot4)
-    {
-        Slot4->OnClicked.AddDynamic(this, &UBMSaveLoadMenuWidget::OnSlot4Clicked);
-    }
-
     // Refresh save slot display
     RefreshSaveSlotDisplay();
 }
@@ -58,21 +43,6 @@ void UBMSaveLoadMenuWidget::NativeDestruct()
     if (Slot1)
     {
         Slot1->OnClicked.RemoveAll(this);
-    }
-
-    if (Slot2)
-    {
-        Slot2->OnClicked.RemoveAll(this);
-    }
-
-    if (Slot3)
-    {
-        Slot3->OnClicked.RemoveAll(this);
-    }
-
-    if (Slot4)
-    {
-        Slot4->OnClicked.RemoveAll(this);
     }
 
     Super::NativeDestruct();
@@ -166,58 +136,92 @@ void UBMSaveLoadMenuWidget::OnSlot4Clicked()
 
 void UBMSaveLoadMenuWidget::LoadGameIndex(int32 SlotIndex)
 {
-    if (UWorld* World = GetWorld())
+    UWorld* World = GetWorld();
+    if (!World) return;
+
+    UGameInstance* GI = World->GetGameInstance();
+    if (!GI) return;
+
+    UBMSaveGameSubsystem* SaveSubsystem = GI->GetSubsystem<UBMSaveGameSubsystem>();
+    if (!SaveSubsystem) return;
+
+    // Check if save exists
+    if (!SaveSubsystem->DoesSaveExist(SlotIndex))
     {
-        if (UGameInstance* GI = World->GetGameInstance())
+        // No save exists, show notification
+        if (UBMEventBusSubsystem* EventBus = GetEventBus())
         {
-            if (UBMSaveGameSubsystem* SaveSubsystem = GI->GetSubsystem<UBMSaveGameSubsystem>())
+            EventBus->EmitNotify(NSLOCTEXT("BMSaveLoad", "NoSave", "No save file found in this slot."));
+        }
+        return;
+    }
+
+    // Check if we're in main menu
+    FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(World, true);
+    bool bIsMainMenuLevel = CurrentLevelName.Contains(TEXT("emptymap")) || CurrentLevelName.Contains(TEXT("MainMenu"));
+
+    bool bSuccess = false;
+
+    if (bIsMainMenuLevel)
+    {
+        // From main menu: need to load the map first, then restore save data
+        bSuccess = SaveSubsystem->LoadGameFromMainMenu(SlotIndex);
+        
+        if (bSuccess)
+        {
+            // Hide the menu immediately (map will change)
+            RemoveFromParent();
+            
+            // Hide all menus
+            if (UBMUIManagerSubsystem* UIManager = GetUIManager())
             {
-                // Check if save exists
-                if (!SaveSubsystem->DoesSaveExist(SlotIndex))
-                {
-                    // No save exists, show notification
-                    if (UBMEventBusSubsystem* EventBus = GetEventBus())
-                    {
-                        EventBus->EmitNotify(NSLOCTEXT("BMSaveLoad", "NoSave", "No save file found in this slot."));
-                    }
-                    return;
-                }
+                UIManager->HideAllMenus();
+            }
+        }
+        else
+        {
+            // Show error notification
+            if (UBMEventBusSubsystem* EventBus = GetEventBus())
+            {
+                EventBus->EmitNotify(NSLOCTEXT("BMSaveLoad", "LoadFailed", "Failed to load game."));
+            }
+        }
+    }
+    else
+    {
+        // In game: just load and restore position
+        bSuccess = SaveSubsystem->LoadGame(SlotIndex);
+        
+        if (bSuccess)
+        {
+            // Show success notification
+            if (UBMEventBusSubsystem* EventBus = GetEventBus())
+            {
+                EventBus->EmitNotify(NSLOCTEXT("BMSaveLoad", "LoadSuccess", "Game loaded successfully!"));
+            }
 
-                // Load the game
-                bool bSuccess = SaveSubsystem->LoadGame(SlotIndex);
-                
-                if (bSuccess)
-                {
-                    // Show success notification
-                    if (UBMEventBusSubsystem* EventBus = GetEventBus())
-                    {
-                        EventBus->EmitNotify(NSLOCTEXT("BMSaveLoad", "LoadSuccess", "Game loaded successfully!"));
-                    }
+            // Hide the menu and switch to game input mode
+            RemoveFromParent();
+            
+            if (APlayerController* PC = World->GetFirstPlayerController())
+            {
+                FInputModeGameOnly InputMode;
+                PC->SetInputMode(InputMode);
+                PC->bShowMouseCursor = false;
+            }
 
-                    // Hide the menu and switch to game input mode
-                    RemoveFromParent();
-                    
-                    if (APlayerController* PC = World->GetFirstPlayerController())
-                    {
-                        FInputModeGameOnly InputMode;
-                        PC->SetInputMode(InputMode);
-                        PC->bShowMouseCursor = false;
-                    }
-
-                    // Hide all menus
-                    if (UBMUIManagerSubsystem* UIManager = GetUIManager())
-                    {
-                        UIManager->HideAllMenus();
-                    }
-                }
-                else
-                {
-                    // Show error notification
-                    if (UBMEventBusSubsystem* EventBus = GetEventBus())
-                    {
-                        EventBus->EmitNotify(NSLOCTEXT("BMSaveLoad", "LoadFailed", "Failed to load game."));
-                    }
-                }
+            // Hide all menus
+            if (UBMUIManagerSubsystem* UIManager = GetUIManager())
+            {
+                UIManager->HideAllMenus();
+            }
+        }
+        else
+        {
+            // Show error notification
+            if (UBMEventBusSubsystem* EventBus = GetEventBus())
+            {
+                EventBus->EmitNotify(NSLOCTEXT("BMSaveLoad", "LoadFailed", "Failed to load game."));
             }
         }
     }
@@ -236,9 +240,6 @@ void UBMSaveLoadMenuWidget::RefreshSaveSlotDisplay()
 
                 // Update button text for each slot
                 UpdateSlotButton(Slot1, 1, SaveSlots);
-                UpdateSlotButton(Slot2, 2, SaveSlots);
-                UpdateSlotButton(Slot3, 3, SaveSlots);
-                UpdateSlotButton(Slot4, 4, SaveSlots);
             }
         }
     }

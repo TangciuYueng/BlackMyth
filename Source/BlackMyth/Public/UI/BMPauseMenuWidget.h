@@ -20,15 +20,8 @@ public:
     // Buttons
     UPROPERTY(meta=(BindWidget)) class UButton* ResumeButton = nullptr;
     UPROPERTY(meta=(BindWidget)) class UButton* SaveButton = nullptr;
-    UPROPERTY(meta=(BindWidget)) class UButton* SkillTreeButton = nullptr;
-    UPROPERTY(meta=(BindWidget)) class UButton* EquipmentUpgradeButton = nullptr;
-    UPROPERTY(meta=(BindWidget)) class UButton* SettingsButton = nullptr;
     UPROPERTY(meta=(BindWidget)) class UButton* ReturnToMainButton = nullptr;
 
-    // Status texts
-    UPROPERTY(meta=(BindWidget)) class UTextBlock* TitleText = nullptr;               // "��ͣ"
-    UPROPERTY(meta=(BindWidget)) class UTextBlock* CurrentStatusText = nullptr;       // "��ǰ״̬��"
-    UPROPERTY(meta=(BindWidget)) class UTextBlock* HealthText = nullptr;              // "����ֵ��350/500"
 
 protected:
     virtual void NativeConstruct() override;
@@ -52,6 +45,4 @@ private:
     void OnSettingsClicked();
     UFUNCTION()
     void OnReturnToMainClicked();
-
-    void UpdateHealthText(float Normalized);
 };

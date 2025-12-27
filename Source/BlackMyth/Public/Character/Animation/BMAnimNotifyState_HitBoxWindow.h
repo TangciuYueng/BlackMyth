@@ -3,23 +3,18 @@
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotifyState.h"
 
-#include "Core/BMTypes.h"                  // FBMDamageInfo / EBMHitReaction / 等
-#include "Character/Components/BMCombatComponent.h" // 下面第2步会在 CombatComponent 里加上下文接口
+#include "Core/BMTypes.h"                  
+#include "Character/Components/BMCombatComponent.h" 
 #include "BMAnimNotifyState_HitBoxWindow.generated.h"
 
 class UBMHitBoxComponent;
 DECLARE_LOG_CATEGORY_EXTERN(LogBMHitBoxWindow, Log, All);
 /**
- * 命中窗口 NotifyState（替换旧 Notify）
+ * 命中窗口 NotifyState
  *
  * 设计目标：
- * - 不再靠 HitBoxType 推断要开哪一个盒子
- * - 从 CombatComponent 的“当前攻击上下文”读取 HitBoxNames（一次窗口可多个）
+ * - 从 CombatComponent 的当前攻击上下文读取 HitBoxNames
  * - 负责在窗口 Begin/End 时开启/关闭 HitBox
- *
- * 使用方式：
- * - 在攻击动画上放置该 NotifyState，覆盖你旧的 Activate/Deactivate notify
- * - Attack 状态开始时由状态机写入 CombatComponent 的 ActiveHitBoxWindowContext
  */
 UCLASS(meta = (DisplayName = "BM HitBox Window"))
 class BLACKMYTH_API UBMAnimNotifyState_HitBoxWindow : public UAnimNotifyState
@@ -29,36 +24,49 @@ class BLACKMYTH_API UBMAnimNotifyState_HitBoxWindow : public UAnimNotifyState
 public:
     UBMAnimNotifyState_HitBoxWindow();
 
-    /** 若为 true：从 CombatComponent 读取当前攻击窗口上下文（推荐，工程化） */
+    /** 若为 true：从 CombatComponent 读取当前攻击窗口上下文 */
     UPROPERTY(EditAnywhere, Category = "BM|HitBoxWindow")
     bool bUseCombatContext = true;
 
-    /**
-     * 若 bUseCombatContext=false：使用这里写死的 HitBoxNames（兜底/特殊窗口）
-     * 例如同一招式不同窗口开不同盒子时可用。
-     */
     UPROPERTY(EditAnywhere, Category = "BM|HitBoxWindow", meta = (EditCondition = "!bUseCombatContext"))
     TArray<FName> HitBoxNamesOverride;
 
-    /**
-     * 窗口名（主要用于调试/区分；也可写入 Params.AttackId）
-     * 建议：同一动画里不同窗口用不同 WindowName。
-     */
+    /** 窗口名 */
     UPROPERTY(EditAnywhere, Category = "BM|HitBoxWindow")
     FName WindowId = TEXT("HitWindow");
 
     /**
-     * 是否在窗口结束时强制关闭全部 HitBox（更保险，但会影响“多窗口重叠”的高级用法）
-     * 默认 false：只关闭本窗口启用的那些（推荐）。
+     * 是否在窗口结束时强制关闭全部 HitBox
      */
     UPROPERTY(EditAnywhere, Category = "BM|HitBoxWindow")
     bool bDeactivateAllOnEnd = false;
 
 public:
-    virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration,
-        const FAnimNotifyEventReference& EventReference) override;
+/**
+ * 动画通知状态开始回调
+ *
+ * 在动画播放到该 NotifyState 的起始位置时触发，负责激活 HitBox 组件以检测攻击碰撞
+ * 根据配置从 CombatComponent 读取攻击上下文或使用硬编码的 HitBox 名称列表
+ *
+ * @param MeshComp 触发通知的骨骼网格组件
+ * @param Animation 当前播放的动画序列
+ * @param TotalDuration 该 NotifyState 的总持续时间（秒），表示 HitBox 保持激活的时长
+ * @param EventReference 动画通知事件引用，提供事件上下文和额外信息
+ */
+virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration,
+    const FAnimNotifyEventReference& EventReference) override;
 
-    virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
-        const FAnimNotifyEventReference& EventReference) override;
+/**
+ * 动画通知状态结束回调
+ *
+ * 在动画播放到该 NotifyState 的结束位置时触发，负责关闭之前激活的 HitBox 组件
+ * 根据配置决定是关闭所有 HitBox 还是仅关闭本窗口启用的 HitBox
+ *
+ * @param MeshComp 触发通知的骨骼网格组件
+ * @param Animation 当前播放的动画序列
+ * @param EventReference 动画通知事件引用，提供事件上下文和额外信息
+ */
+virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
+    const FAnimNotifyEventReference& EventReference) override;
 
 };

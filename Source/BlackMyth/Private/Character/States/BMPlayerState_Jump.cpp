@@ -23,18 +23,17 @@ void UBMPlayerState_Jump::OnEnter(float DeltaTime)
         return;
     }
 
-    // 1) 判断这次进入空中是不是“玩家主动起跳”
+    // 判断这次进入空中是不是玩家主动起跳
     const bool bWantsJumpStart = PC->ConsumePendingJump() && !Move->IsFalling() && PC->CanJump();
 
     if (bWantsJumpStart)
     {
-        // 播起跳动画（一次性） + 执行 Jump()
         bDidPlayJumpStart = true;
         PC->Jump();
 
         const float JumpStartDuration = PC->PlayJumpStartOnce(1.0f);
 
-        // Jump 动画播完后：如果还在空中，则切 FallLoop
+        // Jump 动画播完后如果还在空中，则切 FallLoop
         if (JumpStartDuration > 0.f)
         {
             FTimerDelegate D = FTimerDelegate::CreateWeakLambda(this, [this]()
@@ -50,7 +49,7 @@ void UBMPlayerState_Jump::OnEnter(float DeltaTime)
     }
     else
     {
-        // 2) 非起跳导致的下落：直接 FallLoop
+        // 非起跳导致的下落直接 FallLoop
         EnterFallLoop();
     }
 }
