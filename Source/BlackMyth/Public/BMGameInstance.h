@@ -89,6 +89,9 @@ private:
     FDelegateHandle PreLoadMapHandle;
     void HandlePreLoadMap(const FString& MapName);
 
+    // Force-stop any audio components playing in the specified world and clear level music state
+    void ForceStopAllMusicInWorld(UWorld* World);
+
     // If intro video plays, delay level music until video finishes
     FString PendingLevelMusicPath;
 
