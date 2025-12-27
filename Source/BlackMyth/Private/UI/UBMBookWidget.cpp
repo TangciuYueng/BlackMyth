@@ -122,6 +122,19 @@ void UBMBookWidget::NativeOnInitialized()
     Pages.Add(FText::FromString(TEXT(
         "这一次，我的金箍棒不为护法，只为打碎这尊他们为我塑造的、名为‘斗战胜佛’的琉璃金身。\n"
         "\n"
+        "(按 Enter 翻页)"
+    )));
+    Pages.Add(FText::FromString(TEXT(
+        "键位设置\n"
+        "W 向前移动                                                                    A 向左移动\n"
+        "S 向后移动                                                                     D 向右移动\n"
+        "鼠标左键 普通攻击                                                       鼠标右键 技能1\n"
+        "Q 技能2                                                                          E 技能3\n"
+        "Tab 暂停菜单                                                                I 背包\n"
+        "Enter 跳过剧情                 \n"
+        "1-9（不在背包界面） 使用法器                                 1-9（在背包界面） 购买法器\n"
+        "M 金币作弊                                                                    L 等级作弊\n"
+        "\n"
         "(按 Enter 退出)"
     )));
 
