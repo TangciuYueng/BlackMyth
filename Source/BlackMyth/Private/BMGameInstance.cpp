@@ -11,6 +11,7 @@
 #include "UObject/Package.h"
 #include "Sound/SoundBase.h"
 #include "Components/AudioComponent.h"
+#include "UObject/UObjectIterator.h"
 #include "MoviePlayer.h"
 #include "Misc/Paths.h"
 #include "HAL/FileManager.h"
@@ -151,8 +152,62 @@ void UBMGameInstance::HandlePostLoadMap(UWorld* LoadedWorld)
     }
     else
     {
+        // On entering a new target level, ensure any preexisting audio is stopped.
+        // For level2 specifically, stop all audio globally to avoid leftover level1 tracks from other worlds.
+        const FString Level2Path = TEXT("/Game/Audio/level2.level2");
+        if (FCString::Strcmp(TargetSoundPath, *Level2Path) == 0)
+        {
+            // Stop tracked component if present
+            if (LevelMusicComp)
+            {
+                LevelMusicComp->Stop();
+                LevelMusicComp = nullptr;
+                CurrentLevelMusicPath.Empty();
+            }
+            // Stop all UAudioComponent instances regardless of world
+            for (TObjectIterator<UAudioComponent> It; It; ++It)
+            {
+                UAudioComponent* AC = *It;
+                if (!AC) continue;
+                if (AC->IsPlaying())
+                {
+                    AC->Stop();
+                }
+            }
+        }
+        else
+        {
+            // Otherwise just stop audio in the target world
+            ForceStopAllMusicInWorld(LoadedWorld);
+        }
+
         StartLevelMusicForWorld(LoadedWorld, TargetSoundPath);
         UE_LOG(LogBlackMyth, Log, TEXT("Playing level music '%s' on map '%s' (BaseName=%s)"), TargetSoundPath, *Combined, *BaseLevelName);
+    }
+}
+
+void UBMGameInstance::ForceStopAllMusicInWorld(UWorld* World)
+{
+    if (!World) return;
+
+    // Stop tracked level music component if it belongs to this world
+    if (LevelMusicComp && LevelMusicComp->GetWorld() == World)
+    {
+        LevelMusicComp->Stop();
+        LevelMusicComp = nullptr;
+        CurrentLevelMusicPath.Empty();
+    }
+
+    // Stop any other playing audio components in the world
+    for (TObjectIterator<UAudioComponent> It; It; ++It)
+    {
+        UAudioComponent* AC = *It;
+        if (!AC) continue;
+        if (AC->GetWorld() != World) continue;
+        if (AC->IsPlaying())
+        {
+            AC->Stop();
+        }
     }
 }
 
@@ -213,6 +268,59 @@ void UBMGameInstance::PlayMusic(UWorld* World, const TCHAR* SoundPath, bool bLoo
 
     // Stop current music to ensure only one /Game/Audio track plays
     StopLevelMusic();
+
+    // If playing death music, proactively stop any other audio components playing in this world
+    // This ensures death music is the only audible track (stops ambient/other music tracks)
+    const FString DeathMusicPath = TEXT("/Game/Audio/death.death");
+    if (FCString::Strcmp(SoundPath, *DeathMusicPath) == 0)
+    {
+        for (TObjectIterator<UAudioComponent> It; It; ++It)
+        {
+            UAudioComponent* AC = *It;
+            if (!AC) continue;
+            // Only affect components that belong to the same world and are currently playing
+            if (AC->IsPlaying() && AC->GetWorld() == World)
+            {
+                AC->Stop();
+            }
+        }
+    }
+
+    // General case: stop other audio components in this world to avoid overlapping level music
+    // Respect boss2 protection: if boss phase2 music is active and should be preserved, skip stopping it
+    const FString Boss2MusicPath = TEXT("/Game/Audio/boss2.boss2");
+    bool bPlayerDead = false;
+    if (UWorld* W = GetWorld())
+    {
+        if (APlayerController* PC = W->GetFirstPlayerController())
+        {
+            if (APawn* Pawn = PC->GetPawn())
+            {
+                if (UBMStatsComponent* Stats = Pawn->FindComponentByClass<UBMStatsComponent>())
+                {
+                    bPlayerDead = Stats->IsDead();
+                }
+            }
+        }
+    }
+
+    const bool bPreserveBoss2 = (!bIsBossPhase2Defeated && !bPlayerDead && !CurrentLevelMusicPath.IsEmpty() && CurrentLevelMusicPath.Equals(Boss2MusicPath, ESearchCase::IgnoreCase));
+
+    for (TObjectIterator<UAudioComponent> It; It; ++It)
+    {
+        UAudioComponent* AC = *It;
+        if (!AC) continue;
+        if (AC->GetWorld() != World) continue;
+        if (!AC->IsPlaying()) continue;
+        // Skip the current LevelMusicComp pointer if present (it will be handled by StopLevelMusic above)
+        if (AC == LevelMusicComp) continue;
+        // If we must preserve boss2 music, skip stopping components that are playing boss2
+        if (bPreserveBoss2 && AC->Sound && AC->Sound->GetPathName().Contains(Boss2MusicPath))
+        {
+            continue;
+        }
+        AC->Stop();
+    }
 
     if (USoundBase* SoundAsset = LoadObject<USoundBase>(nullptr, SoundPath))
     {
@@ -417,6 +525,11 @@ void UBMGameInstance::ResetBossMusicState()
 
 void UBMGameInstance::HandlePreLoadMap(const FString& MapName)
 {
+    // Ensure any playing music in the current world is stopped before a new map loads.
+    if (UWorld* CurW = GetWorld())
+    {
+        ForceStopAllMusicInWorld(CurW);
+    }
     // Check if we are loading the first level and haven't played the video yet
     // MapName usually comes as full path, e.g. "/Game/Stylized_PBR_Nature/Maps/Stylized_Nature_ExampleScene"
     
