@@ -20,6 +20,8 @@ public:
     UPROPERTY(meta=(BindWidget)) class UProgressBar* BossHealthBar = nullptr;
     UPROPERTY(meta=(BindWidget)) class UTextBlock* PhaseHintText = nullptr;
 
+    virtual void NativeConstruct() override;
+
 protected:
     virtual void BindEventBus(class UBMEventBusSubsystem* EventBus) override;
     virtual void UnbindEventBus(class UBMEventBusSubsystem* EventBus) override;

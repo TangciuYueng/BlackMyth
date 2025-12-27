@@ -60,7 +60,8 @@ void UBMGameInstance::RestorePlayerPersistentData(APlayerController* PC)
     }
     if (UBMExperienceComponent* XP = Pawn->FindComponentByClass<UBMExperienceComponent>())
     {
-        XP->SetLevel(PersistentLevel, /*bApplyGrowth*/ false);
+        // 设置等级并应用成长数据（bApplyGrowth = true）
+        XP->SetLevel(PersistentLevel, /*bApplyGrowth*/ true);
         XP->SetCurrentXP(PersistentExp, /*bCheckLevelUp*/ false);
         XP->SetSkillPoints(PersistentSkillPoints);
         XP->SetAttributePoints(PersistentAttributePoints);

@@ -3,6 +3,7 @@
 #include "Character/Enemy/BMEnemyBoss.h"
 #include "Character/Components/BMStatsComponent.h"
 #include "System/Save/BMSaveGameSubsystem.h"
+#include "System/Event/BMEventBusSubsystem.h"
 #include "TimerManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
@@ -291,6 +292,16 @@ void UBMEnemyManagerSubsystem::CheckLevelCompletionAndTransition()
         
         UE_LOG(LogTemp, Warning, TEXT("[BMEnemyManagerSubsystem] First level completed! Transitioning to boss level in 5 seconds..."));
         
+        // 通过事件总线发送胜利通知
+        if (UGameInstance* GameInstance = World->GetGameInstance())
+        {
+            if (UBMEventBusSubsystem* EventBus = GameInstance->GetSubsystem<UBMEventBusSubsystem>())
+            {
+                FText VictoryMessage = FText::FromString(TEXT("Victory! All enemies defeated! Loading next level in 5 seconds..."));
+                EventBus->EmitNotify(VictoryMessage);
+            }
+        }
+        
         // 延迟5秒后切换到Boss关卡
         World->GetTimerManager().SetTimer(
             LevelTransitionTimerHandle,
@@ -311,7 +322,7 @@ void UBMEnemyManagerSubsystem::TransitionToNextLevel()
         return;
     }
 
-    // ===== 关键：切换前保存玩家数据 =====
+    // ===== 切换前保存玩家数据 =====
     if (UGameInstance* GameInstance = World->GetGameInstance())
     {
         if (UBMSaveGameSubsystem* SaveSystem = GameInstance->GetSubsystem<UBMSaveGameSubsystem>())
@@ -333,6 +344,16 @@ void UBMEnemyManagerSubsystem::TransitionToNextLevel()
         else
         {
             UE_LOG(LogTemp, Error, TEXT("[BMEnemyManagerSubsystem] SaveGameSubsystem not found! Cannot save player data."));
+        }
+    }
+
+    // 发送加载通知
+    if (UGameInstance* GameInstance = World->GetGameInstance())
+    {
+        if (UBMEventBusSubsystem* EventBus = GameInstance->GetSubsystem<UBMEventBusSubsystem>())
+        {
+            FText LoadingMessage = FText::FromString(TEXT("Loading Boss Level..."));
+            EventBus->EmitNotify(LoadingMessage);
         }
     }
 

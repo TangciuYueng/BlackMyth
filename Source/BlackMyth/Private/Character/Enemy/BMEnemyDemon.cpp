@@ -40,14 +40,14 @@ void ABMEnemyDemon::BeginPlay()
     // ApplyConfiguredAssets();
     // 组件/配置（HurtBox/HitBox/AttackSpecs）
     BuildAttackSpecs();
-
+    BuildLootTable();
     // 调试：启用 HitBox/HurtBox 可视化
-    if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
-    for (UBMHurtBoxComponent* HB : HurtBoxes)
-    {
-        if (!HB) continue;
-        HB->bDebugDraw = true;
-    }
+    //if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
+    //for (UBMHurtBoxComponent* HB : HurtBoxes)
+    //{
+    //    if (!HB) continue;
+    //    HB->bDebugDraw = true;
+    //}
     Super::BeginPlay();
 }
 

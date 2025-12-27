@@ -1,9 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
-
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -13,7 +7,7 @@
 #include "BMNotificationWidget.generated.h"
 
 /**
- * Notification list widget. Blueprint should subclass this and bind a VerticalBox named MessageList.
+ * Notification list widget. 
  */
 UCLASS()
 class BLACKMYTH_API UBMNotificationWidget : public UBMWidgetBase
@@ -22,6 +16,10 @@ class BLACKMYTH_API UBMNotificationWidget : public UBMWidgetBase
 
 public:
     UPROPERTY(meta=(BindWidget)) UVerticalBox* MessageList = nullptr;
+
+    // Display a notification with the given text
+    UFUNCTION(BlueprintCallable, Category = "Notification")
+    void ShowNotification(const FString& Message);
 
 protected:
     virtual void BindEventBus(class UBMEventBusSubsystem* EventBus) override;

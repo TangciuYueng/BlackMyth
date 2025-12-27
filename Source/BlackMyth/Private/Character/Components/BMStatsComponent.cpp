@@ -67,7 +67,7 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
 
     InOutInfo.DamageValue = Applied;
 
-    // Emit HP change to UI ONLY for player-controlled pawn
+    // Emit HP change to UI for player-controlled pawn OR boss
     if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))
     {
         if (OwnerPawn->IsPlayerControlled())
@@ -78,6 +78,21 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
                 {
                     const float Normalized = Stats.MaxHP > 0.f ? Stats.HP / Stats.MaxHP : 0.f;
                     Bus->EmitPlayerHealth(Normalized);
+                }
+            }
+        }
+        else
+        {
+            // Check if this is a boss character
+            if (OwnerPawn->ActorHasTag(TEXT("Boss")))
+            {
+                if (UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr)
+                {
+                    if (auto* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+                    {
+                        const float Normalized = Stats.MaxHP > 0.f ? Stats.HP / Stats.MaxHP : 0.f;
+                        Bus->EmitBossHealth(Normalized);
+                    }
                 }
             }
         }

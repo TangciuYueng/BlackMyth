@@ -30,6 +30,12 @@ void UBMNotificationWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
     }
 }
 
+void UBMNotificationWidget::ShowNotification(const FString& Message)
+{
+    if (Message.IsEmpty()) return;
+    HandleNotify(FText::FromString(Message));
+}
+
 void UBMNotificationWidget::HandleNotify(const FText& Msg)
 {
     if (!MessageList) return;

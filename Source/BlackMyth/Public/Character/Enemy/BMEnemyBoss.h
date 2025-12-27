@@ -109,10 +109,10 @@ protected:
 
     // ===== 二阶段调参 =====
     UPROPERTY(EditDefaultsOnly, Category = "BM|Boss|Phase2")
-    float Phase2MaxHP = 300.f;               
+    float Phase2MaxHP = 3000.f;               
 
     UPROPERTY(EditDefaultsOnly, Category = "BM|Boss|Phase2")
-    float Phase2BaseDamage = 32.f;           
+    float Phase2BaseDamage = 60.f;           
 
 protected:
     // ===== HurtBox（配置式组件）=====

@@ -114,7 +114,7 @@ bool UBMExperienceComponent::PerformLevelUp()
     const float XPUsed = CalculateXPForNextLevel(OldLevel);
     CurrentXP -= XPUsed;
     
-    // 确保经验值不会变成负数（应该不会发生，但为了安全起见）
+    // 确保经验值不会变成负数
     CurrentXP = FMath::Max(0.0f, CurrentXP);
 
     // 授予技能和属性点
@@ -312,7 +312,6 @@ void UBMExperienceComponent::SetLevel(int32 NewLevel, bool bApplyGrowth)
     }
 
     const int32 OldLevel = Level;
-    Level = NewLevel;
 
     // 如果应用增长，模拟升级
     if (bApplyGrowth && OldLevel < NewLevel)
@@ -324,24 +323,36 @@ void UBMExperienceComponent::SetLevel(int32 NewLevel, bool bApplyGrowth)
         SkillPoints = 0;
         AttributePoints = 0;
 
-        // 模拟升级以获取正确的点数总数
+        // 逐级模拟升级以应用正确的属性增长
         for (int32 L = OldLevel; L < NewLevel; L++)
         {
+            // 临时设置等级为 L + 1（下一级）
+            Level = L + 1;
+            
             SkillPoints += SkillPointsPerLevel;
             AttributePoints += AttributePointsPerLevel;
+            
+            // 应用该等级的属性增长
             ApplyLevelUpBonuses();
+            
+            UE_LOG(LogBMExperience, Log, TEXT("SetLevel: Applied growth for level %d"), Level);
         }
 
         // 恢复原始点数（从存档数据）
         SkillPoints = FMath::Max(SkillPoints, OldSkillPoints);
         AttributePoints = FMath::Max(AttributePoints, OldAttributePoints);
     }
+    else
+    {
+        // 不应用增长时，直接设置等级
+        Level = NewLevel;
+    }
 
     // 广播事件
-    if (OldLevel != NewLevel)
+    if (OldLevel != Level)
     {
-        OnLevelUpNative.Broadcast(OldLevel, NewLevel);
-        EmitLevelUpToEventBus(OldLevel, NewLevel);
+        OnLevelUpNative.Broadcast(OldLevel, Level);
+        EmitLevelUpToEventBus(OldLevel, Level, false);
     }
     OnSkillPointChangedNative.Broadcast(SkillPoints);
     OnAttributePointChangedNative.Broadcast(AttributePoints);
@@ -353,7 +364,8 @@ void UBMExperienceComponent::SetLevel(int32 NewLevel, bool bApplyGrowth)
     const float Percent = GetExpPercent();
     EmitXPChangedToEventBus(CurrentXP, MaxXP, Percent);
 
-    UE_LOG(LogBMExperience, Log, TEXT("SetLevel: Set to level %d"), NewLevel);
+    UE_LOG(LogBMExperience, Log, TEXT("SetLevel: Set to level %d (ApplyGrowth: %s)"), 
+        Level, bApplyGrowth ? TEXT("true") : TEXT("false"));
 }
 
 void UBMExperienceComponent::SetCurrentXP(float NewXP, bool bCheckLevelUp)
@@ -479,11 +491,19 @@ UBMEventBusSubsystem* UBMExperienceComponent::GetEventBusSubsystem() const
     return nullptr;
 }
 
-void UBMExperienceComponent::EmitLevelUpToEventBus(int32 OldLevel, int32 NewLevel)
+void UBMExperienceComponent::EmitLevelUpToEventBus(int32 OldLevel, int32 NewLevel, bool Notify)
 {
     if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
     {
         EventBus->EmitPlayerLevelUp(OldLevel, NewLevel);
+        
+        // 显示升级通知
+        if (Notify)
+        {
+            FString NotificationMessage = FString::Printf(TEXT("Level Up! %d -> %d"),
+                OldLevel, NewLevel);
+            EventBus->EmitNotify(FText::FromString(NotificationMessage));
+        }
     }
 }
 

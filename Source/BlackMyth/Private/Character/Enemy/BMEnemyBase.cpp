@@ -18,6 +18,7 @@
 #include "Character/Enemy/States/BMEnemyState_Dodge.h"
 
 #include "System/BMEnemyManagerSubsystem.h"
+#include "System/Event/BMEventBusSubsystem.h"
 #include "Core/BMDataSubsystem.h"
 
 #include "Animation/AnimSingleNodeInstance.h"
@@ -191,7 +192,6 @@ void ABMEnemyBase::DropLoot()
 
     if (!PlayerPawn)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[%s] DropLoot: No player found"), *GetName());
         return;
     }
 
@@ -212,7 +212,6 @@ void ABMEnemyBase::DropLoot()
             if (PlayerInventory->AddCurrency(Currency))
             {
                 TotalCurrency = Currency;
-                UE_LOG(LogTemp, Log, TEXT("[%s] DropLoot: Dropped %d currency"), *GetName(), Currency);
             }
         }
     }
@@ -223,10 +222,8 @@ void ABMEnemyBase::DropLoot()
         const float Exp = FMath::FRandRange(FMath::Max(0.0f, ExpDropMin), FMath::Max(0.0f, ExpDropMax));
         if (Exp > 0.0f)
         {
-            const int32 LevelsGained = PlayerExperience->AddXP(Exp);
+            PlayerExperience->AddXP(Exp);
             TotalExp = Exp;
-            UE_LOG(LogTemp, Log, TEXT("[%s] DropLoot: Dropped %.2f XP (Player gained %d levels)"),
-                *GetName(), Exp, LevelsGained);
         }
     }
 
@@ -256,47 +253,63 @@ void ABMEnemyBase::DropLoot()
             // 尝试添加物品
             if (PlayerInventory->AddItem(LootItem.ItemID, Quantity))
             {
-                DroppedItems.Add(FString::Printf(TEXT("%s x%d"), *LootItem.ItemID.ToString(), Quantity));
-                UE_LOG(LogTemp, Log, TEXT("[%s] DropLoot: Dropped item %s x%d (Probability: %.2f%%)"),
-                    *GetName(), *LootItem.ItemID.ToString(), Quantity, LootItem.Probability * 100.0f);
-            }
-            else
-            {
-                UE_LOG(LogTemp, Warning, TEXT("[%s] DropLoot: Failed to add item %s x%d (inventory full or item not found)"),
-                    *GetName(), *LootItem.ItemID.ToString(), Quantity);
+                // 移除前缀
+                FString ItemName = LootItem.ItemID.ToString();
+                ItemName.RemoveFromStart(TEXT("Item_"));
+                DroppedItems.Add(FString::Printf(TEXT("%s x%d"), *ItemName, Quantity));
             }
         }
     }
 
-    // 汇总日志输出
-    FString SummaryLog = FString::Printf(TEXT("===== [%s] Loot Summary ====="), *GetName());
+    // 构建通知消息
+    FString NotificationMessage;
+    bool bHasLoot = false;
 
     if (TotalCurrency > 0)
     {
-        SummaryLog += FString::Printf(TEXT("\n  Currency: +%d"), TotalCurrency);
+        NotificationMessage += FString::Printf(TEXT("Currency: +%d"), TotalCurrency);
+        bHasLoot = true;
     }
 
     if (TotalExp > 0.0f)
     {
-        SummaryLog += FString::Printf(TEXT("\n  Experience: +%.2f"), TotalExp);
+        if (bHasLoot)
+        {
+            NotificationMessage += TEXT(" | ");
+        }
+        NotificationMessage += FString::Printf(TEXT("XP: +%.0f"), TotalExp);
+        bHasLoot = true;
     }
 
     if (DroppedItems.Num() > 0)
     {
-        SummaryLog += TEXT("\n  Items:");
-        for (const FString& Item : DroppedItems)
+        if (bHasLoot)
         {
-            SummaryLog += FString::Printf(TEXT("\n    - %s"), *Item);
+            NotificationMessage += TEXT(" | ");
+        }
+        NotificationMessage += TEXT("Items: ");
+        for (int32 i = 0; i < DroppedItems.Num(); ++i)
+        {
+            NotificationMessage += DroppedItems[i];
+            if (i < DroppedItems.Num() - 1)
+            {
+                NotificationMessage += TEXT(", ");
+            }
+        }
+        bHasLoot = true;
+    }
+
+    // 通过事件总线发送通知
+    if (bHasLoot)
+    {
+        if (UGameInstance* GI = GetGameInstance())
+        {
+            if (UBMEventBusSubsystem* EventBus = GI->GetSubsystem<UBMEventBusSubsystem>())
+            {
+                EventBus->EmitNotify(FText::FromString(NotificationMessage));
+            }
         }
     }
-    else
-    {
-        SummaryLog += TEXT("\n  Items: None");
-    }
-
-    SummaryLog += TEXT("\n=============================");
-
-    UE_LOG(LogTemp, Log, TEXT("%s"), *SummaryLog);
 }
 
 bool ABMEnemyBase::IsInAttackRange() const
@@ -372,8 +385,9 @@ bool ABMEnemyBase::SelectRandomAttackForCurrentTarget(FBMEnemyAttackSpec& OutSpe
 
     const float Dist2D = FVector::Dist2D(T->GetActorLocation(), GetActorLocation());
 
-    // 过滤可用攻击
+    // 过滤可用攻击并记录权重
     TArray<const FBMEnemyAttackSpec*> Candidates;
+    TArray<float> Weights;
     float TotalW = 0.f;
 
     for (const FBMEnemyAttackSpec& S : AttackSpecs)
@@ -384,22 +398,25 @@ bool ABMEnemyBase::SelectRandomAttackForCurrentTarget(FBMEnemyAttackSpec& OutSpe
         
         const float W = FMath::Max(0.01f, S.Weight);
         Candidates.Add(&S);
+        Weights.Add(W);
         TotalW += W;
     }
 
     if (Candidates.Num() == 0) return false;
 
+    // 按权重随机选择
     float R = FMath::FRandRange(0.f, TotalW);
-    for (const FBMEnemyAttackSpec* S : Candidates)
+    for (int32 i = 0; i < Candidates.Num(); ++i)
     {
-        R -= FMath::Max(0.01f, S->Weight);
+        R -= Weights[i];
         if (R <= 0.f)
         {
-            OutSpec = *S;
+            OutSpec = *Candidates[i];
             return true;
         }
     }
 
+    // 容错：返回最后一个
     OutSpec = *Candidates.Last();
     return true;
 }

@@ -301,22 +301,7 @@ bool UBMSaveGameSubsystem::DeleteSave(int32 Slot)
     }
 
     bool bSuccess = UGameplayStatics::DeleteGameInSlot(SlotName, 0);
-    
-    // 发送删除结果通知
-    if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
-    {
-        if (bSuccess)
-        {
-            UE_LOG(LogBMSave, Log, TEXT("Successfully deleted save from slot %d"), Slot);
-            EventBus->EmitNotify(NSLOCTEXT("BMSave", "Deleted", "Save deleted successfully"));
-        }
-        else
-        {
-            UE_LOG(LogBMSave, Error, TEXT("Failed to delete save from slot %d"), Slot);
-            EventBus->EmitNotify(NSLOCTEXT("BMSave", "DeleteFailed", "Failed to delete save"));
-        }
-    }
-
+   
     return bSuccess;
 }
 
@@ -491,11 +476,12 @@ void UBMSaveGameSubsystem::ApplySaveData(UBMSaveData* SaveData, ABMPlayerCharact
         UE_LOG(LogBMSave, Log, TEXT("ApplySaveData: Skipped position restore (using PlayerStart)"));
     }
 
-    // 2. 恢复完整 Stats
+    // 2. 恢复完整的属性数据（从存档中读取）
     if (UBMStatsComponent* Stats = Player->GetStats())
     {
         FBMStatBlock& StatBlock = Stats->GetStatBlockMutable();
         
+        // 恢复所有属性（包括最大值和当前值）
         StatBlock.MaxHP = SaveData->MaxHP;
         StatBlock.HP = FMath::Clamp(SaveData->HP, 0.0f, SaveData->MaxHP);
         StatBlock.MaxMP = SaveData->MaxMP;
@@ -506,28 +492,28 @@ void UBMSaveGameSubsystem::ApplySaveData(UBMSaveData* SaveData, ABMPlayerCharact
         StatBlock.Defense = SaveData->Defense;
         StatBlock.MoveSpeed = SaveData->MoveSpeed;
         
-        // TODO: 如果需要刷新 UI，可以在这里触发事件
-        // Stats->OnHPChanged.Broadcast(StatBlock.HP);
+        UE_LOG(LogBMSave, Log, TEXT("ApplySaveData: Restored complete stats - MaxHP: %.1f, HP: %.1f, Attack: %.1f, Defense: %.1f, MaxStamina: %.1f, Stamina: %.1f"), 
+            StatBlock.MaxHP, StatBlock.HP, StatBlock.Attack, StatBlock.Defense, StatBlock.MaxStamina, StatBlock.Stamina);
     }
     else
     {
         UE_LOG(LogBMSave, Warning, TEXT("ApplySaveData: Stats component not found"));
     }
 
-    // 3. 恢复 Experience
+    // 3. 恢复等级和经验数据（不应用属性增长）
     if (UBMExperienceComponent* ExpComp = Player->GetComponentByClass<UBMExperienceComponent>())
     {
-        // 设置等级（会自动应用成长数据）
-        ExpComp->SetLevel(SaveData->PlayerLevel, true);
+        // 直接设置等级，不应用属性增长（bApplyGrowth = false）
+        ExpComp->SetLevel(SaveData->PlayerLevel, false);
         
-        // 设置经验值（会自动检查升级）
-        ExpComp->SetCurrentXP(SaveData->CurrentXP);
+        // 设置经验值（不触发升级检查）
+        ExpComp->SetCurrentXP(SaveData->CurrentXP, false);
         
         // 设置技能点数和属性点数
         ExpComp->SetSkillPoints(SaveData->SkillPoints);
         ExpComp->SetAttributePoints(SaveData->AttributePoints);
         
-        UE_LOG(LogBMSave, Log, TEXT("ApplySaveData: Restored experience data - Level: %d, XP: %f, SkillPoints: %d, AttributePoints: %d"), 
+        UE_LOG(LogBMSave, Log, TEXT("ApplySaveData: Restored experience - Level: %d, XP: %.1f, SkillPoints: %d, AttributePoints: %d"), 
             SaveData->PlayerLevel, SaveData->CurrentXP, SaveData->SkillPoints, SaveData->AttributePoints);
     }
     else
@@ -562,7 +548,6 @@ void UBMSaveGameSubsystem::ApplySaveData(UBMSaveData* SaveData, ABMPlayerCharact
         }
         
         // 恢复货币
-        // 使用存档系统专用接口直接设置货币值
         InvComp->SetCurrencyDirect(SaveData->Currency);
         
         UE_LOG(LogBMSave, Log, TEXT("ApplySaveData: Restored inventory - %d item types, Currency: %d"), 
@@ -572,6 +557,8 @@ void UBMSaveGameSubsystem::ApplySaveData(UBMSaveData* SaveData, ABMPlayerCharact
     {
         UE_LOG(LogBMSave, Warning, TEXT("ApplySaveData: Inventory component not found"));   
     }
+    
+    UE_LOG(LogBMSave, Log, TEXT("ApplySaveData: Successfully restored all data"));
 }
 
 bool UBMSaveGameSubsystem::SaveCurrentGame()

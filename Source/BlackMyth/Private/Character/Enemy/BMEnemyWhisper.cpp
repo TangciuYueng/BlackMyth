@@ -40,13 +40,14 @@ void ABMEnemyWhisper::BeginPlay()
 
     // ApplyConfiguredAssets();
     BuildAttackSpecs();
+    BuildLootTable();
 
     // 调试可视化
-    if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
-    for (UBMHurtBoxComponent* HB : HurtBoxes)
-    {
-        if (HB) HB->bDebugDraw = true;
-    }
+    //if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
+    //for (UBMHurtBoxComponent* HB : HurtBoxes)
+    //{
+    //    if (HB) HB->bDebugDraw = true;
+    //}
 
     Super::BeginPlay();
 }
