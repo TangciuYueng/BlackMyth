@@ -29,7 +29,7 @@ ABMEnemyDummy::ABMEnemyDummy()
 
     BuildHurtBoxes();
     BuildHitBoxes();
-    BuildLootTable();
+    
 
     AttackLightAsset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01.MM_Attack_01'")));
     AttackHeavy1Asset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_02.MM_Attack_02'")));
@@ -45,14 +45,14 @@ void ABMEnemyDummy::BeginPlay()
     // ApplyConfiguredAssets();
     // 组件/配置也在 Super 之前准备好
     BuildAttackSpecs();
-
+    BuildLootTable();
     // 调试：启用 HitBox/HurtBox 可视化
-    if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
-    for (UBMHurtBoxComponent* HB : HurtBoxes)
-    {
-        if (!HB) continue;
-        HB->bDebugDraw = true;
-    }
+    //if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
+    //for (UBMHurtBoxComponent* HB : HurtBoxes)
+    //{
+    //    if (!HB) continue;
+    //    HB->bDebugDraw = true;
+    //}
     Super::BeginPlay();
 }
 

@@ -163,7 +163,7 @@ private:
     /**
      * 发送升级事件到 EventBus
      */
-    void EmitLevelUpToEventBus(int32 OldLevel, int32 NewLevel);
+    void EmitLevelUpToEventBus(int32 OldLevel, int32 NewLevel, bool Notify = true);
 
     /**
      * 发送经验值变化事件到 EventBus

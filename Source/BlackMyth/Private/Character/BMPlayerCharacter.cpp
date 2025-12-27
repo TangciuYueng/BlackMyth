@@ -15,6 +15,7 @@
 #include "Character/States/BMPlayerState_Death.h"
 #include "Character/States/BMPlayerState_Dodge.h"
 #include "System/Save/BMSaveGameSubsystem.h"
+#include "System/Event/BMEventBusSubsystem.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/InputComponent.h"
@@ -272,12 +273,12 @@ void ABMPlayerCharacter::BeginPlay()
     PlayIdleLoop();
 
 	// 调试：启用 HitBox/HurtBox 可视化
-    if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
-    for (UBMHurtBoxComponent* HB : HurtBoxes)
-    {
-        if (!HB) continue;
-        HB->bDebugDraw = true;
-    }
+    //if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
+    //for (UBMHurtBoxComponent* HB : HurtBoxes)
+    //{
+    //    if (!HB) continue;
+    //    HB->bDebugDraw = true;
+    //}
 
     // ===== 切换关卡后自动加载存档 =====
     if (UWorld* World = GetWorld())
@@ -312,18 +313,9 @@ void ABMPlayerCharacter::BeginPlay()
                     });
                 }
                 else
-                {
-                    UE_LOG(LogTemp, Log, TEXT("[BMPlayerCharacter] No auto-save found, applying default level growth data."));
-                    
-                    // 没有存档时，应用当前等级的成长数据
-                    if (Experience)
-                    {
-                        const int32 CurrentLevel = Experience->GetLevel();
-                        UE_LOG(LogTemp, Log, TEXT("[BMPlayerCharacter] Applying growth data for level %d"), CurrentLevel);
-                        
-                        // 通过 SetLevel 应用成长数据
-                        Experience->SetLevel(CurrentLevel, true);
-                    }
+                {                   
+                    UE_LOG(LogTemp, Log, TEXT("[BMPlayerCharacter] No auto-save found. Using current state (Level: %d)."), 
+                        Experience ? Experience->GetLevel() : 1);
                 }
             }
         }
@@ -427,7 +419,7 @@ void ABMPlayerCharacter::BuildAttackSteps()
         Slot.Spec.HitBoxNames = { TEXT("HeavyAttack") };
         Slot.Spec.HitBoxParams.bOverrideReaction = true;
         Slot.Spec.HitBoxParams.OverrideReaction = EBMHitReaction::Heavy;
-        Slot.Spec.HitBoxParams.DamageMultiplier = 1.3f;
+        Slot.Spec.HitBoxParams.DamageMultiplier = 1.5f;
 
         Slot.Spec.bUninterruptible = true;
         Slot.Spec.InterruptChance = 0.f;
@@ -452,13 +444,13 @@ void ABMPlayerCharacter::BuildAttackSteps()
         Slot.Spec.HitBoxNames = { TEXT("HeavyAttack") };
         Slot.Spec.HitBoxParams.bOverrideReaction = true;
         Slot.Spec.HitBoxParams.OverrideReaction = EBMHitReaction::Heavy;
-        Slot.Spec.HitBoxParams.DamageMultiplier = 1.5f;
+        Slot.Spec.HitBoxParams.DamageMultiplier = 1.8f;
 
         Slot.Spec.bUninterruptible = true;
         Slot.Spec.InterruptChance = 0.f;
         Slot.Spec.InterruptChanceOnHeavyHit = 0.f;
 
-        Slot.Spec.Cooldown = 2.0f;
+        Slot.Spec.Cooldown = 4.0f;
 
         SkillSlots.Add(Slot);
     }
@@ -466,7 +458,7 @@ void ABMPlayerCharacter::BuildAttackSteps()
         FBMPlayerSkillSlot Slot;
         Slot.Action = EBMCombatAction::Skill3;
 
-        Slot.StaminaCost = 80.f;
+        Slot.StaminaCost = 70.f;
 
         Slot.Spec.Id = TEXT("Skill3");
         Slot.Spec.Anim = AnimSkill3;
@@ -477,13 +469,13 @@ void ABMPlayerCharacter::BuildAttackSteps()
         Slot.Spec.HitBoxNames = { TEXT("HeavyAttack") };
         Slot.Spec.HitBoxParams.bOverrideReaction = true;
         Slot.Spec.HitBoxParams.OverrideReaction = EBMHitReaction::Heavy;
-        Slot.Spec.HitBoxParams.DamageMultiplier = 0.01f;
+        Slot.Spec.HitBoxParams.DamageMultiplier = 2.5f;
 
         Slot.Spec.bUninterruptible = true;
         Slot.Spec.InterruptChance = 0.f;
         Slot.Spec.InterruptChanceOnHeavyHit = 0.f;
 
-        Slot.Spec.Cooldown = 2.0f;
+        Slot.Spec.Cooldown = 8.0f;
 
         SkillSlots.Add(Slot);
     }
@@ -630,6 +622,21 @@ void ABMPlayerCharacter::TriggerHotbarSlot(int32 SlotIndex)
 		const bool bCanAfford = (UnitCost == 0) || Inventory->CanAfford(UnitCost);
 		if (!bCanAfford)
 		{
+			// 通过事件总线通知玩家金币不足
+			if (UWorld* World = GetWorld())
+			{
+				if (UGameInstance* GI = World->GetGameInstance())
+				{
+					if (UBMEventBusSubsystem* EventBus = GI->GetSubsystem<UBMEventBusSubsystem>())
+					{
+						FString ItemName = ItemID.ToString();
+						ItemName.RemoveFromStart(TEXT("Item_"));
+						FString NotificationMessage = FString::Printf(TEXT("Insufficient Currency: %s costs %d, have %d"), 
+							*ItemName, UnitCost, Inventory->GetCurrency());
+						EventBus->EmitNotify(FText::FromString(NotificationMessage));
+					}
+				}
+			}
 			UE_LOG(LogTemp, Warning, TEXT("Hotbar slot %d purchase blocked: need %d, have %d"), SlotIndex, UnitCost, Inventory->GetCurrency());
 			return;
 		}
@@ -643,6 +650,22 @@ void ABMPlayerCharacter::TriggerHotbarSlot(int32 SlotIndex)
 		if (UnitCost > 0)
 		{
 			Inventory->SpendCurrency(UnitCost);
+		}
+
+		// 通过事件总线通知购买成功
+		if (UWorld* World = GetWorld())
+		{
+			if (UGameInstance* GI = World->GetGameInstance())
+			{
+				if (UBMEventBusSubsystem* EventBus = GI->GetSubsystem<UBMEventBusSubsystem>())
+				{
+					FString ItemName = ItemID.ToString();
+					ItemName.RemoveFromStart(TEXT("Item_"));
+					FString NotificationMessage = FString::Printf(TEXT("Purchase Success: %s (Cost: %d, Remaining: %d)"), 
+						*ItemName, UnitCost, Inventory->GetCurrency());
+					EventBus->EmitNotify(FText::FromString(NotificationMessage));
+				}
+			}
 		}
 	}
 	else

@@ -4,6 +4,7 @@
 #include "Character/Components/BMStatsComponent.h"
 #include "Core/BMDataSubsystem.h"
 #include "Data/BMItemData.h"
+#include "System/Event/BMEventBusSubsystem.h"
 #include "Engine/Engine.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
@@ -125,6 +126,7 @@ bool UBMInventoryComponent::AddItem(FName ItemID, int32 Count)
 		{
 			// 可以正常堆叠，直接增加数量
 			Items[ItemID] += Count;
+			const int32 NewCount = Items[ItemID];
 			UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::AddItem - 物品 %s 数量增加 %d，当前数量: %d"), 
 				*ItemID.ToString(), Count, Items[ItemID]);
 		}
@@ -227,6 +229,25 @@ bool UBMInventoryComponent::UseItem(FName ItemID, int32 Count)
 	if (GetItemCount(ItemID) < Count)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::UseItem - 物品 %s 数量不足"), *ItemID.ToString());
+		
+		// 构建通知消息
+		FString ItemName = ItemID.ToString();
+		ItemName.RemoveFromStart(TEXT("Item_"));
+		FString NotificationMessage = FString::Printf(TEXT("Insufficient: %s (Need: %d, Have: %d)"), 
+			*ItemName, Count, GetItemCount(ItemID));
+		
+		// 通过事件总线发送通知
+		if (UWorld* World = GetWorld())
+		{
+			if (UGameInstance* GI = World->GetGameInstance())
+			{
+				if (UBMEventBusSubsystem* EventBus = GI->GetSubsystem<UBMEventBusSubsystem>())
+				{
+					EventBus->EmitNotify(FText::FromString(NotificationMessage));
+				}
+			}
+		}
+		
 		return false;
 	}
 
@@ -249,7 +270,8 @@ bool UBMInventoryComponent::UseItem(FName ItemID, int32 Count)
 		return false;
 	}
 
-	// 应用道具效果
+	// 应用道具效果并记录效果描述
+	TArray<FString> Effects;
 	bool bEffectApplied = false;
 
 	// 1. 最大生命值临时提升（MaxHp字段：15秒内临时提升到该值）
@@ -271,6 +293,8 @@ bool UBMInventoryComponent::UseItem(FName ItemID, int32 Count)
 		FBMStatBlock& Stats = StatsComp->GetStatBlockMutable();
 		Stats.HP = NewMaxHp * HpPercentage;
 		
+		Effects.Add(FString::Printf(TEXT("Max HP: %.0f (15s)"), NewMaxHp));
+		
 		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - %s 临时提升最大生命值 %.1f -> %.1f (持续 %.1fs)，当前HP调整为 %.1f (%.1f%%)"), 
 			*ItemID.ToString(), CurrentMaxHp, NewMaxHp, MaxHpBoostDuration, Stats.HP, HpPercentage * 100.f);
 		
@@ -281,15 +305,8 @@ bool UBMInventoryComponent::UseItem(FName ItemID, int32 Count)
 	if (ItemData->Hp > 0.f)
 	{
 		StatsComp->HealByPercent(ItemData->Hp);
-		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - %s 恢复 %.1f%% HP"), 
-			*ItemID.ToString(), ItemData->Hp);
-		bEffectApplied = true;
-	}
-
-	// 2. 立即回复HP（Hp字段：一次回复的血量百分比）
-	if (ItemData->Hp > 0.f)
-	{
-		StatsComp->HealByPercent(ItemData->Hp);
+		Effects.Add(FString::Printf(TEXT("+%.0f%% HP"), ItemData->Hp));
+		
 		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - %s 恢复 %.1f%% HP"), 
 			*ItemID.ToString(), ItemData->Hp);
 		bEffectApplied = true;
@@ -301,6 +318,8 @@ bool UBMInventoryComponent::UseItem(FName ItemID, int32 Count)
 		// 攻击力加成持续15秒
 		constexpr float AttackBoostDuration = 15.f;
 		StatsComp->AddBuff(EBMBuffType::AttackBoost, ItemData->AttackPower, AttackBoostDuration);
+		Effects.Add(FString::Printf(TEXT("+%.0f%% Attack (15s)"), ItemData->AttackPower));
+		
 		UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - %s 添加 %.1f%% 攻击力加成，持续 %.1fs"), 
 			*ItemID.ToString(), ItemData->AttackPower, AttackBoostDuration);
 		bEffectApplied = true;
@@ -315,6 +334,8 @@ bool UBMInventoryComponent::UseItem(FName ItemID, int32 Count)
 			constexpr float StaminaBoostDuration = 15.f;
 			constexpr float StaminaBoostMultiplier = 2.0f;
 			StatsComp->AddBuff(EBMBuffType::StaminaRegenBoost, StaminaBoostMultiplier, StaminaBoostDuration);
+			Effects.Add(TEXT("Stamina Regen x2 (15s)"));
+			
 			UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - %s 添加耐力恢复加速 (%.1fx)，持续 %.1fs"), 
 				*ItemID.ToString(), StaminaBoostMultiplier, StaminaBoostDuration);
 			bEffectApplied = true;
@@ -325,6 +346,8 @@ bool UBMInventoryComponent::UseItem(FName ItemID, int32 Count)
 			// 无敌状态：持续5秒
 			constexpr float InvulnerabilityDuration = 5.f;
 			StatsComp->AddBuff(EBMBuffType::Invulnerability, 1.0f, InvulnerabilityDuration);
+			Effects.Add(TEXT("Invulnerable (5s)"));
+			
 			UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - %s 添加无敌状态，持续 %.1fs"), 
 				*ItemID.ToString(), InvulnerabilityDuration);
 			bEffectApplied = true;
@@ -336,6 +359,8 @@ bool UBMInventoryComponent::UseItem(FName ItemID, int32 Count)
 			constexpr float HPRegenDuration = 15.f;
 			constexpr float HPRegenPercent = 50.f;
 			StatsComp->AddBuff(EBMBuffType::HealthRegenOverTime, HPRegenPercent, HPRegenDuration);
+			Effects.Add(TEXT("HP Regen 50% (15s)"));
+			
 			UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - %s 添加持续回血 (%.1f%% over %.1fs)"), 
 				*ItemID.ToString(), HPRegenPercent, HPRegenDuration);
 			bEffectApplied = true;
@@ -356,7 +381,47 @@ bool UBMInventoryComponent::UseItem(FName ItemID, int32 Count)
 	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::UseItem - 使用物品 %s x%d"), *ItemID.ToString(), Count);
 
 	OnItemUsed.Broadcast(ItemID, Count);
-	return RemoveItem(ItemID, Count);
+	
+	// 移除物品并获取剩余数量
+	const bool bRemoved = RemoveItem(ItemID, Count);
+	if (!bRemoved)
+	{
+		return false;
+	}
+
+	const int32 RemainingCount = GetItemCount(ItemID);
+
+	// 构建通知消息
+	FString ItemName = ItemID.ToString();
+	ItemName.RemoveFromStart(TEXT("Item_"));
+
+	FString NotificationMessage = FString::Printf(TEXT("Used: %s"), *ItemName);
+	
+	if (Effects.Num() > 0)
+	{
+		NotificationMessage += TEXT(" | Effects: ");
+		for (int32 i = 0; i < Effects.Num(); ++i)
+		{
+			NotificationMessage += Effects[i];
+			if (i < Effects.Num() - 1)
+			{
+				NotificationMessage += TEXT(", ");
+			}
+		}
+	}
+
+	NotificationMessage += FString::Printf(TEXT(" | Remaining: %d"), RemainingCount);
+
+	// 通过事件总线发送通知
+	if (UGameInstance* GI = GetWorld()->GetGameInstance())
+	{
+		if (UBMEventBusSubsystem* EventBus = GI->GetSubsystem<UBMEventBusSubsystem>())
+		{
+			EventBus->EmitNotify(FText::FromString(NotificationMessage));
+		}
+	}
+
+	return true;
 }
 
 bool UBMInventoryComponent::EquipItem(FName ItemID)
@@ -467,12 +532,39 @@ bool UBMInventoryComponent::SpendCurrency(int32 Amount)
 	if (!CanAfford(Amount))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UBMInventoryComponent::SpendCurrency - 货币不足，当前: %d，需要: %d"), Currency, Amount);
+		
+		// 通知用户货币不足
+		if (UWorld* World = GetWorld())
+		{
+			if (UGameInstance* GI = World->GetGameInstance())
+			{
+				if (UBMEventBusSubsystem* EventBus = GI->GetSubsystem<UBMEventBusSubsystem>())
+				{
+					FString NotificationMessage = FString::Printf(TEXT("Insufficient Currency: Need %d, Have %d"), Amount, Currency);
+					EventBus->EmitNotify(FText::FromString(NotificationMessage));
+				}
+			}
+		}
+		
 		return false;
 	}
 
 	// 消费货币
 	Currency -= Amount;
 	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::SpendCurrency - 消费货币 %d，剩余货币: %d"), Amount, Currency);
+
+	// 通知用户货币消费成功
+	if (UWorld* World = GetWorld())
+	{
+		if (UGameInstance* GI = World->GetGameInstance())
+		{
+			if (UBMEventBusSubsystem* EventBus = GI->GetSubsystem<UBMEventBusSubsystem>())
+			{
+				FString NotificationMessage = FString::Printf(TEXT("Spent: %d | Remaining Currency: %d"), Amount, Currency);
+				EventBus->EmitNotify(FText::FromString(NotificationMessage));
+			}
+		}
+	}
 
 	OnInventoryChanged.Broadcast();
 	return true;

@@ -14,6 +14,9 @@
 #include "Character/Enemy/States/BMEnemyBossState_PhaseChange.h"
 #include "Character/Components/BMStateMachineComponent.h"
 #include "Core/BMTypes.h"
+#include "System/Event/BMEventBusSubsystem.h"
+#include "System/UI/BMUIManagerSubsystem.h"
+#include "UI/BMBossBarBase.h"
 
 ABMEnemyBoss::ABMEnemyBoss()
 {
@@ -56,20 +59,21 @@ ABMEnemyBoss::ABMEnemyBoss()
 
     
 }
+
 void ABMEnemyBoss::ApplyBossBodyTuning()
 {
-    // 1) Capsule：决定“物理体积/命中/寻路避障”
+    // Capsule
     if (UCapsuleComponent* Cap = GetCapsuleComponent())
     {
         Cap->SetCapsuleSize(BossCapsuleRadius, BossCapsuleHalfHeight);
     }
 
-    // 2) Mesh：决定“视觉体型”
+    // 视觉体型
     if (USkeletalMeshComponent* TempMesh = GetMesh())
     {
         TempMesh->SetWorldScale3D(FVector(BossMeshScale));
 
-        // 3) Mesh Z 偏移：按 scale 放大（避免脚浮空）
+        // Mesh Z 偏移按 scale 放大
         const float Z = BaseMeshZOffset * BossMeshScale;
         TempMesh->SetRelativeLocation(FVector(0.f, 0.f, Z));
 
@@ -79,10 +83,13 @@ void ABMEnemyBoss::ApplyBossBodyTuning()
 
 void ABMEnemyBoss::BeginPlay()
 {
+    // Tag this actor as Boss so StatsComponent can identify it
+    Tags.AddUnique(TEXT("Boss"));
+
     // 优先从 DataTable 读取配置
     LoadStatsFromDataTable();
     
-    // ApplyConfiguredAssets();
+    ApplyConfiguredAssets();
     BuildAttackSpecs();
 
 	// 注册二阶段转换状态
@@ -94,11 +101,11 @@ void ABMEnemyBoss::BeginPlay()
     }
 
     // 调试可视化
-    if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
-    for (UBMHurtBoxComponent* HB : HurtBoxes)
-    {
-        if (HB) HB->bDebugDraw = true;
-    }
+    //if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
+    //for (UBMHurtBoxComponent* HB : HurtBoxes)
+    //{
+    //    if (HB) HB->bDebugDraw = true;
+    //}
 
     Super::BeginPlay();
 
@@ -151,24 +158,6 @@ void ABMEnemyBoss::BeginPlay()
 
 void ABMEnemyBoss::ApplyConfiguredAssets()
 {
-    if (!MeshAsset.IsNull())
-    {
-        if (USkeletalMesh* M = MeshAsset.LoadSynchronous())
-        {
-            GetMesh()->SetSkeletalMesh(M);
-        }
-    }
-
-    AnimIdle = AnimIdleAsset.IsNull() ? nullptr : AnimIdleAsset.LoadSynchronous();
-    AnimWalk = AnimWalkAsset.IsNull() ? nullptr : AnimWalkAsset.LoadSynchronous();
-    AnimRun = AnimRunAsset.IsNull() ? nullptr : AnimRunAsset.LoadSynchronous();
-
-    AnimHitLight = AnimHitLightAsset.IsNull() ? nullptr : AnimHitLightAsset.LoadSynchronous();
-    AnimHitHeavy = AnimHitHeavyAsset.IsNull() ? nullptr : AnimHitHeavyAsset.LoadSynchronous();
-    AnimDeath = AnimDeathAsset.IsNull() ? nullptr : AnimDeathAsset.LoadSynchronous();
-
-    AnimDodge = AnimDodgeAsset.IsNull() ? nullptr : AnimDodgeAsset.LoadSynchronous();
-
     AnimEnergize = AnimEnergizeAsset.IsNull() ? nullptr : AnimEnergizeAsset.LoadSynchronous();
 }
 
@@ -315,8 +304,7 @@ void ABMEnemyBoss::BuildAttackSpecs()
 
         if (S.Anim) AttackSpecs.Add(S);
     }
-
-    // 重攻击1：霸体
+    
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Boss_Light_02");
@@ -342,13 +330,13 @@ void ABMEnemyBoss::BuildAttackSpecs()
         if (S.Anim) AttackSpecs.Add(S);
     }
 
-    // 重攻击2：脚踢/砸地，远一点
+    // 重攻击
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Boss_Heavy_01");
         S.Anim = AttackHeavy1Asset.IsNull() ? nullptr : AttackHeavy1Asset.LoadSynchronous();
         S.AttackWeight = EBMEnemyAttackWeight::Heavy;
-        S.Weight = 0.9f;
+        S.Weight = 2.0f;
 
         S.MinRange = 0.f;
         S.MaxRange = 200.f;
@@ -436,8 +424,19 @@ void ABMEnemyBoss::EnterPhase2()
     ApplyPhase2Tuning();
     AddPhase2AttackSpecs();
 
-    //// 二阶段回到 idle 动画
-    //PlayIdleLoop();
+    // Broadcast phase change to UI
+    if (UWorld* World = GetWorld())
+    {
+        if (UGameInstance* GI = World->GetGameInstance())
+        {
+            if (UBMEventBusSubsystem* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+            {
+                FText PhaseHint = FText::FromString(TEXT("The Beast Awakens!"));
+                Bus->EmitBossPhase(2, PhaseHint);
+            }
+        }
+    }
+
 }
 
 void ABMEnemyBoss::ApplyPhase2Tuning()
@@ -455,6 +454,20 @@ void ABMEnemyBoss::ApplyPhase2Tuning()
         }
 
         S->ReviveToFull(Phase2MaxHP);
+
+        // Broadcast updated health to UI after revival
+        if (UWorld* World = GetWorld())
+        {
+            if (UGameInstance* GI = World->GetGameInstance())
+            {
+                if (UBMEventBusSubsystem* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+                {
+                    const FBMStatBlock& StatBlock = S->GetStatBlock();
+                    const float Normalized = StatBlock.MaxHP > 0.f ? StatBlock.HP / StatBlock.MaxHP : 0.f;
+                    Bus->EmitBossHealth(Normalized);
+                }
+            }
+        }
     }
 
     // 提高基础伤害
@@ -484,7 +497,7 @@ void ABMEnemyBoss::AddPhase2AttackSpecs()
         S.Id = TEXT("Boss_Ph2_Heavy_02");
         S.Anim = AttackPhase2Heavy2Asset.IsNull() ? nullptr : AttackPhase2Heavy2Asset.LoadSynchronous();
         S.AttackWeight = EBMEnemyAttackWeight::Heavy;
-        S.Weight = 1.2f;
+        S.Weight = 4.0f;
 
         S.MinRange = 0.f;
         S.MaxRange = 200.f;
@@ -509,7 +522,7 @@ void ABMEnemyBoss::AddPhase2AttackSpecs()
         S.Id = TEXT("Boss_Ph2_Light_03");
         S.Anim = AttackPhase2Light3Asset.IsNull() ? nullptr : AttackPhase2Light3Asset.LoadSynchronous();
         S.AttackWeight = EBMEnemyAttackWeight::Light;
-        S.Weight = 2.5f;
+        S.Weight = 5.0f;
 
         S.MinRange = 0.f;
         S.MaxRange = 200.f;
@@ -576,6 +589,31 @@ void ABMEnemyBoss::SetAlertState(bool bAlert)
             {
                 GI->PlayMusic(World, TEXT("/Game/Audio/boss1.boss1"), /*bLoop=*/true);
                 bBossAlertMusicStarted = true;
+
+                // Show boss bar UI when boss becomes alert
+                if (UBMUIManagerSubsystem* UI = GI->GetSubsystem<UBMUIManagerSubsystem>())
+                {
+                    // Try to load boss bar widget class
+                    if (UClass* BossBarClass = LoadClass<UBMBossBarBase>(nullptr, TEXT("/Game/UI/WBP_BossBar.WBP_BossBar_C")))
+                    {
+                        UI->ShowBossBar(BossBarClass);
+                    }
+                }
+
+                // Broadcast initial phase
+                if (UBMEventBusSubsystem* Bus = GI->GetSubsystem<UBMEventBusSubsystem>())
+                {
+                    FText PhaseHint = FText::FromString(TEXT("Boss Encounter!"));
+                    Bus->EmitBossPhase(1, PhaseHint);
+
+                    // Also broadcast initial health
+                    if (UBMStatsComponent* BossStats = GetStats())
+                    {
+                        const FBMStatBlock& StatBlock = BossStats->GetStatBlock();
+                        const float Normalized = StatBlock.MaxHP > 0.f ? StatBlock.HP / StatBlock.MaxHP : 0.f;
+                        Bus->EmitBossHealth(Normalized);
+                    }
+                }
             }
         }
     }

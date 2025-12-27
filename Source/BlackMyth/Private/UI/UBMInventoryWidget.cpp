@@ -4,6 +4,7 @@
 #include "UI/UBMInventoryWidget.h"
 
 #include "Character/Components/BMInventoryComponent.h"
+#include "System/Event/BMEventBusSubsystem.h"
 
 #include "Components/ScrollBox.h"
 #include "Components/ScrollBoxSlot.h"
@@ -67,12 +68,47 @@ bool UUBMInventoryWidget::BuyItemForUI(FName ItemID, int32 Count)
 	const int32 UnitCost = FMath::Max(0, FMath::RoundToInt(UnitPrice));
 	const int32 TotalCost = UnitCost * Count;
 
+	// Record currency before purchase for notification
+	const int32 CurrencyBefore = Inv->GetCurrency();
+
 	if (TotalCost > 0 && !Inv->SpendCurrency(TotalCost))
 	{
 		return false;
 	}
 
-	return Inv->AddItem(ItemID, Count);
+	const bool bAdded = Inv->AddItem(ItemID, Count);
+	if (bAdded)
+	{
+		// Get item name for better notification
+		FString ItemName = ItemID.ToString();
+		ItemName.RemoveFromStart(TEXT("Item_"));
+		const FText DisplayName = Inv->GetItemName(ItemID);
+		if (!DisplayName.IsEmpty())
+		{
+			ItemName = DisplayName.ToString();
+		}
+
+		// Get remaining count after purchase
+		const int32 RemainingCount = Inv->GetItemCount(ItemID);
+		const int32 RemainingCurrency = Inv->GetCurrency();
+
+		// Send notification via EventBus
+		if (UWorld* World = GetWorld())
+		{
+			if (UGameInstance* GI = World->GetGameInstance())
+			{
+				if (UBMEventBusSubsystem* EventBus = GI->GetSubsystem<UBMEventBusSubsystem>())
+				{
+					FString NotificationMessage = FString::Printf(
+						TEXT("Purchased: %s x%d (Cost: %d) | Total: %d | Currency: %d"),
+						*ItemName, Count, TotalCost, RemainingCount, RemainingCurrency);
+					EventBus->EmitNotify(FText::FromString(NotificationMessage));
+				}
+			}
+		}
+	}
+
+	return bAdded;
 }
 
 FName UUBMInventoryWidget::GetHotbarItemID(int32 SlotIndex) const
