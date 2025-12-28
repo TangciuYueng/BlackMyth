@@ -42,6 +42,7 @@ public:
     UPROPERTY(BlueprintReadWrite, Category="Persistent") TMap<FName, int32> PersistentItems;
     UPROPERTY(BlueprintReadWrite, Category="Persistent") bool bHasCapturedPersistentData = false;
     UPROPERTY(BlueprintReadWrite, Category="Persistent") bool bHasPlayedIntroVideo = false;
+    /** (removed) */
     UPROPERTY(BlueprintReadWrite, Category="Persistent") bool bIsBossPhase2Defeated = false;
     UPROPERTY(BlueprintReadWrite, Category="Persistent") bool bHasWatchedEndVideo = false;
 

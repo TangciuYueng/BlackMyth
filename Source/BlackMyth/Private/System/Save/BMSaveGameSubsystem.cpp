@@ -2,6 +2,8 @@
 
 #include "System/Save/BMSaveData.h"
 #include "Character/BMPlayerCharacter.h"
+#include "BMGameInstance.h"
+#include "System/Save/BMSaveGlobals.h"
 #include "Character/Components/BMStatsComponent.h"
 #include "Character/Components/BMInventoryComponent.h"
 #include "Character/Components/BMExperienceComponent.h"
@@ -771,7 +773,9 @@ void UBMSaveGameSubsystem::HandlePostLoadMapForSave(UWorld* LoadedWorld)
     LoadedWorld->GetTimerManager().SetTimerForNextTick([this, SlotToLoad]()
     {
         UE_LOG(LogBMSave, Log, TEXT("HandlePostLoadMapForSave: Restoring save data from slot %d"), SlotToLoad);
-        
+        // Mark global flag so intro/book UI can be suppressed while restoring
+        BMSave::bIsLoadingFromSave = true;
+
         // 加载存档并恢复位置
         bool bSuccess = LoadGame(SlotToLoad, true);
         
@@ -787,6 +791,8 @@ void UBMSaveGameSubsystem::HandlePostLoadMapForSave(UWorld* LoadedWorld)
                     FInputModeGameOnly InputMode;
                     PC->SetInputMode(InputMode);
                     PC->bShowMouseCursor = false;
+                    // Clear global loading flag after restore finished
+                    BMSave::bIsLoadingFromSave = false;
                 }
             }
         }

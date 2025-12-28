@@ -15,6 +15,8 @@
 #include "UI/UBMBookWidget.h" // Add this include
 #include "Engine/LocalPlayer.h"
 #include "UObject/ConstructorHelpers.h" // Add this include
+#include "Misc/ConfigCacheIni.h"
+#include "System/Save/BMSaveGlobals.h"
 
 ABMPlayerController::ABMPlayerController()
 {
@@ -28,6 +30,13 @@ ABMPlayerController::ABMPlayerController()
 void ABMPlayerController::BeginPlay()
 {
     Super::BeginPlay();
+
+    // Load persistent flag: whether intro book has been shown before
+    bool bPersisted = false;
+    if (GConfig->GetBool(TEXT("BlackMyth"), TEXT("HasShownIntroBook"), bPersisted, GGameIni))
+    {
+        bHasShownIntroBook = bPersisted;
+    }
 
     // Bind to real intro video finished event from GameInstance
     if (UBMGameInstance* GI = Cast<UBMGameInstance>(GetGameInstance()))
@@ -129,6 +138,8 @@ void ABMPlayerController::SetupInputComponent()
         UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: Bound RMB->Skill1, Q->Skill2, E->Skill3, L->GainOneLevel, Enter->EndVideo"));
     }
 }
+
+// Duplicate small Input_EnterPressed removed; full implementation exists later in file.
 
 // [TEST] Apply 50% of current MaxHP as actual damage via BMStatsComponent
 void ABMPlayerController::ApplyHalfHPDamage()
@@ -453,11 +464,26 @@ void ABMPlayerController::DebugShowNotification()
 }
 void ABMPlayerController::OnIntroVideoFinished()
 {
-    if (!bHasShownIntroBook)
+    // If we've already shown the book, skip
+    if (bHasShownIntroBook)
     {
-        ShowBookUI();
-        bHasShownIntroBook = true;
+        UE_LOG(LogTemp, Log, TEXT("ABMPlayerController::OnIntroVideoFinished - book already shown, skipping."));
+        return;
     }
+
+    // If loading from a save, suppress the intro/book UI
+    // suppression handled via BMSave global; if set, skip showing
+    if (BMSave::bIsLoadingFromSave)
+    {
+        UE_LOG(LogTemp, Log, TEXT("ABMPlayerController::OnIntroVideoFinished - loading from save, suppressing book UI."));
+        return;
+    }
+
+    ShowBookUI();
+    bHasShownIntroBook = true;
+    // Persist flag to game ini so the book won't show on subsequent runs
+    GConfig->SetBool(TEXT("BlackMyth"), TEXT("HasShownIntroBook"), true, GGameIni);
+    GConfig->Flush(false, GGameIni);
 }
 
 void ABMPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
