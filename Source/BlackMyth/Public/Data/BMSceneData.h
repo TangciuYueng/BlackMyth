@@ -4,18 +4,23 @@
 #include "Engine/DataTable.h"
 #include "BMSceneData.generated.h"
 
+/*
+ * @brief Define the FBMSceneData struct, scene data struct, used to store the scene data
+ * @param FBMSceneData The name of the struct
+ * @param FTableRowBase The parent struct
+ */
 USTRUCT(BlueprintType)
 struct FBMSceneData : public FTableRowBase
 {
     GENERATED_BODY()
 
 public:
-    // ¶ÔÓ¦ CSV: MapPath
-    // Ö¸Ïò .umap ÎÄ¼þ£¬ÀýÈç /Game/Maps/Forest/Map_Forest.Map_Forest
+    // ï¿½ï¿½Ó¦ CSV: MapPath
+    // Ö¸ï¿½ï¿½ .umap ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ /Game/Maps/Forest/Map_Forest.Map_Forest
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Scene")
     FSoftObjectPath MapPath;
 
-    // ¶ÔÓ¦ CSV: DisplayName
+    // ï¿½ï¿½Ó¦ CSV: DisplayName
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Scene")
     FText DisplayName;
 };

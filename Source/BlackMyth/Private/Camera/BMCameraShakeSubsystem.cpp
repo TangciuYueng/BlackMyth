@@ -9,12 +9,19 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogBMCameraShake, Log, All);
 
+/*
+ * @brief Initialize the camera shake subsystem
+ * @param Collection The subsystem collection
+ */
 void UBMCameraShakeSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
     UE_LOG(LogBMCameraShake, Log, TEXT("BMCameraShakeSubsystem initialized"));
 }
 
+/*
+ * @brief Deinitialize the camera shake subsystem
+ */
 void UBMCameraShakeSubsystem::Deinitialize()
 {
     StopCurrentShake();
@@ -22,6 +29,11 @@ void UBMCameraShakeSubsystem::Deinitialize()
     UE_LOG(LogBMCameraShake, Log, TEXT("BMCameraShakeSubsystem deinitialized"));
 }
 
+/*
+ * @brief Should create the camera shake subsystem
+ * @param Outer The outer object
+ * @return True if the subsystem should be created, false otherwise
+ */
 bool UBMCameraShakeSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 {
     if (const UWorld* World = Cast<UWorld>(Outer))
@@ -31,6 +43,10 @@ bool UBMCameraShakeSubsystem::ShouldCreateSubsystem(UObject* Outer) const
     return false;
 }
 
+/*
+ * @brief Play the player hit shake
+ * @param Info The damage info
+ */
 void UBMCameraShakeSubsystem::PlayPlayerHitShake(const FBMDamageInfo& Info)
 {
     if (!bEnableCameraShake) return;
@@ -50,6 +66,10 @@ void UBMCameraShakeSubsystem::PlayPlayerHitShake(const FBMDamageInfo& Info)
     ExecuteShake(Params, DamageScale);
 }
 
+/*
+ * @brief Play the enemy hit shake
+ * @param Info The damage info
+ */
 void UBMCameraShakeSubsystem::PlayEnemyHitShake(const FBMDamageInfo& Info)
 {
     if (!bEnableCameraShake) return;
@@ -63,6 +83,10 @@ void UBMCameraShakeSubsystem::PlayEnemyHitShake(const FBMDamageInfo& Info)
     ExecuteShake(Params, 1.0f);
 }
 
+/*
+ * @brief Play the boss hit shake
+ * @param Info The damage info
+ */
 void UBMCameraShakeSubsystem::PlayBossHitShake(const FBMDamageInfo& Info)
 {
     if (!bEnableCameraShake) return;
@@ -76,6 +100,11 @@ void UBMCameraShakeSubsystem::PlayBossHitShake(const FBMDamageInfo& Info)
     ExecuteShake(Params, 1.0f);
 }
 
+/*
+ * @brief Play the custom shake
+ * @param Params The shake params
+ * @param Scale The scale
+ */
 void UBMCameraShakeSubsystem::PlayCustomShake(const FBMCameraShakeParams& Params, float Scale)
 {
     if (!bEnableCameraShake) return;
@@ -83,6 +112,9 @@ void UBMCameraShakeSubsystem::PlayCustomShake(const FBMCameraShakeParams& Params
     ExecuteShake(Params, Scale);
 }
 
+/*
+ * @brief Stop the current shake
+ */
 void UBMCameraShakeSubsystem::StopCurrentShake()
 {
     if (UWorld* World = GetWorld())
@@ -98,6 +130,11 @@ void UBMCameraShakeSubsystem::StopCurrentShake()
     AccumulatedRotation = FRotator::ZeroRotator;
 }
 
+/*
+ * @brief Execute the shake
+ * @param Params The shake params
+ * @param Scale The scale
+ */
 void UBMCameraShakeSubsystem::ExecuteShake(const FBMCameraShakeParams& Params, float Scale)
 {
     UWorld* World = GetWorld();
@@ -108,25 +145,25 @@ void UBMCameraShakeSubsystem::ExecuteShake(const FBMCameraShakeParams& Params, f
         const float NewIntensity = Params.Amplitude * Scale;
         const float CurrentIntensity = CurrentShakeParams.Amplitude * CurrentShakeScale;
         
-        // Èç¹ûÐÂÕð¶¯Ç¿¶È¸ü´ó£¬»òÕßµ±Ç°Õð¶¯ÒÑ¾­Ë¥¼õ³¬¹ýÒ»°ë£¬Ôò¸²¸Ç
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¿ï¿½È¸ï¿½ï¿½ó£¬»ï¿½ï¿½ßµï¿½Ç°ï¿½ï¿½ï¿½Ñ¾ï¿½Ë¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ë£¬ï¿½ò¸²¸ï¿½
         const float NormalizedTime = CurrentShakeDuration > 0.f ? CurrentShakeTime / CurrentShakeDuration : 1.f;
         if (NewIntensity < CurrentIntensity && NormalizedTime < 0.5f)
         {
-            // ºöÂÔ½ÏÈõµÄÕð¶¯
+            // ï¿½ï¿½ï¿½Ô½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             return;
         }
     }
 
-    // Í£Ö¹Ö®Ç°µÄÕð¶¯
+    // Í£Ö¹Ö®Ç°ï¿½ï¿½ï¿½ï¿½
     StopCurrentShake();
 
-    // ÉèÖÃÐÂµÄÕð¶¯²ÎÊý
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Âµï¿½ï¿½ð¶¯²ï¿½ï¿½ï¿½
     CurrentShakeParams = Params;
     CurrentShakeScale = Scale * GlobalShakeScale;
     CurrentShakeTime = 0.f;
     CurrentShakeDuration = Params.Duration;
 
-    // Æô¶¯¶¨Ê±Æ÷£¬Ã¿Ö¡¸üÐÂÕð¶¯
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Ã¿Ö¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     const float TickInterval = 1.f / 60.f; 
     World->GetTimerManager().SetTimer(
         ShakeTimerHandle,
@@ -137,32 +174,35 @@ void UBMCameraShakeSubsystem::ExecuteShake(const FBMCameraShakeParams& Params, f
     );
 }
 
+/*
+ * @brief Tick the shake
+ */
 void UBMCameraShakeSubsystem::TickShake()
 {
     UWorld* World = GetWorld();
     if (!World) return;
 
-    // ¸üÐÂÊ±¼ä
+    // ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½
     const float DeltaTime = World->GetDeltaSeconds();
     CurrentShakeTime += DeltaTime;
 
-    // ¼ì²éÊÇ·ñ½áÊø
+    // ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½
     if (CurrentShakeTime >= CurrentShakeDuration)
     {
         StopCurrentShake();
         return;
     }
 
-    // ¼ÆËãË¥¼õÒò×Ó
+    // ï¿½ï¿½ï¿½ï¿½Ë¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     const float NormalizedTime = CurrentShakeTime / CurrentShakeDuration;
     const float Falloff = FMath::Pow(1.0f - NormalizedTime, CurrentShakeParams.FalloffExponent);
 
-    // ¼ÆËãµ±Ç°Õð¶¯Æ«ÒÆ
+    // ï¿½ï¿½ï¿½ãµ±Ç°ï¿½ï¿½Æ«ï¿½ï¿½
     const float Time = CurrentShakeTime * CurrentShakeParams.Frequency;
     const float Amplitude = CurrentShakeParams.Amplitude * CurrentShakeScale * Falloff;
     const float RotAmplitude = CurrentShakeParams.RotationAmplitude * CurrentShakeScale * Falloff;
 
-    // Ê¹ÓÃ Perlin ÔëÉù·ç¸ñµÄÕð¶¯
+    // Ê¹ï¿½ï¿½ Perlin ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     FVector NewOffset;
     NewOffset.X = Amplitude * (FMath::Sin(Time * 1.0f) * 0.5f + FMath::Sin(Time * 2.3f) * 0.3f + FMath::Sin(Time * 4.1f) * 0.2f);
     NewOffset.Y = Amplitude * (FMath::Sin(Time * 1.3f + 1.5f) * 0.5f + FMath::Sin(Time * 2.7f) * 0.3f + FMath::Sin(Time * 3.9f) * 0.2f);
@@ -173,14 +213,19 @@ void UBMCameraShakeSubsystem::TickShake()
     NewRotation.Yaw = RotAmplitude * FMath::Sin(Time * 1.4f + 1.0f) * 0.5f;
     NewRotation.Roll = RotAmplitude * FMath::Sin(Time * 0.8f + 2.0f) * 0.3f;
 
-    // Ó¦ÓÃÕð¶¯Æ«ÒÆ
+    // Ó¦ï¿½ï¿½ï¿½ï¿½Æ«ï¿½ï¿½
     ApplyCameraOffset(NewOffset, NewRotation);
 
-    // ¼ÇÂ¼µ±Ç°Æ«ÒÆ
+    // ï¿½ï¿½Â¼ï¿½ï¿½Ç°Æ«ï¿½ï¿½
     AccumulatedOffset = NewOffset;
     AccumulatedRotation = NewRotation;
 }
 
+/*
+ * @brief Apply the camera offset
+ * @param Offset The offset
+ * @param Rotation The rotation
+ */
 void UBMCameraShakeSubsystem::ApplyCameraOffset(const FVector& Offset, const FRotator& Rotation)
 {
     UWorld* World = GetWorld();
@@ -189,15 +234,15 @@ void UBMCameraShakeSubsystem::ApplyCameraOffset(const FVector& Offset, const FRo
     APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(World, 0);
     if (!PlayerPawn) return;
 
-    // ³¢ÊÔ»ñÈ¡ CameraComponent
+    // ï¿½ï¿½ï¿½Ô»ï¿½È¡ CameraComponent
     UCameraComponent* Camera = PlayerPawn->FindComponentByClass<UCameraComponent>();
     if (Camera)
     {
-        // ¼ÆËãÏà¶ÔÆ«ÒÆÔöÁ¿
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         const FVector DeltaOffset = Offset - AccumulatedOffset;
         const FRotator DeltaRotation = Rotation - AccumulatedRotation;
 
-        // Ó¦ÓÃÆ«ÒÆµ½Ïà»ú
+        // Ó¦ï¿½ï¿½Æ«ï¿½Æµï¿½ï¿½ï¿½ï¿½
         FVector CurrentRelative = Camera->GetRelativeLocation();
         FRotator CurrentRelativeRot = Camera->GetRelativeRotation();
 
@@ -206,6 +251,9 @@ void UBMCameraShakeSubsystem::ApplyCameraOffset(const FVector& Offset, const FRo
     }
 }
 
+/*
+ * @brief Reset the camera offset
+ */
 void UBMCameraShakeSubsystem::ResetCameraOffset()
 {
     UWorld* World = GetWorld();
@@ -217,7 +265,7 @@ void UBMCameraShakeSubsystem::ResetCameraOffset()
     UCameraComponent* Camera = PlayerPawn->FindComponentByClass<UCameraComponent>();
     if (Camera && (!AccumulatedOffset.IsNearlyZero() || !AccumulatedRotation.IsNearlyZero()))
     {
-        // ³·ÏúÀÛ»ýµÄÆ«ÒÆ
+        // ï¿½ï¿½ï¿½ï¿½ï¿½Û»ï¿½ï¿½ï¿½Æ«ï¿½ï¿½
         FVector CurrentRelative = Camera->GetRelativeLocation();
         FRotator CurrentRelativeRot = Camera->GetRelativeRotation();
 
@@ -226,6 +274,10 @@ void UBMCameraShakeSubsystem::ResetCameraOffset()
     }
 }
 
+/*
+ * @brief Get the player camera manager
+ * @return The player camera manager
+ */
 APlayerCameraManager* UBMCameraShakeSubsystem::GetPlayerCameraManager() const
 {
     if (UWorld* World = GetWorld())

@@ -4,6 +4,11 @@
 #include "Engine/DataTable.h"
 #include "BMElementalData.generated.h"
 
+/*
+ * @brief Define the FBMElementalData struct, elemental data struct, used to store the elemental data
+ * @param FBMElementalData The name of the struct
+ * @param FTableRowBase The parent struct
+ */
 USTRUCT(BlueprintType)
 struct FBMElementalData : public FTableRowBase
 {

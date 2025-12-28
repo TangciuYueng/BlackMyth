@@ -6,17 +6,27 @@
 
 DEFINE_LOG_CATEGORY(LogBMHurtBox);
 
+/*
+ * @brief Constructor of the UBMHurtBoxComponent class
+ */
 UBMHurtBoxComponent::UBMHurtBoxComponent()
 {
     PrimaryComponentTick.bCanEverTick = true;
 }
 
+/*
+ * @brief Begin play, it creates or updates the collision
+ */
 void UBMHurtBoxComponent::BeginPlay()
 {
     Super::BeginPlay();
     CreateOrUpdateCollision();
 }
 
+/*
+ * @brief End play, it destroys the collision and resets the bound component
+ * @param EndPlayReason The reason for the end play
+ */
 void UBMHurtBoxComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     if (CollisionBox)
@@ -29,6 +39,10 @@ void UBMHurtBoxComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
     Super::EndPlay(EndPlayReason);
 }
 
+/*
+ * @brief Resolve owner mesh, it resolves the owner mesh from the owner
+ * @return The owner mesh
+ */
 USkeletalMeshComponent* UBMHurtBoxComponent::ResolveOwnerMesh() const
 {
     if (ACharacter* C = Cast<ACharacter>(GetOwner()))
@@ -38,6 +52,9 @@ USkeletalMeshComponent* UBMHurtBoxComponent::ResolveOwnerMesh() const
     return nullptr;
 }
 
+/*
+ * @brief Create or update collision, it creates or updates the collision
+ */
 void UBMHurtBoxComponent::CreateOrUpdateCollision()
 {
     AActor* Owner = GetOwner();
@@ -68,11 +85,11 @@ void UBMHurtBoxComponent::CreateOrUpdateCollision()
     CollisionBox->SetBoxExtent(BoxExtent);
     CollisionBox->SetRelativeTransform(RelativeTransform);
 
-    // 只参与 Overlap
+    // 只锟斤拷锟斤拷 Overlap
     CollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     CollisionBox->SetGenerateOverlapEvents(true);
 
-    // 与 HitBox 统一用 WorldDynamic
+    // 锟斤拷 HitBox 统一锟斤拷 WorldDynamic
     CollisionBox->SetCollisionObjectType(ECC_WorldDynamic);
     CollisionBox->SetCollisionResponseToAllChannels(ECR_Ignore);
     CollisionBox->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
@@ -82,6 +99,10 @@ void UBMHurtBoxComponent::CreateOrUpdateCollision()
     BoundComponent = CollisionBox;
 }
 
+/*
+ * @brief Modify incoming damage, it modifies the incoming damage based on the damage multiplier and weakness/resistance types
+ * @param InOutInfo The incoming damage info
+ */
 void UBMHurtBoxComponent::ModifyIncomingDamage(FBMDamageInfo& InOutInfo) const
 {
     InOutInfo.DamageValue *= DamageMultiplier;
@@ -96,11 +117,21 @@ void UBMHurtBoxComponent::ModifyIncomingDamage(FBMDamageInfo& InOutInfo) const
     }
 }
 
+/*
+ * @brief On hit, it handles the hit
+ * @param AppliedDamage The applied damage
+ */
 void UBMHurtBoxComponent::OnHit(float AppliedDamage)
 {
     (void)AppliedDamage;
 }
 
+/*
+ * @brief Tick component, it ticks the component and draws the debug box if the bDebugDraw property is true
+ * @param DeltaTime The delta time
+ * @param TickType The tick type
+ * @param ThisTickFunction The tick function
+ */
 void UBMHurtBoxComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {   
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -123,11 +154,19 @@ void UBMHurtBoxComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
     );
 }
 
+/*
+ * @brief Is hurt box enabled, it checks if the hurt box is enabled
+ * @return True if the hurt box is enabled, false otherwise
+ */
 bool UBMHurtBoxComponent::IsHurtBoxEnabled() const
 {
     return CollisionBox && CollisionBox->GetCollisionEnabled() != ECollisionEnabled::NoCollision;
 }
 
+/*
+ * @brief Set hurt box enabled, it sets the hurt box enabled
+ * @param bEnabled The enabled
+ */
 void UBMHurtBoxComponent::SetHurtBoxEnabled(bool bEnabled)
 {
     if (!CollisionBox) return;

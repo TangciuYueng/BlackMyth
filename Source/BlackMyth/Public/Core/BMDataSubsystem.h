@@ -10,6 +10,11 @@
 #include "Data/BMItemData.h"
 #include "BMDataSubsystem.generated.h"
 
+/**
+ * @brief Define the UBMDataSubsystem class, data subsystem, used to manage the data
+ * @param UBMDataSubsystem The name of the class
+ * @param UGameInstanceSubsystem The parent class
+ */
 UCLASS()
 class BLACKMYTH_API UBMDataSubsystem : public UGameInstanceSubsystem
 {
@@ -18,23 +23,29 @@ class BLACKMYTH_API UBMDataSubsystem : public UGameInstanceSubsystem
 public:
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
-    // API to get data from tables
+    // Get skill data from the skill table
     const FBMSkillData* GetSkillData(FName SkillID) const;
 
+    // Get scene data from the scene table
     const FBMSceneData* GetSceneData(FName SceneID) const;
 
+    // Get player growth data from the player growth table
     const FBMPlayerGrowthData* GetPlayerGrowthData(int32 Level) const;
 
+    // Get enemy data from the enemy table
     const FBMEnemyData* GetEnemyData(FName EnemyID) const;
 
+    // Get item data from the item table
     const FBMItemData* GetItemData(FName ItemID) const;
 
+	// Get the item table path for debugging
 	FString GetItemTablePathDebug() const;
 
+	// Get the elemental multiplier for the attack and defend elements
     float GetElementalMultiplier(FName AttackElement, FName DefendElement) const;
 
 protected:
-    // Caches for data tables
+    // Cache for the tables
     UPROPERTY()
     UDataTable* SkillTableCache;
 

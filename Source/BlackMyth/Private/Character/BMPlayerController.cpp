@@ -12,12 +12,15 @@
 #include "UI/BMNotificationWidget.h"
 #include "Character/Enemy/BMEnemyBoss.h"
 #include "BlackMythCharacter.h"
-#include "UI/UBMBookWidget.h" // Add this include
+#include "UI/UBMBookWidget.h"
 #include "Engine/LocalPlayer.h"
-#include "UObject/ConstructorHelpers.h" // Add this include
+#include "UObject/ConstructorHelpers.h"
 #include "Misc/ConfigCacheIni.h"
 #include "System/Save/BMSaveGlobals.h"
 
+/*
+ * @brief Constructor of the ABMPlayerController class
+ */
 ABMPlayerController::ABMPlayerController()
 {
     static ConstructorHelpers::FClassFinder<UBMBookWidget> BookWidgetBP(TEXT("/Game/UI/WBP_Book.WBP_Book_C"));
@@ -27,11 +30,14 @@ ABMPlayerController::ABMPlayerController()
     }
 }
 
+/*
+ * @brief Begin play, it begins the play
+ */
 void ABMPlayerController::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Load persistent flag: whether intro book has been shown before
+    // Load persistent flag: whether intro book has been shown before, it loads the persistent flag
     bool bPersisted = false;
     if (GConfig->GetBool(TEXT("BlackMyth"), TEXT("HasShownIntroBook"), bPersisted, GGameIni))
     {
@@ -52,8 +58,6 @@ void ABMPlayerController::BeginPlay()
             BMGI->RestorePlayerPersistentData(this);
         }
 
-
-
         // Ensure game is unpaused and input is in GameOnly after reload
         UGameplayStatics::SetGamePaused(this, false);
         FInputModeGameOnly GameOnly;
@@ -65,7 +69,6 @@ void ABMPlayerController::BeginPlay()
         {
             // ����ָ�����˵��ؿ���ʾ���˵�
             const UWorld* World = GetWorld();
-            // Compare against the asset name of the startup map. For full path "/Game/emptymap/emptymap" the asset name is "emptymap".
             const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(const_cast<UObject*>(static_cast<const UObject*>(World)), /*bRemovePrefixPIE*/ true);
             const FString ExpectedLevelName = TEXT("emptymap");
             if (CurrentLevelName != ExpectedLevelName)
@@ -110,6 +113,9 @@ void ABMPlayerController::BeginPlay()
     }
 }
 
+/*
+ * @brief Setup input component, it setups the input component
+ */
 void ABMPlayerController::SetupInputComponent()
 {
     Super::SetupInputComponent();
@@ -139,9 +145,9 @@ void ABMPlayerController::SetupInputComponent()
     }
 }
 
-// Duplicate small Input_EnterPressed removed; full implementation exists later in file.
-
-// [TEST] Apply 50% of current MaxHP as actual damage via BMStatsComponent
+/*
+ * @brief Apply half HP damage, it applies the half HP damage
+ */
 void ABMPlayerController::ApplyHalfHPDamage()
 {
     APawn* MyPawn = GetPawn();
@@ -151,7 +157,6 @@ void ABMPlayerController::ApplyHalfHPDamage()
         return;
     }
 
-// Keep utility functions at file scope, not nested inside other methods
     UBMStatsComponent* Stats = MyPawn->FindComponentByClass<UBMStatsComponent>();
     if (!Stats)
     {
@@ -170,6 +175,9 @@ void ABMPlayerController::ApplyHalfHPDamage()
     UE_LOG(LogTemp, Log, TEXT("ApplyHalfHPDamage: Applied=%.2f, NewHP=%.2f/%.2f"), Applied, Block.HP, Block.MaxHP);
 }
 
+/*
+ * @brief Debug gain one level, it debugs the gain one level
+ */
 void ABMPlayerController::DebugGainOneLevel()
 {
     UE_LOG(LogTemp, Log, TEXT("DebugGainOneLevel: invoked"));
@@ -190,6 +198,9 @@ void ABMPlayerController::DebugGainOneLevel()
     }
 }
 
+/*
+ * @brief Input enter pressed, it inputs the enter pressed
+ */
 void ABMPlayerController::Input_EnterPressed()
 {
     UE_LOG(LogTemp, Log, TEXT("Input_EnterPressed: Key pressed. Checking for dead Phase 2 boss..."));
@@ -224,7 +235,9 @@ void ABMPlayerController::Input_EnterPressed()
     UE_LOG(LogTemp, Log, TEXT("Input_EnterPressed: Boss Phase 2 Defeated flag is NOT set."));
 }
 
-// [TEST] Consume 25 stamina to test stamina bar updates
+/*
+ * @brief Consume stamina test, it consumes the stamina test
+ */
 void ABMPlayerController::ConsumeStaminaTest()
 {
     APawn* MyPawn = GetPawn();
@@ -248,20 +261,35 @@ void ABMPlayerController::ConsumeStaminaTest()
         StaminaCost, bSuccess, OldStamina, NewStamina, Block.MaxStamina);
 }
 
+/*
+ * @brief Start skill 1 cooldown, it starts the skill 1 cooldown
+ */
 void ABMPlayerController::StartSkill1Cooldown()
 {
     TriggerSkillCooldown(TEXT("Skill1"), 10.f);
 }
 
+/*
+ * @brief Start skill 2 cooldown, it starts the skill 2 cooldown
+ */
 void ABMPlayerController::StartSkill2Cooldown()
 {
     TriggerSkillCooldown(TEXT("Skill2"), 8.f);
 }
 
+/*
+ * @brief Start skill 3 cooldown, it starts the skill 3 cooldown
+ */
 void ABMPlayerController::StartSkill3Cooldown()
 {
     TriggerSkillCooldown(TEXT("Skill3"), 12.f);
 }
+
+/*
+ * @brief Trigger skill cooldown, it triggers the skill cooldown
+ * @param SkillId The skill id
+ * @param TotalSeconds The total seconds
+ */
 void ABMPlayerController::TriggerSkillCooldown(FName SkillId, float TotalSeconds)
 {
     UBMEventBusSubsystem* Bus = GetGameInstance() ? GetGameInstance()->GetSubsystem<UBMEventBusSubsystem>() : nullptr;
@@ -308,6 +336,9 @@ void ABMPlayerController::TriggerSkillCooldown(FName SkillId, float TotalSeconds
     }
 }
 
+/*
+ * @brief On skill cooldown tick skill 1, it on the skill cooldown tick skill 1
+ */
 void ABMPlayerController::OnSkillCooldownTick_Skill1()
 {
     UBMEventBusSubsystem* Bus = GetGameInstance() ? GetGameInstance()->GetSubsystem<UBMEventBusSubsystem>() : nullptr;
@@ -324,6 +355,9 @@ void ABMPlayerController::OnSkillCooldownTick_Skill1()
     }
 }
 
+/*
+ * @brief On skill cooldown tick skill 2, it on the skill cooldown tick skill 2
+ */
 void ABMPlayerController::OnSkillCooldownTick_Skill2()
 {
     UBMEventBusSubsystem* Bus = GetGameInstance() ? GetGameInstance()->GetSubsystem<UBMEventBusSubsystem>() : nullptr;
@@ -340,6 +374,9 @@ void ABMPlayerController::OnSkillCooldownTick_Skill2()
     }
 }
 
+/*
+ * @brief On skill cooldown tick skill 3, it on the skill cooldown tick skill 3
+ */
 void ABMPlayerController::OnSkillCooldownTick_Skill3()
 {
     UBMEventBusSubsystem* Bus = GetGameInstance() ? GetGameInstance()->GetSubsystem<UBMEventBusSubsystem>() : nullptr;
@@ -356,6 +393,9 @@ void ABMPlayerController::OnSkillCooldownTick_Skill3()
     }
 }
 
+/*
+ * @brief Toggle pause menu, it toggles the pause menu
+ */
 void ABMPlayerController::TogglePauseMenu()
 {
     UE_LOG(LogTemp, Log, TEXT("ABMPlayerController: TogglePauseMenu invoked"));
@@ -410,6 +450,9 @@ void ABMPlayerController::TogglePauseMenu()
     }
 }
 
+/*
+ * @brief Debug show notification, it debugs the show notification
+ */
 void ABMPlayerController::DebugShowNotification()
 {
     UGameInstance* GI = GetGameInstance();
@@ -462,6 +505,10 @@ void ABMPlayerController::DebugShowNotification()
     UIManager->PushNotificationMessage(FText::FromString(MessageTest));
     UE_LOG(LogTemp, Log, TEXT("DebugShowNotification -> %s"), *MessageTest);
 }
+
+/*
+ * @brief On intro video finished, it on the intro video finished
+ */
 void ABMPlayerController::OnIntroVideoFinished()
 {
     // If we've already shown the book, skip
@@ -486,6 +533,10 @@ void ABMPlayerController::OnIntroVideoFinished()
     GConfig->Flush(false, GGameIni);
 }
 
+/*
+ * @brief End play, it ends the play
+ * @param EndPlayReason The end play reason
+ */
 void ABMPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     if (UBMGameInstance* GI = Cast<UBMGameInstance>(GetGameInstance()))
@@ -496,6 +547,9 @@ void ABMPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
     Super::EndPlay(EndPlayReason);
 }
 
+/*
+ * @brief Show book UI, it shows the book UI
+ */
 void ABMPlayerController::ShowBookUI()
 {
     // Do not show book UI on level 2 (demo level)
@@ -533,6 +587,3 @@ void ABMPlayerController::ShowBookUI()
         }
     }
 }
-
-// Input_EnterPressed is implemented earlier (handles boss/end video logic).
-

@@ -7,11 +7,17 @@
 
 DEFINE_LOG_CATEGORY(LogBMStats);
 
+/*
+ * @brief Constructor of the UBMStatsComponent class
+ */
 UBMStatsComponent::UBMStatsComponent()
 {
     PrimaryComponentTick.bCanEverTick = true;
 }
 
+/*
+ * @brief Begin play, it initializes the stats
+ */
 void UBMStatsComponent::BeginPlay()
 {
     Super::BeginPlay();
@@ -29,6 +35,11 @@ void UBMStatsComponent::BeginPlay()
     }
 }
 
+/*
+ * @brief Apply damage, it applies the damage to the stats
+ * @param InOutInfo The incoming damage info
+ * @return The applied damage
+ */
 float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
 {
     if (IsDead())
@@ -37,7 +48,7 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
         return 0.f;
     }
 
-    // ¼ì²éÎÞµÐ×´Ì¬
+    // ï¿½ï¿½ï¿½ï¿½Þµï¿½×´Ì¬
     if (IsInvulnerable())
     {
         UE_LOG(LogBMStats, Log, TEXT("Damage blocked by invulnerability buff"));
@@ -55,7 +66,7 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
     float Mitigated = Input;
     if (InOutInfo.DamageType != EBMDamageType::TrueDamage)
     {
-        // ·ÀÓù¹«Ê½: ¼õÉËÂÊ = Defense / (100 + Defense)
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ = Defense / (100 + Defense)
         const float DamageReduction = Stats.Defense / (100.f + Stats.Defense);
         Mitigated = Input * (1.f - DamageReduction);
     }
@@ -138,6 +149,11 @@ float UBMStatsComponent::ApplyDamage(FBMDamageInfo& InOutInfo)
     return Applied;
 }
 
+/*
+ * @brief Try consume stamina, it tries to consume the stamina
+ * @param Amount The amount of stamina to consume
+ * @return True if the stamina is consumed, false otherwise
+ */
 bool UBMStatsComponent::TryConsumeStamina(float Amount)
 {
     if (Amount <= 0.f) return true;
@@ -157,6 +173,11 @@ bool UBMStatsComponent::TryConsumeStamina(float Amount)
     return true;
 }
 
+/*
+ * @brief Try consume MP, it tries to consume the MP
+ * @param Amount The amount of MP to consume
+ * @return True if the MP is consumed, false otherwise
+ */
 bool UBMStatsComponent::TryConsumeMP(float Amount)
 {
     if (Amount <= 0.f) return true;
@@ -165,6 +186,12 @@ bool UBMStatsComponent::TryConsumeMP(float Amount)
     return true;
 }
 
+/*
+ * @brief Tick component, it ticks the component
+ * @param DeltaTime The delta time
+ * @param TickType The tick type
+ * @param ThisTickFunction The tick function
+ */
 void UBMStatsComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -174,13 +201,13 @@ void UBMStatsComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
         return;
     }
 
-    // ¸üÐÂÔöÒæÐ§¹û¼ÆÊ±Æ÷
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½
     TickBuffs(DeltaTime);
 
-    // ´¦Àí³ÖÐø»ØÑªÐ§¹û
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÑªÐ§ï¿½ï¿½
     TickHealthRegen(DeltaTime);
 
-    // ÄÍÁ¦»Ö¸´
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½
     if (Stats.MaxStamina > 0.f && Stats.Stamina < Stats.MaxStamina)
     {
         const float OldStamina = Stats.Stamina;
@@ -202,6 +229,10 @@ void UBMStatsComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
     }
 }
 
+/*
+ * @brief Revive to full, it revives the stats to full
+ * @param NewMaxHP The new max HP
+ */
 void UBMStatsComponent::ReviveToFull(float NewMaxHP)
 {
     Stats.MaxHP = FMath::Max(1.f, NewMaxHP);
@@ -209,21 +240,38 @@ void UBMStatsComponent::ReviveToFull(float NewMaxHP)
     bDeathBroadcasted = false;
 }
 
+/*
+ * @brief Add gameplay tag, it adds the gameplay tag to the stats
+ * @param Tag The tag to add
+ */
 void UBMStatsComponent::AddGameplayTag(FName Tag)
 {
     if (!Tag.IsNone()) Tags.Add(Tag);
 }
 
+/*
+ * @brief Remove gameplay tag, it removes the gameplay tag from the stats
+ * @param Tag The tag to remove
+ */
 void UBMStatsComponent::RemoveGameplayTag(FName Tag)
 {
     if (!Tag.IsNone()) Tags.Remove(Tag);
 }
 
+/*
+ * @brief Has gameplay tag, it checks if the stats has the gameplay tag
+ * @param Tag The tag to check
+ * @return True if the stats has the gameplay tag, false otherwise
+ */
 bool UBMStatsComponent::HasGameplayTag(FName Tag) const
 {
     return !Tag.IsNone() && Tags.Contains(Tag);
 }
 
+/*
+ * @brief Initialize from block, it initializes the stats from the block
+ * @param In The block to initialize from
+ */
 void UBMStatsComponent::InitializeFromBlock(const FBMStatBlock& In)
 {
     Stats = In;
@@ -232,6 +280,9 @@ void UBMStatsComponent::InitializeFromBlock(const FBMStatBlock& In)
     Stats.Stamina = FMath::Clamp(Stats.Stamina, 0.f, Stats.MaxStamina);
 }
 
+/*
+ * @brief Revive, it revives the stats
+ */
 void UBMStatsComponent::Revive()
 {
     bDeathBroadcasted = false;
@@ -253,8 +304,12 @@ void UBMStatsComponent::Revive()
     }
 }
 
-// ==================== µÀ¾ßÐ§¹ûÊµÏÖ ====================
+// ==================== ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½Êµï¿½ï¿½ ====================
 
+/*
+ * @brief Heal by percent, it heals the stats by percent
+ * @param Percent The percent to heal
+ */
 void UBMStatsComponent::HealByPercent(float Percent)
 {
     if (IsDead() || Percent <= 0.f)
@@ -266,6 +321,10 @@ void UBMStatsComponent::HealByPercent(float Percent)
     HealByAmount(HealAmount);
 }
 
+/*
+ * @brief Heal by amount, it heals the stats by amount
+ * @param Amount The amount to heal
+ */
 void UBMStatsComponent::HealByAmount(float Amount)
 {
     if (IsDead() || Amount <= 0.f)
@@ -283,7 +342,7 @@ void UBMStatsComponent::HealByAmount(float Amount)
         UE_LOG(LogBMStats, Log, TEXT("Healed %.1f HP (%.1f -> %.1f / %.1f)"), 
             Healed, OldHP, Stats.HP, EffectiveMaxHp);
 
-        // Í¨ÖªUI¸üÐÂÑªÁ¿
+        // Í¨ÖªUIï¿½ï¿½ï¿½ï¿½Ñªï¿½ï¿½
         if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))
         {
             if (OwnerPawn->IsPlayerControlled())
@@ -301,6 +360,12 @@ void UBMStatsComponent::HealByAmount(float Amount)
     }
 }
 
+/*
+ * @brief Add buff, it adds the buff to the stats
+ * @param Type The type of the buff
+ * @param Value The value of the buff
+ * @param Duration The duration of the buff
+ */
 void UBMStatsComponent::AddBuff(EBMBuffType Type, float Value, float Duration)
 {
     if (Type == EBMBuffType::None || Duration <= 0.f)
@@ -308,7 +373,7 @@ void UBMStatsComponent::AddBuff(EBMBuffType Type, float Value, float Duration)
         return;
     }
 
-    // ÒÆ³ýÍ¬ÀàÐÍµÄ¾ÉÐ§¹û
+    // ï¿½Æ³ï¿½Í¬ï¿½ï¿½ï¿½ÍµÄ¾ï¿½Ð§ï¿½ï¿½
     RemoveBuff(Type);
 
     FBMBuffInstance NewBuff(Type, Value, Duration);
@@ -318,6 +383,10 @@ void UBMStatsComponent::AddBuff(EBMBuffType Type, float Value, float Duration)
         static_cast<int32>(Type), Value, Duration);
 }
 
+/*
+ * @brief Remove buff, it removes the buff from the stats
+ * @param Type The type of the buff
+ */
 void UBMStatsComponent::RemoveBuff(EBMBuffType Type)
 {
     ActiveBuffs.RemoveAll([Type](const FBMBuffInstance& Buff)
@@ -326,6 +395,11 @@ void UBMStatsComponent::RemoveBuff(EBMBuffType Type)
     });
 }
 
+/*
+ * @brief Has buff, it checks if the stats has the buff
+ * @param Type The type of the buff
+ * @return True if the stats has the buff, false otherwise
+ */
 bool UBMStatsComponent::HasBuff(EBMBuffType Type) const
 {
     return ActiveBuffs.ContainsByPredicate([Type](const FBMBuffInstance& Buff)
@@ -334,11 +408,19 @@ bool UBMStatsComponent::HasBuff(EBMBuffType Type) const
     });
 }
 
+/*
+ * @brief Is invulnerable, it checks if the stats is invulnerable
+ * @return True if the stats is invulnerable, false otherwise
+ */
 bool UBMStatsComponent::IsInvulnerable() const
 {
     return HasBuff(EBMBuffType::Invulnerability);
 }
 
+/*
+ * @brief Get attack multiplier, it gets the attack multiplier
+ * @return The attack multiplier
+ */
 float UBMStatsComponent::GetAttackMultiplier() const
 {
     float Multiplier = 1.0f;
@@ -346,13 +428,17 @@ float UBMStatsComponent::GetAttackMultiplier() const
     {
         if (Buff.Type == EBMBuffType::AttackBoost && !Buff.IsExpired())
         {
-            // °Ù·Ö±È¼Ó³É
+            // ï¿½Ù·Ö±È¼Ó³ï¿½
             Multiplier += Buff.Value / 100.f;
         }
     }
     return Multiplier;
 }
 
+/*
+ * @brief Get stamina regen multiplier, it gets the stamina regen multiplier
+ * @return The stamina regen multiplier
+ */
 float UBMStatsComponent::GetStaminaRegenMultiplier() const
 {
     float Multiplier = 1.0f;
@@ -360,23 +446,27 @@ float UBMStatsComponent::GetStaminaRegenMultiplier() const
     {
         if (Buff.Type == EBMBuffType::StaminaRegenBoost && !Buff.IsExpired())
         {
-            // ±¶ÂÊ¼Ó³É
+            // ï¿½ï¿½ï¿½Ê¼Ó³ï¿½
             Multiplier *= Buff.Value;
         }
     }
     return Multiplier;
 }
 
+/*
+ * @brief Get effective max HP, it gets the effective max HP
+ * @return The effective max HP
+ */
 float UBMStatsComponent::GetEffectiveMaxHp() const
 {
     float EffectiveMaxHp = Stats.MaxHP;
     
-    // ²éÕÒ MaxHpBoost ÔöÒæÐ§¹û
+    // ï¿½ï¿½ï¿½ï¿½ MaxHpBoost ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½
     for (const FBMBuffInstance& Buff : ActiveBuffs)
     {
         if (Buff.Type == EBMBuffType::MaxHpBoost && !Buff.IsExpired())
         {
-            // Value ´æ´¢µÄÊÇÁÙÊ±ÌáÉýºóµÄ×î´óÉúÃüÖµ
+            // Value ï¿½æ´¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
             EffectiveMaxHp = FMath::Max(EffectiveMaxHp, Buff.Value);
         }
     }
@@ -384,6 +474,10 @@ float UBMStatsComponent::GetEffectiveMaxHp() const
     return EffectiveMaxHp;
 }
 
+/*
+ * @brief Tick buffs, it ticks the buffs
+ * @param DeltaTime The delta time
+ */
 void UBMStatsComponent::TickBuffs(float DeltaTime)
 {
     bool bHadExpiredBuffs = false;
@@ -398,7 +492,7 @@ void UBMStatsComponent::TickBuffs(float DeltaTime)
             {
                 bHadExpiredBuffs = true;
                 
-                // ¼ÇÂ¼ÊÇ·ñÓÐ MaxHpBoost ¹ýÆÚ
+                // ï¿½ï¿½Â¼ï¿½Ç·ï¿½ï¿½ï¿½ MaxHpBoost ï¿½ï¿½ï¿½ï¿½
                 if (Buff.Type == EBMBuffType::MaxHpBoost)
                 {
                     bMaxHpBuffExpired = true;
@@ -409,12 +503,12 @@ void UBMStatsComponent::TickBuffs(float DeltaTime)
         }
     }
 
-    // Èç¹û MaxHpBoost ¹ýÆÚ£¬ÐèÒªµ÷Õûµ±Ç°HPÒÔ±£³ÖÑªÁ¿°Ù·Ö±È
+    // ï¿½ï¿½ï¿½ MaxHpBoost ï¿½ï¿½ï¿½Ú£ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°HPï¿½Ô±ï¿½ï¿½ï¿½Ñªï¿½ï¿½ï¿½Ù·Ö±ï¿½
     if (bMaxHpBuffExpired)
     {
         const float OldEffectiveMaxHp = GetEffectiveMaxHp();
         
-        // ÒÆ³ýÒÑ¹ýÆÚµÄÔöÒæÐ§¹û
+        // ï¿½Æ³ï¿½ï¿½Ñ¹ï¿½ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½
         TArray<FBMBuffInstance> TempExpiredBuffs;
         for (const FBMBuffInstance& Buff : ActiveBuffs)
         {
@@ -424,7 +518,7 @@ void UBMStatsComponent::TickBuffs(float DeltaTime)
             }
         }
         
-        // ÏÈÒÆ³ý¹ýÆÚµÄ MaxHpBoost
+        // ï¿½ï¿½ï¿½Æ³ï¿½ï¿½ï¿½ï¿½Úµï¿½ MaxHpBoost
         for (const FBMBuffInstance& ExpiredBuff : TempExpiredBuffs)
         {
             ActiveBuffs.RemoveAll([&ExpiredBuff](const FBMBuffInstance& Buff)
@@ -435,19 +529,19 @@ void UBMStatsComponent::TickBuffs(float DeltaTime)
             });
         }
         
-        // »ñÈ¡ÐÂµÄÓÐÐ§×î´óÉúÃüÖµ
+        // ï¿½ï¿½È¡ï¿½Âµï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
         const float NewEffectiveMaxHp = GetEffectiveMaxHp();
         
-        // ¼ÆËãµ±Ç°HP°Ù·Ö±È
+        // ï¿½ï¿½ï¿½ãµ±Ç°HPï¿½Ù·Ö±ï¿½
         const float HpPercentage = (OldEffectiveMaxHp > 0.f) ? (Stats.HP / OldEffectiveMaxHp) : 1.0f;
         
-        // ¸ù¾ÝÐÂµÄ×î´óÉúÃüÖµµ÷Õûµ±Ç°HP£¬±£³Ö°Ù·Ö±È²»±ä
+        // ï¿½ï¿½ï¿½ï¿½ï¿½Âµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°HPï¿½ï¿½ï¿½ï¿½ï¿½Ö°Ù·Ö±È²ï¿½ï¿½ï¿½
         Stats.HP = FMath::Clamp(NewEffectiveMaxHp * HpPercentage, 0.f, NewEffectiveMaxHp);
         
         UE_LOG(LogBMStats, Log, TEXT("MaxHpBoost expired: MaxHP %.1f -> %.1f, HP adjusted to %.1f (%.1f%%)"), 
             OldEffectiveMaxHp, NewEffectiveMaxHp, Stats.HP, HpPercentage * 100.f);
         
-        // Í¨ÖªUI¸üÐÂÑªÁ¿
+        // Í¨ÖªUIï¿½ï¿½ï¿½ï¿½Ñªï¿½ï¿½
         if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))
         {
             if (OwnerPawn->IsPlayerControlled())
@@ -464,7 +558,7 @@ void UBMStatsComponent::TickBuffs(float DeltaTime)
         }
     }
 
-    // ÒÆ³ýÆäËûÒÑ¹ýÆÚµÄÔöÒæÐ§¹û
+    // ï¿½Æ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½
     if (bHadExpiredBuffs)
     {
         ActiveBuffs.RemoveAll([](const FBMBuffInstance& Buff)
@@ -474,15 +568,19 @@ void UBMStatsComponent::TickBuffs(float DeltaTime)
     }
 }
 
+/*
+ * @brief Tick health regen, it ticks the health regen
+ * @param DeltaTime The delta time
+ */
 void UBMStatsComponent::TickHealthRegen(float DeltaTime)
 {
-    // ²éÕÒ³ÖÐø»ØÑªÐ§¹û
+    // ï¿½ï¿½ï¿½Ò³ï¿½ï¿½ï¿½ï¿½ï¿½ÑªÐ§ï¿½ï¿½
     for (const FBMBuffInstance& Buff : ActiveBuffs)
     {
         if (Buff.Type == EBMBuffType::HealthRegenOverTime && !Buff.IsExpired())
         {
-            // Value ÊÇÔÚ TotalDuration ÄÚ»Ö¸´µÄ×ÜHP°Ù·Ö±È
-            // Ã¿Ãë»Ö¸´Á¿ = (Value / TotalDuration) * EffectiveMaxHP / 100
+            // Value ï¿½ï¿½ï¿½ï¿½ TotalDuration ï¿½Ú»Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½HPï¿½Ù·Ö±ï¿½
+            // Ã¿ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ = (Value / TotalDuration) * EffectiveMaxHP / 100
             if (Buff.TotalDuration > 0.f)
             {
                 const float EffectiveMaxHp = GetEffectiveMaxHp();
@@ -494,7 +592,7 @@ void UBMStatsComponent::TickHealthRegen(float DeltaTime)
                     const float OldHP = Stats.HP;
                     Stats.HP = FMath::Clamp(Stats.HP + RegenThisTick, 0.f, EffectiveMaxHp);
 
-                    // Í¨ÖªUI¸üÐÂÑªÁ¿
+                    // Í¨ÖªUIï¿½ï¿½ï¿½ï¿½Ñªï¿½ï¿½
                     if (!FMath::IsNearlyEqual(Stats.HP, OldHP))
                     {
                         if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))

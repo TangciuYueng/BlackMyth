@@ -7,6 +7,10 @@
 #include "GameFramework/CharacterMovementComponent.h"
 
 
+/*
+ * @brief On enter, it enters the attack state, it selects a random attack for the current target and sets the active attack spec
+ * @param DeltaTime The delta time
+ */
 void UBMEnemyState_Attack::OnEnter(float)
 {
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());
@@ -16,24 +20,24 @@ void UBMEnemyState_Attack::OnEnter(float)
     E->GetWorldTimerManager().ClearTimer(AttackFinishHandle);
     E->ClearActiveAttackSpec();
 
-    // ²»ÔÊÐí¿ÕÖÐ³öÊÖ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð³ï¿½ï¿½ï¿½
     if (auto* Move = E->GetCharacterMovement(); Move && Move->IsFalling())
     {
         if (E->GetFSM()) E->GetFSM()->ChangeStateByName(BMEnemyStateNames::Chase);
         return;
     }
 
-    // ³öÊÖÊ±Í£Ö¹Â·¾¶ÒÆ¶¯£¬±£Áô¹ßÐÔ
+    // ï¿½ï¿½ï¿½ï¿½Ê±Í£Ö¹Â·ï¿½ï¿½ï¿½Æ¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     E->RequestStopMovement();
 
-    // Ñ¡ÔñËæ»ú¹¥»÷
+    // Ñ¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     if (!E->SelectRandomAttackForCurrentTarget(ActiveAttack))
     {
         if (E->GetFSM()) E->GetFSM()->ChangeStateByName(BMEnemyStateNames::Chase);
         return;
     }
 
-    // Ð´Èë Combat ÉÏÏÂÎÄ
+    // Ð´ï¿½ï¿½ Combat ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     if (UBMCombatComponent* Combat = E->GetCombat())
     {
         FBMHitBoxActivationParams Params;
@@ -46,7 +50,7 @@ void UBMEnemyState_Attack::OnEnter(float)
         Combat->SetActiveHitBoxWindowContext(ActiveAttack.HitBoxNames, Params);
     }
 
-    // Í¬²½ EnemyBase µ±Ç°ÕÐÊ½
+    // Í¬ï¿½ï¿½ EnemyBase ï¿½ï¿½Ç°ï¿½ï¿½Ê½
     E->SetActiveAttackSpec(ActiveAttack);
 
     if (UBMCombatComponent* Combat = E->GetCombat())
@@ -54,10 +58,10 @@ void UBMEnemyState_Attack::OnEnter(float)
         Combat->SetActionLock(true);
     }
 
-    // °´ Spec ¿ØÖÆÖ´ÐÐ²ßÂÔ
+    // ï¿½ï¿½ Spec ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð²ï¿½ï¿½ï¿½
     if (ActiveAttack.bStopPathFollowingOnEnter)
     {
-        E->RequestStopMovement(); // ±£Áô¹ßÐÔ
+        E->RequestStopMovement(); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     }
     if (ActiveAttack.bFaceTargetOnEnter)
     {
@@ -65,7 +69,7 @@ void UBMEnemyState_Attack::OnEnter(float)
     }
     const float Duration = E->PlayAttackOnce(ActiveAttack);
 
-    // Ìá½»¸ÃÕÐÊ½¶ÀÁ¢ÀäÈ´
+    // ï¿½á½»ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È´
     if (Duration > 0.f)
     {
         if (UBMCombatComponent* Combat = E->GetCombat())
@@ -74,7 +78,7 @@ void UBMEnemyState_Attack::OnEnter(float)
         }
     }
 
-    // ÍÆ½øÀäÈ´
+    // ï¿½Æ½ï¿½ï¿½ï¿½È´
     E->CommitAttackCooldown(ActiveAttack.Cooldown);
 
     if (Duration <= 0.f)
@@ -90,6 +94,10 @@ void UBMEnemyState_Attack::OnEnter(float)
     E->GetWorldTimerManager().SetTimer(AttackFinishHandle, D, Duration, false);
 }
 
+/*
+ * @brief On exit, it exits the attack state, it clears the active attack spec and deactivates all hit boxes
+ * @param DeltaTime The delta time
+ */
 void UBMEnemyState_Attack::OnExit(float)
 {
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());
@@ -109,15 +117,24 @@ void UBMEnemyState_Attack::OnExit(float)
     bFinished = false;
 }
 
+/*
+ * @brief On update, it updates the attack state, it faces the target
+ * @param DeltaTime The delta time
+ */
 void UBMEnemyState_Attack::OnUpdate(float DeltaTime)
 {
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());
     if (!E) return;
 
-    // ¹¥»÷ÆÚ¼äÒ²¿ÉÒÔ³ÖÐø×ªÏò
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ú¼ï¿½Ò²ï¿½ï¿½ï¿½Ô³ï¿½ï¿½ï¿½×ªï¿½ï¿½
     E->FaceTarget(DeltaTime);
 }
 
+/*
+ * @brief Can transition to, it checks if the state can transition to the given state
+ * @param StateName The name of the state to transition to
+ * @return True if the state can transition to the given state, false otherwise
+ */
 bool UBMEnemyState_Attack::CanTransitionTo(FName StateName) const
 {
     if (StateName == BMEnemyStateNames::Death)          return true;
@@ -127,6 +144,9 @@ bool UBMEnemyState_Attack::CanTransitionTo(FName StateName) const
     return bFinished;
 }
 
+/*
+ * @brief Finish attack, it finishes the attack, it changes the state to chase
+ */
 void UBMEnemyState_Attack::FinishAttack()
 {
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());

@@ -6,6 +6,10 @@
 #include "Character/Components/BMStatsComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
+/*
+ * @brief On enter, it enters the dodge state, it stops the enemy movement, deactivates all hurt boxes and sets the action lock to true
+ * @param DeltaTime The delta time
+ */
 void UBMEnemyState_Dodge::OnEnter(float)
 {
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());
@@ -16,19 +20,19 @@ void UBMEnemyState_Dodge::OnEnter(float)
 
     bFinished = false;
 
-    // Í£Ö¹ AI Â·¾¶ÒÆ¶¯
+    // Í£Ö¹ AI Â·ï¿½ï¿½ï¿½Æ¶ï¿½
     E->RequestStopMovement();
 
-    // Ëø¶¯×÷
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     if (UBMCombatComponent* C = E->GetCombat())
     {
         C->SetActionLock(true);
     }
 
-    // Dodge ×´Ì¬¹Ø±ÕËùÓÐ HurtBox
+    // Dodge ×´Ì¬ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½ HurtBox
     E->SetAllHurtBoxesEnabled(false);
 
-    // Ëø¶¨·½ÏòÓÅÏÈÏòºóÉÁ±Ü
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     FVector Dir = -E->GetActorForwardVector();
     if (const AActor* Inst = E->GetLastDamageInfo().InstigatorActor.Get())
     {
@@ -44,7 +48,7 @@ void UBMEnemyState_Dodge::OnEnter(float)
     LockedDir = Dir.IsNearlyZero() ? (-E->GetActorForwardVector()) : Dir.GetSafeNormal();
 
 
-    // ²¥·ÅÉÁ±Ü¶¯»­
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¶ï¿½ï¿½ï¿½
     WindowDuration = E->PlayDodgeOnce();  
     if (WindowDuration <= 0.f)
     {
@@ -52,13 +56,13 @@ void UBMEnemyState_Dodge::OnEnter(float)
         return;
     }
 
-    // ÉèÖÃ×ÜÎ»ÒÆ¾àÀë
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½Æ¾ï¿½ï¿½ï¿½
     TotalDistance = FMath::Max(0.f, E->DodgeDistance);
     TraveledDistance = 0.f;
 
     LastStepTime = E->GetWorld()->GetTimeSeconds();
 
-    // ¿ªÆô Step ÍÆ½ø
+    // ï¿½ï¿½ï¿½ï¿½ Step ï¿½Æ½ï¿½
     E->GetWorldTimerManager().SetTimer(
         TimerHandleStep,
         this,
@@ -67,11 +71,17 @@ void UBMEnemyState_Dodge::OnEnter(float)
         true
     );
 
-    // ¶¯»­½áÊø
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     FTimerDelegate D = FTimerDelegate::CreateWeakLambda(this, [this]() { FinishDodge(); });
     E->GetWorldTimerManager().SetTimer(TimerHandleFinish, D, WindowDuration, false);
 }
 
+/*
+ * @brief Has walkable floor at, it checks if the character has a walkable floor at the given world position
+ * @param WorldPos The world position
+ * @param Char The character
+ * @return True if the character has a walkable floor at the given world position, false otherwise
+ */
 bool UBMEnemyState_Dodge::HasWalkableFloorAt(const FVector& WorldPos, const ACharacter* Char) const
 {
     if (!Char) return false;
@@ -95,6 +105,9 @@ bool UBMEnemyState_Dodge::HasWalkableFloorAt(const FVector& WorldPos, const ACha
     return Hit.ImpactNormal.Z >= WalkableZ;
 }
 
+/*
+ * @brief Step dodge, it steps the dodge
+ */
 void UBMEnemyState_Dodge::StepDodge()
 {
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());
@@ -130,14 +143,14 @@ void UBMEnemyState_Dodge::StepDodge()
     const FVector Delta = LockedDir * Step;
     const FVector Next = Cur + Delta;
 
-    // Æ½Ì¨±ßÔµ±£»¤
+    // Æ½Ì¨ï¿½ï¿½Ôµï¿½ï¿½ï¿½ï¿½
     if (!HasWalkableFloorAt(Next, E))
     {
         E->GetWorldTimerManager().ClearTimer(TimerHandleStep);
         return;
     }
 
-    // Sweep ÍÆ½ø
+    // Sweep ï¿½Æ½ï¿½
     FHitResult Hit;
     E->SetActorLocation(Next, true, &Hit, ETeleportType::None);
 
@@ -150,6 +163,10 @@ void UBMEnemyState_Dodge::StepDodge()
     }
 }
 
+/*
+ * @brief On exit, it exits the dodge state, it clears the timers, enables all hurt boxes and sets the action lock to false
+ * @param DeltaTime The delta time
+ */
 void UBMEnemyState_Dodge::OnExit(float)
 {
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());
@@ -158,10 +175,10 @@ void UBMEnemyState_Dodge::OnExit(float)
     E->GetWorldTimerManager().ClearTimer(TimerHandleFinish);
     E->GetWorldTimerManager().ClearTimer(TimerHandleStep);
 
-    // »Ö¸´ HurtBox
+    // ï¿½Ö¸ï¿½ HurtBox
     E->SetAllHurtBoxesEnabled(true);
 
-    // ½âËø
+    // ï¿½ï¿½ï¿½ï¿½
     if (UBMCombatComponent* C = E->GetCombat())
     {
         C->SetActionLock(false);
@@ -170,13 +187,21 @@ void UBMEnemyState_Dodge::OnExit(float)
     bFinished = false;
 }
 
+/*
+ * @brief Can transition to, it checks if the state can transition to the given state
+ * @param StateName The name of the state to transition to
+ * @return True if the state can transition to the given state, false otherwise
+ */
 bool UBMEnemyState_Dodge::CanTransitionTo(FName StateName) const
 {
-    // Dodge ²»¿É±»´ò¶Ï
+    // Dodge ï¿½ï¿½ï¿½É±ï¿½ï¿½ï¿½ï¿½
     if (StateName == BMEnemyStateNames::Death) return true;
     return bFinished;
 }
 
+/*
+ * @brief Finish dodge, it finishes the dodge, it changes the state to chase or idle
+ */
 void UBMEnemyState_Dodge::FinishDodge()
 {
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());
@@ -184,7 +209,7 @@ void UBMEnemyState_Dodge::FinishDodge()
 
     bFinished = true;
 
-    // ÍË³ö Dodge ºó»Øµ½ Idle »ò Chase
+    // ï¿½Ë³ï¿½ Dodge ï¿½ï¿½Øµï¿½ Idle ï¿½ï¿½ Chase
     if (UBMStateMachineComponent* FSM = E->GetFSM())
     {
         FSM->ChangeStateByName(E->IsAlerted() ? BMEnemyStateNames::Chase : BMEnemyStateNames::Idle);

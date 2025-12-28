@@ -6,6 +6,10 @@
 #include "NavigationSystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
+/*
+ * @brief On enter, it enters the patrol state, it plays the walk loop and sets the max walk speed to the patrol speed
+ * @param DeltaTime The delta time
+ */
 void UBMEnemyState_Patrol::OnEnter(float)
 {
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());
@@ -14,29 +18,34 @@ void UBMEnemyState_Patrol::OnEnter(float)
     E->PlayWalkLoop();
     if (auto* Move = E->GetCharacterMovement()) Move->MaxWalkSpeed = E->GetPatrolSpeed();
 
-    RepathAccum = 999.f; // Á¢¿ÌÑ¡µã
+    RepathAccum = 999.f; // ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½
 }
 
+/*
+ * @brief On update, it updates the patrol state, it checks if the enemy is alerted and has a valid target
+ * if not, it changes the state to chase
+ * @param DeltaTime The delta time
+ */
 void UBMEnemyState_Patrol::OnUpdate(float DeltaTime)
 {
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());
     if (!E) return;
 
-    // ·¢ÏÖÍæ¼Ò -> Chase
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ -> Chase
     if (E->IsAlerted() && E->HasValidTarget())
     {
         E->GetFSM()->ChangeStateByName(BMEnemyStateNames::Chase);
         return;
     }
 
-    // Ã¿Ö¡×ö¶¯»­ÃÅ¿Ø
+    // Ã¿Ö¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å¿ï¿½
     const float Speed2D = E->GetVelocity().Size2D();
     if (Speed2D <= E->GetLocomotionSpeedThreshold())
         E->PlayIdleLoop();
     else
         E->PlayWalkLoop();
 
-    // ½öÃ¿¸ôÒ»¶ÎÊ±¼äÖØÐÂÑ¡µã²¢·¢ MoveTo
+    // ï¿½ï¿½Ã¿ï¿½ï¿½Ò»ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ã²¢ï¿½ï¿½ MoveTo
     RepathAccum += DeltaTime;
     if (RepathAccum < 2.0f) return;
     RepathAccum = 0.f;

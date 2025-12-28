@@ -7,24 +7,34 @@
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 
+/*
+ * @brief Constructor of the UBMShopComponent class
+ * @param ObjectInitializer The object initializer
+ */
 UBMShopComponent::UBMShopComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	// ÉÌµê×é¼þÎÞÐèTick£¬±£³ÖÇáÁ¿
+	// ï¿½Ìµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Tickï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
+/*
+ * @brief Begin play, it rebuilds the runtime shelf and broadcasts the shop changed
+ */
 void UBMShopComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	// ³õÊ¼»¯ÔËÐÐÊ±»õ¼Ü²¢Í¬²½Ò»´ÎUI
+	// ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½Ü²ï¿½Í¬ï¿½ï¿½Ò»ï¿½ï¿½UI
 	RebuildRuntimeShelf();
 	BroadcastShopChanged();
 }
 
+/*
+ * @brief Rebuild runtime shelf, it rebuilds the runtime shelf
+ */
 void UBMShopComponent::RebuildRuntimeShelf()
 {
-	// ½«¿É±à¼­»õ¼Ü¸´ÖÆµ½¼¯ºÏÖÐ£¬·½±ã¿ìËÙÐ£ÑéÊÛÂô·¶Î§
+	// ï¿½ï¿½ï¿½É±à¼­ï¿½ï¿½ï¿½Ü¸ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î§
 	AvailableItems.Reset();
 	for (const FBMShopSlot& Slot : DefaultShelf)
 	{
@@ -37,9 +47,15 @@ void UBMShopComponent::RebuildRuntimeShelf()
 	}
 }
 
+/*
+ * @brief Purchase item, it purchases the item
+ * @param ItemID The item ID
+ * @param Count The count
+ * @return True if the item is purchased, false otherwise
+ */
 bool UBMShopComponent::PurchaseItem(FName ItemID, int32 Count)
 {
-	// ÏÈÐ£Ñé²ÎÊý£¬²¢È·±£ÉÌµêÈ·ÊµÔÚÊÛ¸ÃÎïÆ·
+	// ï¿½ï¿½Ð£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½Ìµï¿½È·Êµï¿½ï¿½ï¿½Û¸ï¿½ï¿½ï¿½Æ·
 	if (ItemID == NAME_None || Count <= 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UBMShopComponent::PurchaseItem - invalid params"));
@@ -80,6 +96,11 @@ bool UBMShopComponent::PurchaseItem(FName ItemID, int32 Count)
 	return true;
 }
 
+/*
+ * @brief Get warehouse count, it gets the warehouse count
+ * @param ItemID The item ID
+ * @return The warehouse count
+ */
 int32 UBMShopComponent::GetWarehouseCount(FName ItemID) const
 {
 	if (const int32* CountPtr = WarehouseItems.Find(ItemID))
@@ -89,17 +110,31 @@ int32 UBMShopComponent::GetWarehouseCount(FName ItemID) const
 	return 0;
 }
 
+/*
+ * @brief Get shelf snapshot, it gets the shelf snapshot
+ * @return The shelf snapshot
+ */
 TArray<FBMShopSlot> UBMShopComponent::GetShelfSnapshot() const
 {
 	return DefaultShelf;
 }
 
+/*
+ * @brief Get item data, it gets the item data
+ * @param ItemID The item ID
+ * @return The item data
+ */
 const FBMItemData* UBMShopComponent::GetItemData(FName ItemID) const
 {
 	UBMDataSubsystem* DataSubsystem = GetDataSubsystem();
 	return DataSubsystem ? DataSubsystem->GetItemData(ItemID) : nullptr;
 }
 
+/*
+ * @brief Find slot definition, it finds the slot definition
+ * @param ItemID The item ID
+ * @return The slot definition
+ */
 const FBMShopSlot* UBMShopComponent::FindSlotDefinition(FName ItemID) const
 {
 	return DefaultShelf.FindByPredicate([ItemID](const FBMShopSlot& Slot)
@@ -108,6 +143,12 @@ const FBMShopSlot* UBMShopComponent::FindSlotDefinition(FName ItemID) const
 	});
 }
 
+/*
+ * @brief Resolve price, it resolves the price
+ * @param ItemData The item data
+ * @param SlotDefinition The slot definition
+ * @return The price
+ */
 float UBMShopComponent::ResolvePrice(const FBMItemData& ItemData, const FBMShopSlot* SlotDefinition) const
 {
 	if (SlotDefinition && SlotDefinition->PriceOverride >= 0.f)
@@ -117,11 +158,18 @@ float UBMShopComponent::ResolvePrice(const FBMItemData& ItemData, const FBMShopS
 	return ItemData.Price;
 }
 
+/*
+ * @brief Broadcast shop changed, it broadcasts the shop changed
+ */
 void UBMShopComponent::BroadcastShopChanged()
 {
 	OnShopChanged.Broadcast();
 }
 
+/*
+ * @brief Get data subsystem, it gets the data subsystem
+ * @return The data subsystem
+ */
 UBMDataSubsystem* UBMShopComponent::GetDataSubsystem() const
 {
 	if (const UWorld* World = GetWorld())

@@ -27,6 +27,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 
+/*
+ * @brief Constructor of the ABMEnemyBase class
+ */
 ABMEnemyBase::ABMEnemyBase()
 {
     PrimaryActorTick.bCanEverTick = true;
@@ -46,6 +49,10 @@ ABMEnemyBase::ABMEnemyBase()
     }
 }
 
+/*
+ * @brief Begin play, it begins the play
+ * @param DeltaSeconds The delta seconds
+ */
 void ABMEnemyBase::BeginPlay()
 {
     Super::BeginPlay();
@@ -73,6 +80,9 @@ void ABMEnemyBase::Tick(float DeltaSeconds)
     Super::Tick(DeltaSeconds);
 }
 
+/*
+ * @brief Init enemy states, it initializes the enemy states
+ */
 void ABMEnemyBase::InitEnemyStates()
 {
     UBMStateMachineComponent* Machine = GetFSM();
@@ -105,6 +115,9 @@ void ABMEnemyBase::InitEnemyStates()
     Machine->ChangeStateByName(BMEnemyStateNames::Idle);
 }
 
+/*
+ * @brief Cache player pawn, it caches the player pawn
+ */
 void ABMEnemyBase::CachePlayerPawn()
 {
     if (UWorld* W = GetWorld())
@@ -113,6 +126,9 @@ void ABMEnemyBase::CachePlayerPawn()
     }
 }
 
+/*
+ * @brief Start perception timer, it starts the perception timer
+ */
 void ABMEnemyBase::StartPerceptionTimer()
 {
     if (!GetWorld() || PerceptionInterval <= 0.f) return;
@@ -126,6 +142,9 @@ void ABMEnemyBase::StartPerceptionTimer()
     );
 }
 
+/*
+ * @brief Update perception, it updates the perception
+ */
 void ABMEnemyBase::UpdatePerception()
 {
     const bool bDetected = DetectPlayer();
@@ -141,6 +160,10 @@ void ABMEnemyBase::UpdatePerception()
     }
 }
 
+/*
+ * @brief Detect player, it detects the player
+ * @return True if the player is detected, false otherwise
+ */
 bool ABMEnemyBase::DetectPlayer() const
 {
     APawn* PlayerPawn = CachedPlayer.Get();
@@ -164,6 +187,10 @@ bool ABMEnemyBase::DetectPlayer() const
     return DistSq <= FMath::Square(AggroRange);
 }
 
+/*
+ * @brief Set alert state, it sets the alert state
+ * @param bAlert The alert state
+ */
 void ABMEnemyBase::SetAlertState(bool bAlert)
 {
     if (bIsAlert == bAlert) return;
@@ -175,6 +202,9 @@ void ABMEnemyBase::SetAlertState(bool bAlert)
     }
 }
 
+/*
+ * @brief Drop loot, it drops the loot
+ */
 void ABMEnemyBase::DropLoot()
 {
     // 获取玩家
@@ -309,6 +339,10 @@ void ABMEnemyBase::DropLoot()
     }
 }
 
+/*
+ * @brief Is in attack range, it checks if the enemy is in attack range
+ * @return True if the enemy is in attack range, false otherwise
+ */
 bool ABMEnemyBase::IsInAttackRange() const
 {
     APawn* T = CurrentTarget.Get();
@@ -333,6 +367,10 @@ bool ABMEnemyBase::IsInAttackRange() const
     return false;
 }
 
+/*
+ * @brief Can start attack, it checks if the enemy can start attack
+ * @return True if the enemy can start attack, false otherwise
+ */
 bool ABMEnemyBase::CanStartAttack() const
 {
     if (GetWorld() && GetWorld()->GetTimeSeconds() < NextAttackAllowedTime)
@@ -364,6 +402,10 @@ bool ABMEnemyBase::CanStartAttack() const
     return false;
 }
 
+/*
+ * @brief Commit attack cooldown, it commits the attack cooldown
+ * @param CooldownSeconds The cooldown seconds
+ */
 void ABMEnemyBase::CommitAttackCooldown(float CooldownSeconds)
 {
     const float Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
@@ -374,6 +416,11 @@ void ABMEnemyBase::CommitAttackCooldown(float CooldownSeconds)
     NextAttackAllowedTime = Now + ActualInterval;
 }
 
+/*
+ * @brief Select random attack for current target, it selects the random attack for the current target
+ * @param OutSpec The out spec
+ * @return True if the attack is selected, false otherwise
+ */
 bool ABMEnemyBase::SelectRandomAttackForCurrentTarget(FBMEnemyAttackSpec& OutSpec) const
 {
     APawn* T = CurrentTarget.Get();
@@ -417,6 +464,10 @@ bool ABMEnemyBase::SelectRandomAttackForCurrentTarget(FBMEnemyAttackSpec& OutSpe
     return true;
 }
 
+/*
+ * @brief Set single node play rate, it sets the single node play rate
+ * @param Rate The rate
+ */
 void ABMEnemyBase::SetSingleNodePlayRate(float Rate)
 {
     if (!GetMesh()) return;
@@ -429,6 +480,11 @@ void ABMEnemyBase::SetSingleNodePlayRate(float Rate)
     }
 }
 
+/*
+ * @brief Play loop, it plays the loop
+ * @param Seq The sequence
+ * @param PlayRate The play rate
+ */
 void ABMEnemyBase::PlayLoop(UAnimSequence* Seq, float PlayRate)
 {
     if (!Seq || !GetMesh()) return;
@@ -452,6 +508,14 @@ void ABMEnemyBase::PlayLoop(UAnimSequence* Seq, float PlayRate)
     SetSingleNodePlayRate(PlayRate);
 }
 
+/*
+ * @brief Play once, it plays the once
+ * @param Seq The sequence
+ * @param PlayRate The play rate
+ * @param StartTime The start time
+ * @param MaxPlayTime The max play time
+ * @return The play time
+ */
 float ABMEnemyBase::PlayOnce(UAnimSequence* Seq, float PlayRate, float StartTime, float MaxPlayTime)
 {
     if (!Seq || !GetMesh())
@@ -501,26 +565,45 @@ float ABMEnemyBase::PlayOnce(UAnimSequence* Seq, float PlayRate, float StartTime
     return EffectivePlayTime / SafePlayRate;
 }
 
+/*
+ * @brief Play idle loop, it plays the idle loop
+ */
 void ABMEnemyBase::PlayIdleLoop()
 {
     PlayLoop(AnimIdle, 1.0f);
 }
 
+/*
+ * @brief Play walk loop, it plays the walk loop
+ */
 void ABMEnemyBase::PlayWalkLoop()
 {
     PlayLoop(AnimWalk, 1.0f);
 }
 
+/*
+ * @brief Play run loop, it plays the run loop
+ */
 void ABMEnemyBase::PlayRunLoop()
 {
     PlayLoop(AnimRun, 1.0f);
 }
 
+/*
+ * @brief Play attack once, it plays the attack once
+ * @param Spec The spec
+ * @return The play time
+ */
 float ABMEnemyBase::PlayAttackOnce(const FBMEnemyAttackSpec& Spec)
 {
     return PlayOnce(Spec.Anim, Spec.PlayRate);
 }
 
+/*
+ * @brief Play hit once, it plays the hit once
+ * @param Info The info
+ * @return The play time
+ */
 float ABMEnemyBase::PlayHitOnce(const FBMDamageInfo& Info)
 {
     UAnimSequence* Seq = nullptr;
@@ -533,16 +616,29 @@ float ABMEnemyBase::PlayHitOnce(const FBMDamageInfo& Info)
     return PlayOnce(Seq, 1.0f);
 }
 
+/*
+ * @brief Play death once, it plays the death once
+ * @return The play time
+ */
 float ABMEnemyBase::PlayDeathOnce()
 {
     return PlayOnce(AnimDeath, 1.0f);
 }
 
+/*
+ * @brief Play dodge once, it plays the dodge once
+ * @return The play time
+ */
 float ABMEnemyBase::PlayDodgeOnce()
 {
     return PlayOnce(AnimDodge, DodgePlayRate);
 }
 
+/*
+ * @brief Request move to target, it requests the move to target
+ * @param AcceptanceRadius The acceptance radius
+ * @return True if the request is successful, false otherwise
+ */
 bool ABMEnemyBase::RequestMoveToTarget(float AcceptanceRadius)
 {
     ABMEnemyAIController* C = Cast<ABMEnemyAIController>(GetController());
@@ -550,6 +646,12 @@ bool ABMEnemyBase::RequestMoveToTarget(float AcceptanceRadius)
     return C->RequestMoveToActor(CurrentTarget.Get(), AcceptanceRadius);
 }
 
+/*
+ * @brief Request move to location, it requests the move to location
+ * @param Location The location
+ * @param AcceptanceRadius The acceptance radius
+ * @return True if the request is successful, false otherwise
+ */
 bool ABMEnemyBase::RequestMoveToLocation(const FVector& Location, float AcceptanceRadius)
 {
     ABMEnemyAIController* C = Cast<ABMEnemyAIController>(GetController());
@@ -557,6 +659,9 @@ bool ABMEnemyBase::RequestMoveToLocation(const FVector& Location, float Acceptan
     return C->RequestMoveToLocation(Location, AcceptanceRadius);
 }
 
+/*
+ * @brief Request stop movement, it requests the stop movement
+ */
 void ABMEnemyBase::RequestStopMovement()
 {
     if (ABMEnemyAIController* C = Cast<ABMEnemyAIController>(GetController()))
@@ -565,6 +670,11 @@ void ABMEnemyBase::RequestStopMovement()
     }
 }
 
+/*
+ * @brief Face target, it faces the target
+ * @param DeltaSeconds The delta seconds
+ * @param TurnSpeedDeg The turn speed degrees
+ */
 void ABMEnemyBase::FaceTarget(float DeltaSeconds, float TurnSpeedDeg)
 {
     APawn* T = CurrentTarget.Get();
@@ -577,6 +687,11 @@ void ABMEnemyBase::FaceTarget(float DeltaSeconds, float TurnSpeedDeg)
     SetActorRotation(FMath::Lerp(GetActorRotation(), Want, Alpha));
 }
 
+/*
+ * @brief Can be damaged by, it checks if the enemy can be damaged by the info
+ * @param Info The info
+ * @return True if the enemy can be damaged by the info, false otherwise
+ */
 bool ABMEnemyBase::CanBeDamagedBy(const FBMDamageInfo& Info) const
 {
     if (!Super::CanBeDamagedBy(Info)) return false;
@@ -588,17 +703,29 @@ bool ABMEnemyBase::CanBeDamagedBy(const FBMDamageInfo& Info) const
     return true;
 }
 
+/*
+ * @brief Set active attack spec, it sets the active attack spec
+ * @param Spec The spec
+ */
 void ABMEnemyBase::SetActiveAttackSpec(const FBMEnemyAttackSpec& Spec)
 {
     ActiveAttackSpec = Spec;
     bHasActiveAttackSpec = true;
 }
 
+/*
+ * @brief Clear active attack spec, it clears the active attack spec
+ */
 void ABMEnemyBase::ClearActiveAttackSpec()
 {
     bHasActiveAttackSpec = false;
 }
 
+/*
+ * @brief Should interrupt current attack, it checks if the enemy should interrupt the current attack
+ * @param Incoming The incoming
+ * @return True if the enemy should interrupt the current attack, false otherwise
+ */
 bool ABMEnemyBase::ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) const
 {
     if (!bHasActiveAttackSpec)
@@ -637,6 +764,10 @@ bool ABMEnemyBase::ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) c
     return bWillInterrupt;
 }
 
+/*
+ * @brief Request hit state, it requests the hit state
+ * @param FinalInfo The final info
+ */
 void ABMEnemyBase::RequestHitState(const FBMDamageInfo& FinalInfo)
 {
     LastDamageInfo = FinalInfo;
@@ -666,6 +797,10 @@ void ABMEnemyBase::RequestHitState(const FBMDamageInfo& FinalInfo)
     }
 }
 
+/*
+ * @brief Request death state, it requests the death state
+ * @param LastHitInfo The last hit info
+ */
 void ABMEnemyBase::RequestDeathState(const FBMDamageInfo& LastHitInfo)
 {
     LastDamageInfo = LastHitInfo;
@@ -676,6 +811,11 @@ void ABMEnemyBase::RequestDeathState(const FBMDamageInfo& LastHitInfo)
     Machine->ChangeStateByName(BMEnemyStateNames::Death);
 }
 
+/*
+ * @brief Apply single node play rate, it applies the single node play rate
+ * @param Mesh The mesh
+ * @param Rate The rate
+ */
 static void ApplySingleNodePlayRate(USkeletalMeshComponent* Mesh, float Rate)
 {
     if (!Mesh) return;
@@ -685,6 +825,10 @@ static void ApplySingleNodePlayRate(USkeletalMeshComponent* Mesh, float Rate)
     }
 }
 
+/*
+ * @brief Handle damage taken, it handles the damage taken
+ * @param FinalInfo The final info
+ */
 void ABMEnemyBase::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
 {
     Super::HandleDamageTaken(FinalInfo);
@@ -698,6 +842,10 @@ void ABMEnemyBase::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
     RequestHitState(FinalInfo);
 }
 
+/*
+ * @brief Handle death, it handles the death
+ * @param LastHitInfo The last hit info
+ */
 void ABMEnemyBase::HandleDeath(const FBMDamageInfo& LastHitInfo)
 {
     // 先切 Death 状态，再做通用逻辑
@@ -707,6 +855,13 @@ void ABMEnemyBase::HandleDeath(const FBMDamageInfo& LastHitInfo)
     DropLoot();
 }
 
+/*
+ * @brief Resolve hit box window, it resolves the hit box window
+ * @param WindowId The window id
+ * @param OutHitBoxNames The out hit box names
+ * @param OutParams The out params
+ * @return True if the hit box window is resolved, false otherwise
+ */
 bool ABMEnemyBase::ResolveHitBoxWindow(
     FName WindowId,
     TArray<FName>& OutHitBoxNames,
@@ -733,6 +888,11 @@ bool ABMEnemyBase::ResolveHitBoxWindow(
     return false;
 }
 
+/*
+ * @brief Try evade incoming hit, it tries to evade the incoming hit
+ * @param InInfo The in info
+ * @return True if the incoming hit is evaded, false otherwise
+ */
 bool ABMEnemyBase::TryEvadeIncomingHit(const FBMDamageInfo& InInfo)
 {
     UBMStatsComponent* S = GetStats();
@@ -768,6 +928,11 @@ bool ABMEnemyBase::TryEvadeIncomingHit(const FBMDamageInfo& InInfo)
     return true; // 不结算伤害
 }
 
+/*
+ * @brief Compute backward dodge dir from hit, it computes the backward dodge dir from the hit
+ * @param InInfo The in info
+ * @return The backward dodge dir
+ */
 FVector ABMEnemyBase::ComputeBackwardDodgeDirFromHit(const FBMDamageInfo& InInfo) const
 {
     FVector Dir = -GetActorForwardVector();
@@ -786,6 +951,9 @@ FVector ABMEnemyBase::ComputeBackwardDodgeDirFromHit(const FBMDamageInfo& InInfo
     return Dir.IsNearlyZero() ? -GetActorForwardVector() : Dir.GetSafeNormal();
 }
 
+/*
+ * @brief Init floating health bar, it initializes the floating health bar
+ */
 void ABMEnemyBase::InitFloatingHealthBar()
 {
     if (!ShouldShowFloatingHealthBar())
@@ -816,6 +984,9 @@ void ABMEnemyBase::InitFloatingHealthBar()
         *GetName(), TotalOffset, CapsuleHalfHeight, FloatingHealthBarOffset, bIsAlert ? TEXT("true") : TEXT("false"));
 }
 
+/*
+ * @brief Load stats from data table, it loads the stats from the data table
+ */
 void ABMEnemyBase::LoadStatsFromDataTable()
 {
     const FName EnemyID = GetEnemyDataID();
@@ -876,6 +1047,10 @@ void ABMEnemyBase::LoadStatsFromDataTable()
         *GetName(), *EnemyID.ToString(), Data->MaxHP, Data->AttackPower, Data->Defense);
 }
 
+/*
+ * @brief Load assets from data table, it loads the assets from the data table
+ * @param Data The data
+ */
 void ABMEnemyBase::LoadAssetsFromDataTable(const FBMEnemyData* Data)
 {
     if (!Data)

@@ -16,6 +16,9 @@
 
 DEFINE_LOG_CATEGORY(LogBMCharacter);
 
+/*
+ * @brief Constructor of the ABMCharacterBase class
+ */
 ABMCharacterBase::ABMCharacterBase()
 {
     PrimaryActorTick.bCanEverTick = true;
@@ -27,6 +30,9 @@ ABMCharacterBase::ABMCharacterBase()
     HitBox = CreateDefaultSubobject<UBMHitBoxComponent>(TEXT("HitBox"));
 }
 
+/*
+ * @brief Begin play, it begins the play
+ */
 void ABMCharacterBase::BeginPlay()
 {
     Super::BeginPlay();
@@ -48,11 +54,15 @@ void ABMCharacterBase::BeginPlay()
         UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(C);
         if (!Prim) continue;
 
-        // Ö»¸Ä trace ÏìÓ¦
+        // Ö»ï¿½ï¿½ trace ï¿½ï¿½Ó¦
         Prim->SetCollisionResponseToChannel(CameraBoomChannel, ECR_Ignore);
     }
 }
 
+/*
+ * @brief Tick, it ticks the character base
+ * @param DeltaSeconds The delta seconds
+ */
 void ABMCharacterBase::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
@@ -63,6 +73,9 @@ void ABMCharacterBase::Tick(float DeltaSeconds)
     }
 }
 
+/*
+ * @brief Cache hurt boxes, it caches the hurt boxes
+ */
 void ABMCharacterBase::CacheHurtBoxes()
 {
     HurtBoxes.Reset();
@@ -79,24 +92,33 @@ void ABMCharacterBase::CacheHurtBoxes()
     }
 }
 
+/*
+ * @brief Get forward vector, it gets the forward vector
+ * @return The forward vector
+ */
 FVector ABMCharacterBase::GetForwardVector() const
 {
     return GetActorForwardVector();
 }
 
+/*
+ * @brief Can be damaged by, it checks if the character can be damaged by the info
+ * @param Info The info
+ * @return True if the character can be damaged by the info, false otherwise
+ */
 bool ABMCharacterBase::CanBeDamagedBy(const FBMDamageInfo& Info) const
 {
-    // ²»³Ô×Ô¼º´ò×Ô¼ºµÄÉËº¦
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½Ëºï¿½
     if (Info.InstigatorActor.Get() == this)
     {
         return false;
     }
 
-    // Í¬ÕóÓª²»»¥ÏàÉËº¦
+    // Í¬ï¿½ï¿½Óªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ëºï¿½
     const ABMCharacterBase* TempInstigator = Cast<ABMCharacterBase>(Info.InstigatorActor.Get());
     if (TempInstigator)
     {
-        // Èç¹û¹¥»÷ÕßºÍÊÜº¦ÕßÊÇÍ¬Ò»ÕóÓª,Ôò²»Ôì³ÉÉËº¦
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ßºï¿½ï¿½Üºï¿½ï¿½ï¿½ï¿½ï¿½Í¬Ò»ï¿½ï¿½Óª,ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ëºï¿½
         if (TempInstigator->Team == this->Team && this->Team != EBMTeam::Neutral)
         {
             return false;
@@ -106,6 +128,11 @@ bool ABMCharacterBase::CanBeDamagedBy(const FBMDamageInfo& Info) const
     return true;
 }
 
+/*
+ * @brief Take damage from hit, it takes the damage from the hit
+ * @param InOutInfo The in out info
+ * @return The applied damage
+ */
 float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
 {
     if (!Stats)
@@ -121,12 +148,12 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
         return 0.f;
     }
 
-    // È·±£ TargetActor ºÏÀí
+    // È·ï¿½ï¿½ TargetActor ï¿½ï¿½ï¿½ï¿½
     if (!InOutInfo.TargetActor)
     {
         InOutInfo.TargetActor = this;
     }
-    // »ù´¡¹ýÂË
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     if (!CanBeDamagedBy(InOutInfo))
     {
         InOutInfo.DamageValue = 0.f;
@@ -151,7 +178,7 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
         }
     }
 
-    // Stats ×îÖÕ½áËã
+    // Stats ï¿½ï¿½ï¿½Õ½ï¿½ï¿½ï¿½
     const float Applied = Stats->ApplyDamage(InOutInfo);
 
     if (Applied > 0.f)
@@ -165,12 +192,12 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
         HandleDamageTaken(InOutInfo);
         OnCharacterDamaged.Broadcast(this, InOutInfo);
 
-        // ´¥·¢Ïà»úÕð¶¯
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if (UWorld* World = GetWorld())
         {
             if (UBMCameraShakeSubsystem* ShakeSubsystem = World->GetSubsystem<UBMCameraShakeSubsystem>())
             {
-                // ¸ù¾Ý½ÇÉ«ÀàÐÍÑ¡Ôñ²»Í¬Ç¿¶ÈµÄÕð¶¯
+                // ï¿½ï¿½ï¿½Ý½ï¿½É«ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½Í¬Ç¿ï¿½Èµï¿½ï¿½ï¿½
                 switch (CharacterType)
                 {
                 case EBMCharacterType::Player:
@@ -191,6 +218,10 @@ float ABMCharacterBase::TakeDamageFromHit(FBMDamageInfo& InOutInfo)
     return Applied;
 }
 
+/*
+ * @brief Handle damage taken, it handles the damage taken
+ * @param FinalInfo The final info
+ */
 void ABMCharacterBase::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
 {
     UE_LOG(LogBMCharacter, Verbose, TEXT("[%s] Took %.2f damage from %s"),
@@ -199,9 +230,13 @@ void ABMCharacterBase::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
         FinalInfo.InstigatorActor ? *FinalInfo.InstigatorActor->GetName() : TEXT("None"));
 }
 
+/*
+ * @brief Handle stats death, it handles the stats death
+ * @param Killer The killer
+ */
 void ABMCharacterBase::HandleStatsDeath(AActor* Killer)
 {
-    // ËÀÍöÊ±¹ã²¥×îºóÒ»´ÎÓÐÐ§ÉËº¦ÐÅÏ¢
+    // ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ã²¥ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ð§ï¿½Ëºï¿½ï¿½ï¿½Ï¢
     if (!LastAppliedDamageInfo.TargetActor)
     {
         LastAppliedDamageInfo.TargetActor = this;
@@ -215,11 +250,21 @@ void ABMCharacterBase::HandleStatsDeath(AActor* Killer)
     OnCharacterDied.Broadcast(this, LastAppliedDamageInfo);
 }
 
+/*
+ * @brief Handle death, it handles the death
+ * @param LastHitInfo The last hit info
+ */
 void ABMCharacterBase::HandleDeath(const FBMDamageInfo& LastHitInfo)
 {
     (void)LastHitInfo;
 }
 
+/*
+ * @brief Get active hit window, it gets the active hit window
+ * @param OutHitBoxNames The out hit box names
+ * @param OutParams The out params
+ * @return True if the active hit window is resolved, false otherwise
+ */
 bool ABMCharacterBase::GetActiveHitWindow(TArray<FName>& OutHitBoxNames, FBMHitBoxActivationParams& OutParams) const
 {
     if (!bHasActiveHitWindow || ActiveHitWindowHitBoxes.Num() == 0)
@@ -231,6 +276,11 @@ bool ABMCharacterBase::GetActiveHitWindow(TArray<FName>& OutHitBoxNames, FBMHitB
     return true;
 }
 
+/*
+ * @brief Set active hit window, it sets the active hit window
+ * @param InHitBoxNames The in hit box names
+ * @param InParams The in params
+ */
 void ABMCharacterBase::SetActiveHitWindow(const TArray<FName>& InHitBoxNames, const FBMHitBoxActivationParams& InParams)
 {
     ActiveHitWindowHitBoxes = InHitBoxNames;
@@ -238,6 +288,9 @@ void ABMCharacterBase::SetActiveHitWindow(const TArray<FName>& InHitBoxNames, co
     bHasActiveHitWindow = (ActiveHitWindowHitBoxes.Num() > 0);
 }
 
+/*
+ * @brief Clear active hit window, it clears the active hit window
+ */
 void ABMCharacterBase::ClearActiveHitWindow()
 {
     ActiveHitWindowHitBoxes.Reset();
@@ -245,6 +298,13 @@ void ABMCharacterBase::ClearActiveHitWindow()
     bHasActiveHitWindow = false;
 }
 
+/*
+ * @brief Resolve hit box window, it resolves the hit box window
+ * @param WindowId The window id
+ * @param OutHitBoxNames The out hit box names
+ * @param OutParams The out params
+ * @return True if the hit box window is resolved, false otherwise
+ */
 bool ABMCharacterBase::ResolveHitBoxWindow(
     FName WindowId,
     TArray<FName>& OutHitBoxNames,
@@ -257,6 +317,10 @@ bool ABMCharacterBase::ResolveHitBoxWindow(
     return false;
 }
 
+/*
+ * @brief Set all hurt boxes enabled, it sets all hurt boxes enabled
+ * @param bEnabled The enabled
+ */
 void ABMCharacterBase::SetAllHurtBoxesEnabled(bool bEnabled)
 {
 	if (!HurtBoxes.Num()) CacheHurtBoxes();
@@ -268,9 +332,14 @@ void ABMCharacterBase::SetAllHurtBoxesEnabled(bool bEnabled)
     }
 }
 
+/*
+ * @brief Try evade incoming hit, it tries to evade the incoming hit
+ * @param InInfo The in info
+ * @return True if the incoming hit is evaded, false otherwise
+ */
 bool ABMCharacterBase::TryEvadeIncomingHit(const FBMDamageInfo& InInfo)
 {
     (void)InInfo;
-    return false; // Ä¬ÈÏ²»ÉÁ±Ü
+    return false; // Ä¬ï¿½Ï²ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 

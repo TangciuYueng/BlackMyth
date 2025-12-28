@@ -6,6 +6,10 @@
 #include "Camera/PlayerCameraManager.h"
 #include "Kismet/GameplayStatics.h"
 
+/*
+ * @brief Constructor of the UBMHealthBarComponent class, it initializes the component and sets the auto activate and hidden in game properties
+ * @param USceneComponent The parent class
+ */
 UBMHealthBarComponent::UBMHealthBarComponent() 
 {
     PrimaryComponentTick.bCanEverTick = true;
@@ -13,6 +17,10 @@ UBMHealthBarComponent::UBMHealthBarComponent()
     bHiddenInGame = false;
 }
 
+/*
+ * @brief Begin play, it applies the vertical offset and observes the character, 
+ * if the observed character is not valid, it casts the owner to ABMCharacterBase and observes the character
+ */
 void UBMHealthBarComponent::BeginPlay()
 {
     Super::BeginPlay();
@@ -29,12 +37,22 @@ void UBMHealthBarComponent::BeginPlay()
     RefreshFromStats();
 }
 
+/*
+ * @brief End play, it unbinds the character and calls the super end play
+ * @param EndPlayReason The reason for the end play
+ */
 void UBMHealthBarComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     UnbindFromCharacter();
     Super::EndPlay(EndPlayReason);
 }
 
+/*
+ * @brief Tick component, it faces the camera if the bFaceCamera property is true
+ * @param DeltaTime The delta time
+ * @param TickType The tick type
+ * @param ThisTickFunction The tick function
+ */
 void UBMHealthBarComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -45,6 +63,10 @@ void UBMHealthBarComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
     }
 }
 
+/*
+ * @brief Observe character, it observes the character if the observed character is not the same as the input character
+ * @param InCharacter The character to observe
+ */
 void UBMHealthBarComponent::ObserveCharacter(ABMCharacterBase* InCharacter)
 {
     if (ObservedCharacter.Get() == InCharacter)
@@ -56,12 +78,19 @@ void UBMHealthBarComponent::ObserveCharacter(ABMCharacterBase* InCharacter)
     BindToCharacter(InCharacter);
 }
 
+/*
+ * @brief Set vertical offset, it sets the vertical offset and applies the vertical offset
+ * @param NewOffset The new offset
+ */
 void UBMHealthBarComponent::SetVerticalOffset(float NewOffset)
 {
     VerticalOffset = NewOffset;
     ApplyVerticalOffset();
 }
 
+/*
+ * @brief Refresh from stats, it refreshes the health bar from the stats component
+ */
 void UBMHealthBarComponent::RefreshFromStats()
 {
     UBMStatsComponent* StatsComponent = ObservedStats.Get();
@@ -87,6 +116,10 @@ void UBMHealthBarComponent::RefreshFromStats()
     UpdateHealthDisplay(CurrentHP, MaxHP);
 }
 
+/*
+ * @brief Bind to character, it binds the character to the health bar and refreshes the health bar from the stats component
+ * @param Character The character to bind to
+ */
 void UBMHealthBarComponent::BindToCharacter(ABMCharacterBase* Character)
 {
     if (!Character)
@@ -103,6 +136,9 @@ void UBMHealthBarComponent::BindToCharacter(ABMCharacterBase* Character)
     RefreshFromStats();
 }
 
+/*
+ * @brief Unbind from character, it unbinds the character from the health bar and resets the observed character and stats
+ */
 void UBMHealthBarComponent::UnbindFromCharacter()
 {
     if (!ObservedCharacter.IsValid())
@@ -126,6 +162,11 @@ void UBMHealthBarComponent::UnbindFromCharacter()
     ObservedStats.Reset();
 }
 
+/*
+ * @brief Handle character damaged, it refreshes the health bar from the stats component if the victim is the observed character
+ * @param Victim The victim
+ * @param Info The damage info
+ */
 void UBMHealthBarComponent::HandleCharacterDamaged(ABMCharacterBase* Victim, const FBMDamageInfo& Info)
 {
     if (Victim == ObservedCharacter.Get())
@@ -134,6 +175,11 @@ void UBMHealthBarComponent::HandleCharacterDamaged(ABMCharacterBase* Victim, con
     }
 }
 
+/*
+ * @brief Handle character died, it refreshes the health bar from the stats component and sets the visibility to false if the victim is the observed character
+ * @param Victim The victim
+ * @param Info The damage info
+ */
 void UBMHealthBarComponent::HandleCharacterDied(ABMCharacterBase* Victim, const FBMDamageInfo& Info)
 {
     if (Victim == ObservedCharacter.Get())
@@ -143,6 +189,9 @@ void UBMHealthBarComponent::HandleCharacterDied(ABMCharacterBase* Victim, const 
     }
 }
 
+/*
+ * @brief Face camera, it faces the camera if the bFaceCamera property is true
+ */
 void UBMHealthBarComponent::FaceCamera()
 {
     UWorld* World = GetWorld();
@@ -167,11 +216,17 @@ void UBMHealthBarComponent::FaceCamera()
     }
 }
 
+/*
+ * @brief Apply vertical offset, it applies the vertical offset to the health bar
+ */
 void UBMHealthBarComponent::ApplyVerticalOffset()
 {
     SetRelativeLocation(FVector(0.f, 0.f, VerticalOffset));
 }
 
+/*
+ * @brief Constructor of the UBMEnemyHealthBarComponent class, it initializes the component and sets the auto activate and hidden in game properties
+ */
 UBMEnemyHealthBarComponent::UBMEnemyHealthBarComponent()
 {
     PrimaryComponentTick.bCanEverTick = true;
@@ -181,6 +236,9 @@ UBMEnemyHealthBarComponent::UBMEnemyHealthBarComponent()
 
 }
 
+/*
+ * @brief On register, it registers the background and foreground text components
+ */
 void UBMEnemyHealthBarComponent::OnRegister()
 {
     Super::OnRegister();
@@ -234,6 +292,11 @@ void UBMEnemyHealthBarComponent::OnRegister()
     }
 }
 
+/*
+ * @brief Update health display, it updates the health display based on the current and max HP
+ * @param CurrentHP The current HP
+ * @param MaxHP The max HP
+ */
 void UBMEnemyHealthBarComponent::UpdateHealthDisplay(float CurrentHP, float MaxHP)
 {
     const float Percent = (MaxHP > 0.f) ? (CurrentHP / MaxHP) : 0.f;
@@ -248,6 +311,11 @@ void UBMEnemyHealthBarComponent::UpdateHealthDisplay(float CurrentHP, float MaxH
 
 }
 
+/*
+ * @brief Build filled bar string, it builds the filled bar string based on the filled count
+ * @param FilledCount The filled count
+ * @return The filled bar string
+ */
 FString UBMEnemyHealthBarComponent::BuildFilledBarString(int32 FilledCount) const
 {
     FString Bar;
@@ -267,6 +335,10 @@ FString UBMEnemyHealthBarComponent::BuildFilledBarString(int32 FilledCount) cons
     return Bar;
 }
 
+/*
+ * @brief Build background bar string, it builds the background bar string
+ * @return The background bar string
+ */
 FString UBMEnemyHealthBarComponent::BuildBackgroundBarString() const
 {
     FString Bar;
@@ -282,4 +354,3 @@ FString UBMEnemyHealthBarComponent::BuildBackgroundBarString() const
     
     return Bar;
 }
-

@@ -4,13 +4,18 @@
 #include "Core/BMTypes.h"
 #include "BMItemData.generated.h"
 
+/*
+ * @brief Define the FBMItemData struct, item data struct, used to store the item data
+ * @param FBMItemData The name of the struct
+ * @param FTableRowBase The parent struct
+ */
 USTRUCT(BlueprintType)
 struct FBMItemData : public FTableRowBase
 {
     GENERATED_BODY()
 
 public:
-    // »ù´¡ÊôÐÔ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item|Basic")
     FText Name;
 
@@ -23,7 +28,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item|Basic")
     FSoftObjectPath IconPath;
 
-    // ÊôÐÔ¼Ó³É
+    // ï¿½ï¿½ï¿½Ô¼Ó³ï¿½
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item|Stats")
     float MaxHp = 0.0f;
 
@@ -33,7 +38,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item|Stats")
     float AttackPower = 0.0f;
 
-    // ¶îÍâ¹¦ÄÜ
+    // ï¿½ï¿½ï¿½â¹¦ï¿½ï¿½
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item|Effect")
     EBMItemFunction AdditionalFunction = EBMItemFunction::None;
 };

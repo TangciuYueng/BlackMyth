@@ -9,6 +9,10 @@
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 
+/*
+ * @brief Initialize, it initializes the enemy manager subsystem
+ * @param Collection The collection
+ */
 void UBMEnemyManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
@@ -16,7 +20,7 @@ void UBMEnemyManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     RegisteredEnemies.Empty();
     bLevelTransitionTriggered = false;
 
-    // Æô¶¯×Ô¶¯ÇåÀí¶¨Ê±Æ÷
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½
     if (UWorld* World = GetWorld())
     {
         World->GetTimerManager().SetTimer(
@@ -31,9 +35,12 @@ void UBMEnemyManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     UE_LOG(LogTemp, Log, TEXT("[BMEnemyManagerSubsystem] Initialized"));
 }
 
+/*
+ * @brief Deinitialize, it deinitializes the enemy manager subsystem
+ */
 void UBMEnemyManagerSubsystem::Deinitialize()
 {
-    // ÇåÀíËùÓÐ¶©ÔÄ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½
     for (TWeakObjectPtr<ABMEnemyBase> Enemy : RegisteredEnemies)
     {
         if (ABMEnemyBase* EnemyPtr = Enemy.Get())
@@ -55,6 +62,10 @@ void UBMEnemyManagerSubsystem::Deinitialize()
     Super::Deinitialize();
 }
 
+/*
+ * @brief Register enemy, it registers the enemy
+ * @param Enemy The enemy
+ */
 void UBMEnemyManagerSubsystem::RegisterEnemy(ABMEnemyBase* Enemy)
 {
     if (!Enemy)
@@ -63,7 +74,7 @@ void UBMEnemyManagerSubsystem::RegisterEnemy(ABMEnemyBase* Enemy)
         return;
     }
 
-    // ±ÜÃâÖØ¸´×¢²á
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ø¸ï¿½×¢ï¿½ï¿½
     for (const TWeakObjectPtr<ABMEnemyBase>& Existing : RegisteredEnemies)
     {
         if (Existing.Get() == Enemy)
@@ -75,7 +86,7 @@ void UBMEnemyManagerSubsystem::RegisterEnemy(ABMEnemyBase* Enemy)
 
     RegisteredEnemies.Add(Enemy);
 
-    // ¶©ÔÄËÀÍöÊÂ¼þ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½
     Enemy->OnCharacterDied.AddUObject(this, &UBMEnemyManagerSubsystem::HandleEnemyDeath);
 
     UE_LOG(LogTemp, Log, TEXT("[BMEnemyManagerSubsystem] Registered enemy: %s (Total: %d, Alive: %d)"),
@@ -84,6 +95,10 @@ void UBMEnemyManagerSubsystem::RegisterEnemy(ABMEnemyBase* Enemy)
     BroadcastCountChanged();
 }
 
+/*
+ * @brief Unregister enemy, it unregisters the enemy
+ * @param Enemy The enemy
+ */
 void UBMEnemyManagerSubsystem::UnregisterEnemy(ABMEnemyBase* Enemy)
 {
     if (!Enemy)
@@ -91,10 +106,10 @@ void UBMEnemyManagerSubsystem::UnregisterEnemy(ABMEnemyBase* Enemy)
         return;
     }
 
-    // È¡Ïû¶©ÔÄ
+    // È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     Enemy->OnCharacterDied.RemoveAll(this);
 
-    // ´ÓÁÐ±íÖÐÒÆ³ý
+    // ï¿½ï¿½ï¿½Ð±ï¿½ï¿½ï¿½ï¿½Æ³ï¿½
     RegisteredEnemies.RemoveAll([Enemy](const TWeakObjectPtr<ABMEnemyBase>& Ptr)
     {
         return Ptr.Get() == Enemy;
@@ -106,6 +121,10 @@ void UBMEnemyManagerSubsystem::UnregisterEnemy(ABMEnemyBase* Enemy)
     BroadcastCountChanged();
 }
 
+/*
+ * @brief Get the alive enemy count, it gets the alive enemy count
+ * @return The alive enemy count
+ */
 int32 UBMEnemyManagerSubsystem::GetAliveEnemyCount() const
 {
     int32 Count = 0;
@@ -114,7 +133,7 @@ int32 UBMEnemyManagerSubsystem::GetAliveEnemyCount() const
     {
         if (ABMEnemyBase* Enemy = EnemyPtr.Get())
         {
-            // Boss ÌØÊâ´¦Àí£º½×¶Î×ª»»ÆÚ¼äÊÓÎª´æ»î
+            // Boss ï¿½ï¿½ï¿½â´¦ï¿½ï¿½ï¿½ï¿½ï¿½×¶ï¿½×ªï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½
             if (ABMEnemyBoss* Boss = Cast<ABMEnemyBoss>(Enemy))
             {
                 if (Boss->IsInPhaseTransition())
@@ -137,6 +156,10 @@ int32 UBMEnemyManagerSubsystem::GetAliveEnemyCount() const
     return Count;
 }
 
+/*
+ * @brief Get the total enemy count, it gets the total enemy count
+ * @return The total enemy count
+ */
 int32 UBMEnemyManagerSubsystem::GetTotalEnemyCount() const
 {
     int32 Count = 0;
@@ -152,6 +175,11 @@ int32 UBMEnemyManagerSubsystem::GetTotalEnemyCount() const
     return Count;
 }
 
+/*
+ * @brief Get the alive enemies, it gets the alive enemies
+ * @param OutEnemies The out enemies
+ * @return The alive enemies count
+ */
 int32 UBMEnemyManagerSubsystem::GetAliveEnemies(TArray<ABMEnemyBase*>& OutEnemies) const
 {
     OutEnemies.Empty();
@@ -160,7 +188,7 @@ int32 UBMEnemyManagerSubsystem::GetAliveEnemies(TArray<ABMEnemyBase*>& OutEnemie
     {
         if (ABMEnemyBase* Enemy = EnemyPtr.Get())
         {
-            // Boss ÌØÊâ´¦Àí£º½×¶Î×ª»»ÆÚ¼äÒ²¼ÓÈëÁÐ±í
+            // Boss ï¿½ï¿½ï¿½â´¦ï¿½ï¿½ï¿½ï¿½ï¿½×¶ï¿½×ªï¿½ï¿½ï¿½Ú¼ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½Ð±ï¿½
             if (ABMEnemyBoss* Boss = Cast<ABMEnemyBoss>(Enemy))
             {
                 if (Boss->IsInPhaseTransition())
@@ -183,6 +211,11 @@ int32 UBMEnemyManagerSubsystem::GetAliveEnemies(TArray<ABMEnemyBase*>& OutEnemie
     return OutEnemies.Num();
 }
 
+/*
+ * @brief Get all enemies, it gets all enemies
+ * @param OutEnemies The out enemies
+ * @return The all enemies count
+ */
 int32 UBMEnemyManagerSubsystem::GetAllEnemies(TArray<ABMEnemyBase*>& OutEnemies) const
 {
     OutEnemies.Empty();
@@ -198,18 +231,22 @@ int32 UBMEnemyManagerSubsystem::GetAllEnemies(TArray<ABMEnemyBase*>& OutEnemies)
     return OutEnemies.Num();
 }
 
+/*
+ * @brief Are all enemies dead, it are all enemies dead
+ * @return True if all enemies are dead, false otherwise
+ */
 bool UBMEnemyManagerSubsystem::AreAllEnemiesDead() const
 {
     for (const TWeakObjectPtr<ABMEnemyBase>& EnemyPtr : RegisteredEnemies)
     {
         if (ABMEnemyBase* Enemy = EnemyPtr.Get())
         {
-            // Boss ÌØÊâ´¦Àí£º½×¶Î×ª»»ÆÚ¼äÊÓÎª´æ»î
+            // Boss ï¿½ï¿½ï¿½â´¦ï¿½ï¿½ï¿½ï¿½ï¿½×¶ï¿½×ªï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½
             if (ABMEnemyBoss* Boss = Cast<ABMEnemyBoss>(Enemy))
             {
                 if (Boss->IsInPhaseTransition())
                 {
-                    return false; // Boss ÕýÔÚ×ª»»½×¶Î£¬ÊÓÎª´æ»î
+                    return false; // Boss ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½×¶Î£ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½
                 }
             }
 
@@ -217,15 +254,18 @@ bool UBMEnemyManagerSubsystem::AreAllEnemiesDead() const
             {
                 if (!Stats->IsDead())
                 {
-                    return false; // ·¢ÏÖ´æ»îµÐÈË
+                    return false; // ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½
                 }
             }
         }
     }
 
-    return RegisteredEnemies.Num() > 0; // ÈôÁÐ±íÎª¿ÕÔò·µ»Ø false
+    return RegisteredEnemies.Num() > 0; // ï¿½ï¿½ï¿½Ð±ï¿½Îªï¿½ï¿½ï¿½ò·µ»ï¿½ false
 }
 
+/*
+ * @brief Cleanup invalid enemies, it cleans up the invalid enemies
+ */
 void UBMEnemyManagerSubsystem::CleanupInvalidEnemies()
 {
     const int32 OldCount = RegisteredEnemies.Num();
@@ -246,6 +286,11 @@ void UBMEnemyManagerSubsystem::CleanupInvalidEnemies()
     }
 }
 
+/*
+ * @brief Handle enemy death, it handles the enemy death
+ * @param Victim The victim
+ * @param LastHitInfo The last hit info
+ */
 void UBMEnemyManagerSubsystem::HandleEnemyDeath(ABMCharacterBase* Victim, const FBMDamageInfo& LastHitInfo)
 {
     if (ABMEnemyBase* Enemy = Cast<ABMEnemyBase>(Victim))
@@ -255,20 +300,23 @@ void UBMEnemyManagerSubsystem::HandleEnemyDeath(ABMCharacterBase* Victim, const 
 
         BroadcastCountChanged();
 
-        // ¼ì²éÊÇ·ñËùÓÐµÐÈË¶¼ÒÑËÀÍö
+        // ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½Ë¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if (AreAllEnemiesDead())
         {
             UE_LOG(LogTemp, Warning, TEXT("[BMEnemyManagerSubsystem] === ALL ENEMIES DEFEATED ==="));
             
-            // ¼ì²é¹Ø¿¨Íê³ÉÌõ¼þ²¢ÇÐ»»
+            // ï¿½ï¿½ï¿½Ø¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½
             CheckLevelCompletionAndTransition();
         }
     }
 }
 
+/*
+ * @brief Check level completion and transition, it checks the level completion and transition
+ */
 void UBMEnemyManagerSubsystem::CheckLevelCompletionAndTransition()
 {
-    // ·ÀÖ¹ÖØ¸´´¥·¢
+    // ï¿½ï¿½Ö¹ï¿½Ø¸ï¿½ï¿½ï¿½ï¿½ï¿½
     if (bLevelTransitionTriggered)
     {
         return;
@@ -280,19 +328,19 @@ void UBMEnemyManagerSubsystem::CheckLevelCompletionAndTransition()
         return;
     }
 
-    // »ñÈ¡µ±Ç°¹Ø¿¨Ãû³Æ
+    // ï¿½ï¿½È¡ï¿½ï¿½Ç°ï¿½Ø¿ï¿½ï¿½ï¿½ï¿½ï¿½
     FString CurrentLevelName = World->GetName();
     
     UE_LOG(LogTemp, Warning, TEXT("[BMEnemyManagerSubsystem] Current Level: %s"), *CurrentLevelName);
 
-    // ¼ì²éÊÇ·ñÊÇµÚÒ»¹Ø£¨×ÔÈ»³¡¾°£©
+    // ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Çµï¿½Ò»ï¿½Ø£ï¿½ï¿½ï¿½È»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     if (CurrentLevelName.Contains(TEXT("Stylized_Nature_ExampleScene")))
     {
         bLevelTransitionTriggered = true;
         
         UE_LOG(LogTemp, Warning, TEXT("[BMEnemyManagerSubsystem] First level completed! Transitioning to boss level in 5 seconds..."));
         
-        // Í¨¹ýÊÂ¼þ×ÜÏß·¢ËÍÊ¤ÀûÍ¨Öª
+        // Í¨ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ß·ï¿½ï¿½ï¿½Ê¤ï¿½ï¿½Í¨Öª
         if (UGameInstance* GameInstance = World->GetGameInstance())
         {
             if (UBMEventBusSubsystem* EventBus = GameInstance->GetSubsystem<UBMEventBusSubsystem>())
@@ -302,7 +350,7 @@ void UBMEnemyManagerSubsystem::CheckLevelCompletionAndTransition()
             }
         }
         
-        // ÑÓ³Ù5ÃëºóÇÐ»»µ½Boss¹Ø¿¨
+        // ï¿½Ó³ï¿½5ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½ï¿½Bossï¿½Ø¿ï¿½
         World->GetTimerManager().SetTimer(
             LevelTransitionTimerHandle,
             this,
@@ -313,6 +361,9 @@ void UBMEnemyManagerSubsystem::CheckLevelCompletionAndTransition()
     }
 }
 
+/*
+ * @brief Transition to next level, it transitions to next level
+ */
 void UBMEnemyManagerSubsystem::TransitionToNextLevel()
 {
     UWorld* World = GetWorld();
@@ -322,14 +373,14 @@ void UBMEnemyManagerSubsystem::TransitionToNextLevel()
         return;
     }
 
-    // ===== ÇÐ»»Ç°±£´æÍæ¼ÒÊý¾Ý =====
+    // ===== ï¿½Ð»ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ =====
     if (UGameInstance* GameInstance = World->GetGameInstance())
     {
         if (UBMSaveGameSubsystem* SaveSystem = GameInstance->GetSubsystem<UBMSaveGameSubsystem>())
         {
             UE_LOG(LogTemp, Warning, TEXT("[BMEnemyManagerSubsystem] Auto-saving before level transition..."));
             
-            // Ê¹ÓÃ×Ô¶¯´æµµ²ÛÎ»£¨²ÛÎ»0£©
+            // Ê¹ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½æµµï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½Î»0ï¿½ï¿½
             bool bSaveSuccess = SaveSystem->SaveGame(0);
             
             if (bSaveSuccess)
@@ -347,7 +398,7 @@ void UBMEnemyManagerSubsystem::TransitionToNextLevel()
         }
     }
 
-    // ·¢ËÍ¼ÓÔØÍ¨Öª
+    // ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½Í¨Öª
     if (UGameInstance* GameInstance = World->GetGameInstance())
     {
         if (UBMEventBusSubsystem* EventBus = GameInstance->GetSubsystem<UBMEventBusSubsystem>())
@@ -357,15 +408,18 @@ void UBMEnemyManagerSubsystem::TransitionToNextLevel()
         }
     }
 
-    // Boss¹Ø¿¨Â·¾¶
+    // Bossï¿½Ø¿ï¿½Â·ï¿½ï¿½
     const FString BossLevelPath = TEXT("/Game/Stylized_Spruce_Forest/Demo/Maps/STZD_Demo_01");
     
     UE_LOG(LogTemp, Warning, TEXT("[BMEnemyManagerSubsystem] Loading Boss Level: %s"), *BossLevelPath);
     
-    // ÇÐ»»µ½Boss¹Ø¿¨
+    // ï¿½Ð»ï¿½ï¿½ï¿½Bossï¿½Ø¿ï¿½
     UGameplayStatics::OpenLevel(World, FName(*BossLevelPath));
 }
 
+/*
+ * @brief Broadcast count changed, it broadcasts the count changed
+ */
 void UBMEnemyManagerSubsystem::BroadcastCountChanged()
 {
     const int32 AliveCount = GetAliveEnemyCount();

@@ -12,6 +12,10 @@
 #include "InputCoreTypes.h"
 #include "Character/BMPlayerCharacter.h"
 
+/*
+ * @brief Constructor for the BlackMythPlayerController class
+ * @return void
+ */
 void ABlackMythPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -36,6 +40,10 @@ void ABlackMythPlayerController::BeginPlay()
 	}
 }
 
+/* 
+ * @brief Setup the input component
+ * @return void
+ */
 void ABlackMythPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
@@ -76,8 +84,22 @@ void ABlackMythPlayerController::SetupInputComponent()
 	}
 }
 
+/*
+ * @brief Hotbar 1
+ * @return void
+ */
 void ABlackMythPlayerController::Hotbar1() { TriggerHotbar(1); }
+
+/*
+ * @brief Hotbar 2
+ * @return void
+ */
 void ABlackMythPlayerController::Hotbar2() { TriggerHotbar(2); }
+
+/*
+ * @brief Hotbar 3
+ * @return void
+ */
 void ABlackMythPlayerController::Hotbar3() { TriggerHotbar(3); }
 void ABlackMythPlayerController::Hotbar4() { TriggerHotbar(4); }
 void ABlackMythPlayerController::Hotbar5() { TriggerHotbar(5); }
@@ -86,6 +108,11 @@ void ABlackMythPlayerController::Hotbar7() { TriggerHotbar(7); }
 void ABlackMythPlayerController::Hotbar8() { TriggerHotbar(8); }
 void ABlackMythPlayerController::Hotbar9() { TriggerHotbar(9); }
 
+/*
+ * @brief Trigger the hotbar
+ * @param SlotIndex The slot index
+ * @return void
+ */
 void ABlackMythPlayerController::TriggerHotbar(int32 SlotIndex)
 {
 	if (ABMPlayerCharacter* BMPlayer = Cast<ABMPlayerCharacter>(GetPawn()))
@@ -95,6 +122,10 @@ void ABlackMythPlayerController::TriggerHotbar(int32 SlotIndex)
 	}
 }
 
+/*
+ * @brief Should use touch controls
+ * @return bool
+ */
 bool ABlackMythPlayerController::ShouldUseTouchControls() const
 {
 	// are we on a mobile platform? Should we force touch?

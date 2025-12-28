@@ -7,6 +7,9 @@
 #include "UI/BMMainWidget.h"
 #include "Character/Components/BMStatsComponent.h"
 
+/*
+ * @brief Native construct, it native construct
+ */
 void UBMDeathWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -20,6 +23,9 @@ void UBMDeathWidget::NativeConstruct()
 	}
 }
 
+/*
+ * @brief Native destruct, it native destruct
+ */
 void UBMDeathWidget::NativeDestruct()
 {
 	if (RestartButton)
@@ -33,6 +39,9 @@ void UBMDeathWidget::NativeDestruct()
 	Super::NativeDestruct();
 }
 
+/*
+ * @brief On restart clicked, it on restart clicked
+ */
 void UBMDeathWidget::OnRestartClicked()
 {
     // Reload current level (clean reset of animations, movement, input, etc.)
@@ -54,6 +63,9 @@ void UBMDeathWidget::OnRestartClicked()
     }
 }
 
+/*
+ * @brief On quit clicked, it on quit clicked
+ */
 void UBMDeathWidget::OnQuitClicked()
 {
     // Show main menu instead of quitting the application

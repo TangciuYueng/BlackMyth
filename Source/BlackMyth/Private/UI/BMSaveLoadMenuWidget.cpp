@@ -13,6 +13,9 @@
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
 
+/*
+ * @brief Native construct, it native construct
+ */
 void UBMSaveLoadMenuWidget::NativeConstruct()
 {
     Super::NativeConstruct();
@@ -32,6 +35,9 @@ void UBMSaveLoadMenuWidget::NativeConstruct()
     RefreshSaveSlotDisplay();
 }
 
+/*
+ * @brief Native destruct, it native destruct
+ */
 void UBMSaveLoadMenuWidget::NativeDestruct()
 {
     // Unbind button events
@@ -48,6 +54,9 @@ void UBMSaveLoadMenuWidget::NativeDestruct()
     Super::NativeDestruct();
 }
 
+/*
+ * @brief On back clicked, it on back clicked
+ */
 void UBMSaveLoadMenuWidget::OnBackClicked()
 {
     UWorld* World = GetWorld();
@@ -114,26 +123,42 @@ void UBMSaveLoadMenuWidget::OnBackClicked()
     }
 }
 
+/*
+ * @brief On slot 1 clicked, it on slot 1 clicked
+ */
 void UBMSaveLoadMenuWidget::OnSlot1Clicked()
 {
     LoadGameIndex(1);
 }
 
+/*
+ * @brief On slot 2 clicked, it on slot 2 clicked
+ */
 void UBMSaveLoadMenuWidget::OnSlot2Clicked()
 {
     LoadGameIndex(2);
 }
 
+/*
+ * @brief On slot 3 clicked, it on slot 3 clicked
+ */
 void UBMSaveLoadMenuWidget::OnSlot3Clicked()
 {
     LoadGameIndex(3);
 }
 
+/*
+ * @brief On slot 4 clicked, it on slot 4 clicked
+ */
 void UBMSaveLoadMenuWidget::OnSlot4Clicked()
 {
     LoadGameIndex(4);
 }
 
+/*
+ * @brief Load game index, it load game index
+ * @param SlotIndex The slot index
+ */
 void UBMSaveLoadMenuWidget::LoadGameIndex(int32 SlotIndex)
 {
     UWorld* World = GetWorld();
@@ -227,6 +252,9 @@ void UBMSaveLoadMenuWidget::LoadGameIndex(int32 SlotIndex)
     }
 }
 
+/*
+ * @brief Refresh save slot display, it refresh save slot display
+ */
 void UBMSaveLoadMenuWidget::RefreshSaveSlotDisplay()
 {
     if (UWorld* World = GetWorld())
@@ -245,6 +273,12 @@ void UBMSaveLoadMenuWidget::RefreshSaveSlotDisplay()
     }
 }
 
+/*
+ * @brief Update slot button, it update slot button
+ * @param Button The button
+ * @param SlotIndex The slot index
+ * @param SaveSlots The save slots
+ */
 void UBMSaveLoadMenuWidget::UpdateSlotButton(UButton* Button, int32 SlotIndex, const TArray<FBMSaveSlotInfo>& SaveSlots)
 {
     if (!Button)
@@ -287,6 +321,11 @@ void UBMSaveLoadMenuWidget::UpdateSlotButton(UButton* Button, int32 SlotIndex, c
     }
 }
 
+/*
+ * @brief Set button text, it set button text
+ * @param Button The button
+ * @param Text The text
+ */
 void UBMSaveLoadMenuWidget::SetButtonText(UButton* Button, const FText& Text)
 {
     if (!Button)
@@ -308,8 +347,4 @@ void UBMSaveLoadMenuWidget::SetButtonText(UButton* Button, const FText& Text)
         }
     }
 
-    // If no TextBlock found, the text might be set in Blueprint
-    // In that case, we can't update it from C++, but the button will still work
-    // You may need to expose a function or use a different approach in Blueprint
 }
-

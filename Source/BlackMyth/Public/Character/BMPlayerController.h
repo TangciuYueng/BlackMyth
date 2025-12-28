@@ -9,7 +9,9 @@
 class UBMBookWidget;
 
 /**
- * 
+ * @brief Define the BMPlayerController class
+ * @param ABMPlayerController The name of the class
+ * @param APlayerController The parent class
  */
 UCLASS()
 class BLACKMYTH_API ABMPlayerController : public APlayerController
@@ -30,12 +32,16 @@ public:
     void OnIntroVideoFinished();
 
 private:
+    // Show the main menu
     void ShowMainMenu();
+    // Toggle the pause menu
     void TogglePauseMenu();
+    // Apply half HP damage
     void ApplyHalfHPDamage();
     // Show a test notification message via UBMNotifications subsystem
     void DebugShowNotification();
-    void ConsumeStaminaTest(); // [TEST] Consume 25 stamina for testing
+    // Consume stamina test
+    void ConsumeStaminaTest();
 
     // Skill cooldown testing
     void TriggerSkillCooldown(FName SkillId, float TotalSeconds);
@@ -50,9 +56,12 @@ private:
     void OnSkillCooldownTick_Skill3();
     void Input_EnterPressed();
 
+    // Skill cooldown timers
     FTimerHandle Skill1CooldownTimer;
     FTimerHandle Skill2CooldownTimer;
+    // Skill 1 remaining time
     float Skill1Remaining = 0.f;
+    // Skill 2 remaining time
     float Skill2Remaining = 0.f;
     FTimerHandle Skill3CooldownTimer;
     float Skill3Remaining = 0.f;
@@ -63,7 +72,7 @@ private:
     // Book UI
     UPROPERTY(EditDefaultsOnly, Category = "BM|UI")
     TSubclassOf<UBMBookWidget> BookWidgetClass;
-
+    // Book widget instance
     UPROPERTY()
     UBMBookWidget* BookWidgetInstance = nullptr;
 

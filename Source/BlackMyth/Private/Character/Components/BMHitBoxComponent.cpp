@@ -10,11 +10,17 @@
 
 DEFINE_LOG_CATEGORY(LogBMHitBox);
 
+/*
+ * @brief Constructor of the UBMHitBoxComponent class
+ */
 UBMHitBoxComponent::UBMHitBoxComponent()
 {
     PrimaryComponentTick.bCanEverTick = true;
 }
 
+/*
+ * @brief Begin play, it initializes the name to def index and component to hit box name
+ */
 void UBMHitBoxComponent::BeginPlay()
 {
     Super::BeginPlay();
@@ -47,6 +53,10 @@ void UBMHitBoxComponent::BeginPlay()
     DeactivateAllHitBoxes();
 }
 
+/*
+ * @brief End play, it deactivates all hit boxes and destroys the hit boxes
+ * @param EndPlayReason The reason for the end play
+ */
 void UBMHitBoxComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     DeactivateAllHitBoxes();
@@ -71,11 +81,19 @@ void UBMHitBoxComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
     Super::EndPlay(EndPlayReason);
 }
 
+/*
+ * @brief Register definition, it adds the definition to the definitions array
+ * @param Def The definition to register
+ */
 void UBMHitBoxComponent::RegisterDefinition(const FBMHitBoxDefinition& Def)
 {
     Definitions.Add(Def);
 }
 
+/*
+ * @brief Resolve owner mesh, it resolves the owner mesh from the owner
+ * @return The owner mesh
+ */
 USkeletalMeshComponent* UBMHitBoxComponent::ResolveOwnerMesh() const
 {
     if (ACharacter* C = Cast<ACharacter>(GetOwner()))
@@ -85,14 +103,23 @@ USkeletalMeshComponent* UBMHitBoxComponent::ResolveOwnerMesh() const
     return nullptr;
 }
 
+/*
+ * @brief Resolve owner character, it resolves the owner character from the owner
+ * @return The owner character
+ */
 ABMCharacterBase* UBMHitBoxComponent::ResolveOwnerCharacter() const
 {
     return Cast<ABMCharacterBase>(GetOwner());
 }
 
+/*
+ * @brief Type to name, it converts the type to a name
+ * @param Type The type to convert
+ * @return The name
+ */
 FName UBMHitBoxComponent::TypeToName(EBMHitBoxType Type)
 {
-    // ÓÃ FName ×ö key
+    // ï¿½ï¿½ FName ï¿½ï¿½ key
     switch (Type)
     {
         case EBMHitBoxType::LightAttack: return TEXT("LightAttack");
@@ -102,6 +129,11 @@ FName UBMHitBoxComponent::TypeToName(EBMHitBoxType Type)
     }
 }
 
+/*
+ * @brief Find def by type, it finds the definition by type
+ * @param Type The type to find
+ * @return The definition
+ */
 const FBMHitBoxDefinition* UBMHitBoxComponent::FindDefByType(EBMHitBoxType Type) const
 {
     for (const FBMHitBoxDefinition& Def : Definitions)
@@ -111,7 +143,7 @@ const FBMHitBoxDefinition* UBMHitBoxComponent::FindDefByType(EBMHitBoxType Type)
             return &Def;
         }
     }
-    // »ØÍË Default
+    // ï¿½ï¿½ï¿½ï¿½ Default
     for (const FBMHitBoxDefinition& Def : Definitions)
     {
         if (Def.Type == EBMHitBoxType::Default)
@@ -122,6 +154,10 @@ const FBMHitBoxDefinition* UBMHitBoxComponent::FindDefByType(EBMHitBoxType Type)
     return nullptr;
 }
 
+/*
+ * @brief Ensure created, it ensures that the hit box is created
+ * @param Def The definition to ensure
+ */
 void UBMHitBoxComponent::EnsureCreated(const FBMHitBoxDefinition& Def)
 {
     AActor* Owner = GetOwner();
@@ -183,11 +219,23 @@ void UBMHitBoxComponent::EnsureCreated(const FBMHitBoxDefinition& Def)
     ComponentToHitBoxName.Add(Box, Def.Name);
 }
 
+/*
+ * @brief Reset hit list, it resets the hit list
+ */
 void UBMHitBoxComponent::ResetHitList()
 {
     HitRecordsThisWindow.Reset();
 }
 
+/*
+ * @brief On hit box overlap, it handles the hit box overlap
+ * @param OverlappedComponent The overlapped component
+ * @param OtherActor The other actor
+ * @param OtherComp The other component
+ * @param OtherBodyIndex The other body index
+ * @param bFromSweep The from sweep
+ * @param SweepResult The sweep result
+ */
 void UBMHitBoxComponent::OnHitBoxOverlap(
     UPrimitiveComponent* OverlappedComponent,
     AActor* OtherActor,
@@ -198,19 +246,19 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
 {
     (void)OtherBodyIndex;
 
-    // »ù´¡ºÏ·¨ÐÔ¼ì²é
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ï·ï¿½ï¿½Ô¼ï¿½ï¿½
     if (!OverlappedComponent || !OtherActor || OtherActor == GetOwner())
     {
         return;
     }
 
-    // ±ØÐëÃüÖÐ¶Ô·½µÄ HurtBox
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶Ô·ï¿½ï¿½ï¿½ HurtBox
     if (!OtherComp || !OtherComp->ComponentHasTag(TEXT("BM_HurtBox")))
     {
         return;
     }
 
-    // Í¨¹ý OverlappedComponent ÕÒµ½HitBox
+    // Í¨ï¿½ï¿½ OverlappedComponent ï¿½Òµï¿½HitBox
     const FName* HitBoxNamePtr = ComponentToHitBoxName.Find(OverlappedComponent);
     if (!HitBoxNamePtr)
     {
@@ -223,13 +271,13 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
         return;
     }
 
-    // µ±Ç°´°¿Ú¼¤»îµÄHitBoxNames
+    // ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½HitBoxNames
     if (!ActiveHitBoxNames.Contains(HitBoxName))
     {
         return;
     }
 
-    // ½âÎö¹¥»÷Õß/ÊÜº¦Õß
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½Üºï¿½ï¿½ï¿½
     ABMCharacterBase* Attacker = ResolveOwnerCharacter();
     ABMCharacterBase* Victim = Cast<ABMCharacterBase>(OtherActor);
     if (!Attacker || !Victim)
@@ -237,11 +285,11 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
         return;
     }
 
-    // È¥ÖØ
+    // È¥ï¿½ï¿½
     TWeakObjectPtr<AActor> TargetKey(OtherActor);
     FBMHitRecord& Record = HitRecordsThisWindow.FindOrAdd(TargetKey);
 
-    // ¶ÁÈ¡È¥ÖØ²ßÂÔ
+    // ï¿½ï¿½È¡È¥ï¿½Ø²ï¿½ï¿½ï¿½
     switch (ActiveWindowParams.DedupPolicy)
     {
         case EBMHitDedupPolicy::PerWindow:
@@ -267,11 +315,11 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
             break;
     }
 
-    // Í¨¹ýÈ¥ÖØ¼ì²éºó£¬ÏÈ¼ÇÒ»´ÎÃüÖÐ
+    // Í¨ï¿½ï¿½È¥ï¿½Ø¼ï¿½ï¿½ï¿½ï¿½È¼ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     Record.TotalHits++;
     Record.HitBoxHits.FindOrAdd(HitBoxName)++;
 
-    // ¶¨Î»HitBoxDefinition
+    // ï¿½ï¿½Î»HitBoxDefinition
     const FBMHitBoxDefinition* Def = nullptr;
 
     if (const int32* DefIndex = NameToDefIndex.Find(HitBoxName))
@@ -299,7 +347,7 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
         return;
     }
 
-    // ¼ÆËã»ù´¡ÉËº¦
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ëºï¿½
     float BaseAttack = 0.f;
     float AttackMultiplier = 1.0f;
 
@@ -310,29 +358,29 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
     else if (UBMStatsComponent* S = Attacker->GetStats())
     {
         BaseAttack = S->GetStatBlock().Attack;
-        // »ñÈ¡¹¥»÷Á¦¼Ó³É±¶ÂÊ
+        // ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó³É±ï¿½ï¿½ï¿½
         AttackMultiplier = S->GetAttackMultiplier();
     }
 
-    // Ó¦ÓÃ¹¥»÷Á¦¼Ó³É
+    // Ó¦ï¿½Ã¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó³ï¿½
     BaseAttack *= AttackMultiplier;
 
-    // ¹¹ÔìFBMDamageInfo
+    // ï¿½ï¿½ï¿½ï¿½FBMDamageInfo
     FBMDamageInfo Info;
     Info.InstigatorActor = Attacker;
     Info.TargetActor = Victim;
 
     Info.RawDamageValue = BaseAttack;
 
-    // Def£ºBaseAttack * DamageScale + AdditiveDamage
-    // ÔÙ³ËÒÔÕâ´Î¹¥»÷´°¿Ú±¶ÂÊ
+    // Defï¿½ï¿½BaseAttack * DamageScale + AdditiveDamage
+    // ï¿½Ù³ï¿½ï¿½ï¿½ï¿½ï¿½Î¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½
     const float DefDamage = BaseAttack * Def->DamageScale + Def->AdditiveDamage;
     Info.DamageValue = DefDamage * FMath::Max(0.f, ActiveWindowParams.DamageMultiplier);
 
 
     Info.DamageType = Def->DamageType;
 
-    // ÊÜ»÷·´À¡
+    // ï¿½Ü»ï¿½ï¿½ï¿½ï¿½ï¿½
     Info.HitReaction = Def->DefaultReaction;
     if (ActiveWindowParams.bOverrideReaction && ActiveWindowParams.OverrideReaction != EBMHitReaction::None)
     {
@@ -352,11 +400,17 @@ void UBMHitBoxComponent::OnHitBoxOverlap(
         Info.HitNormal = FVector::UpVector;
     }
 
-    // ½áËã
+    // ï¿½ï¿½ï¿½ï¿½
     Victim->TakeDamageFromHit(Info);
 }
 
 
+/*
+ * @brief Tick component, it ticks the component and draws the debug boxes if the bDebugDraw property is true
+ * @param DeltaTime The delta time
+ * @param TickType The tick type
+ * @param ThisTickFunction The tick function
+ */
 void UBMHitBoxComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -385,6 +439,11 @@ void UBMHitBoxComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
     }
 }
 
+/*
+ * @brief Set hit box collision enabled, it sets the hit box collision enabled
+ * @param HitBoxName The hit box name
+ * @param bEnabled The enabled
+ */
 void UBMHitBoxComponent::SetHitBoxCollisionEnabled(FName HitBoxName, bool bEnabled)
 {
     if (HitBoxName.IsNone()) return;
@@ -395,6 +454,11 @@ void UBMHitBoxComponent::SetHitBoxCollisionEnabled(FName HitBoxName, bool bEnabl
     }
 }
 
+/*
+ * @brief Find names by type, it finds the names by type
+ * @param Type The type to find
+ * @return The names
+ */
 TArray<FName> UBMHitBoxComponent::FindNamesByType(EBMHitBoxType Type) const
 {
     TArray<FName> Out;
@@ -408,6 +472,11 @@ TArray<FName> UBMHitBoxComponent::FindNamesByType(EBMHitBoxType Type) const
     return Out;
 }
 
+/*
+ * @brief Activate hit boxes by names, it activates the hit boxes by names
+ * @param HitBoxNames The hit box names
+ * @param Params The activation parameters
+ */
 void UBMHitBoxComponent::ActivateHitBoxesByNames(const TArray<FName>& HitBoxNames, const FBMHitBoxActivationParams& Params)
 {
     if (HitBoxNames.Num() == 0)
@@ -427,19 +496,23 @@ void UBMHitBoxComponent::ActivateHitBoxesByNames(const TArray<FName>& HitBoxName
     {
         if (Name.IsNone()) continue;
 
-        // ÈôÃ»´´½¨
+        // ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½
         const int32* Index = NameToDefIndex.Find(Name);
         if (Index && Definitions.IsValidIndex(*Index))
         {
             EnsureCreated(Definitions[*Index]);
         }
 
-        // ¼¤»î
+        // ï¿½ï¿½ï¿½ï¿½
         ActiveHitBoxNames.Add(Name);
         SetHitBoxCollisionEnabled(Name, true);
     }
 }
 
+/*
+ * @brief Deactivate hit boxes by names, it deactivates the hit boxes by names
+ * @param HitBoxNames The hit box names
+ */
 void UBMHitBoxComponent::DeactivateHitBoxesByNames(const TArray<FName>& HitBoxNames)
 {
     for (const FName& Name : HitBoxNames)
@@ -457,6 +530,9 @@ void UBMHitBoxComponent::DeactivateHitBoxesByNames(const TArray<FName>& HitBoxNa
     }
 }
 
+/*
+ * @brief Deactivate all hit boxes, it deactivates all hit boxes
+ */
 void UBMHitBoxComponent::DeactivateAllHitBoxes()
 {
     for (auto& KVP : HitBoxes)

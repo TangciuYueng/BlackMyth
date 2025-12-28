@@ -6,6 +6,10 @@
 
 DEFINE_LOG_CATEGORY(LogBMSkill);
 
+/*
+ * @brief Constructor of the UBMSkillComponent class
+ * @param ObjectInitializer The object initializer
+ */
 UBMSkillComponent::UBMSkillComponent(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
@@ -16,6 +20,9 @@ UBMSkillComponent::UBMSkillComponent(const FObjectInitializer& ObjectInitializer
     bIsSkillActive = false;
 }
 
+/*
+ * @brief Begin play, it initializes the skill data
+ */
 void UBMSkillComponent::BeginPlay()
 {
     Super::BeginPlay();
@@ -27,6 +34,11 @@ void UBMSkillComponent::BeginPlay()
     }
 }
 
+/*
+ * @brief Initialize skill, it initializes the skill data
+ * @param InSkillID The skill ID
+ * @return True if the skill is initialized, false otherwise
+ */
 bool UBMSkillComponent::InitializeSkill(FName InSkillID)
 {
     if (InSkillID.IsNone())
@@ -73,6 +85,11 @@ bool UBMSkillComponent::InitializeSkill(FName InSkillID)
     return true;
 }
 
+/*
+ * @brief Execute, it executes the skill
+ * @param PlayerCharacter The player character
+ * @return True if the skill is executed, false otherwise
+ */
 bool UBMSkillComponent::Execute(ABMPlayerCharacter* PlayerCharacter)
 {
     if (!PlayerCharacter)
@@ -119,6 +136,10 @@ bool UBMSkillComponent::Execute(ABMPlayerCharacter* PlayerCharacter)
     return true;
 }
 
+/*
+ * @brief Get cost, it gets the cost of the skill
+ * @return The cost of the skill
+ */
 float UBMSkillComponent::GetCost() const
 {
     if (!SkillData)
@@ -128,6 +149,10 @@ float UBMSkillComponent::GetCost() const
     return SkillData->Cost;
 }
 
+/*
+ * @brief Get cooldown, it gets the cooldown of the skill
+ * @return The cooldown of the skill
+ */
 float UBMSkillComponent::GetCooldown() const
 {
     if (!SkillData)
@@ -137,6 +162,10 @@ float UBMSkillComponent::GetCooldown() const
     return SkillData->Cooldown;
 }
 
+/*
+ * @brief Is available, it checks if the skill is available
+ * @return True if the skill is available, false otherwise
+ */
 bool UBMSkillComponent::IsAvailable() const
 {
     // 检查技能配置是否有效
@@ -169,6 +198,10 @@ bool UBMSkillComponent::IsAvailable() const
     return true;
 }
 
+/*
+ * @brief Get remaining cooldown, it gets the remaining cooldown of the skill
+ * @return The remaining cooldown of the skill
+ */
 float UBMSkillComponent::GetRemainingCooldown() const
 {
     if (!SkillData)
@@ -196,6 +229,11 @@ float UBMSkillComponent::GetRemainingCooldown() const
     return FMath::Max(0.0f, Remaining);
 }
 
+/*
+ * @brief Check resource available, it checks if the resource is available
+ * @param PlayerCharacter The player character
+ * @return True if the resource is available, false otherwise
+ */
 bool UBMSkillComponent::CheckResourceAvailable(ABMPlayerCharacter* PlayerCharacter) const
 {
     if (!PlayerCharacter)
@@ -222,6 +260,11 @@ bool UBMSkillComponent::CheckResourceAvailable(ABMPlayerCharacter* PlayerCharact
     return StatBlock.Stamina >= Cost;
 }
 
+/*
+ * @brief Consume resource, it consumes the resource
+ * @param PlayerCharacter The player character
+ * @return True if the resource is consumed, false otherwise
+ */
 bool UBMSkillComponent::ConsumeResource(ABMPlayerCharacter* PlayerCharacter) const
 {
     if (!PlayerCharacter)
@@ -243,7 +286,6 @@ bool UBMSkillComponent::ConsumeResource(ABMPlayerCharacter* PlayerCharacter) con
     }
 
     // 消耗 Stamina
-    // 技能消耗 Stamina 而不是 MP
     return Stats->TryConsumeStamina(Cost);
 }
 
