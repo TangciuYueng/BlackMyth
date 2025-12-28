@@ -10,7 +10,9 @@ class UBMExperienceComponent;
 #include "BMHUDWidget.generated.h"
 
 /**
- * 技能冷却数据结构
+ * @brief Define the FSkillCooldownData struct
+ * @param FSkillCooldownData The name of the struct
+ * @param UBMWidgetBase The parent class
  */
 USTRUCT()
 struct FSkillCooldownData
@@ -28,7 +30,9 @@ struct FSkillCooldownData
 };
 
 /**
- * 
+ * @brief Define the UBMHUDWidget class
+ * @param UBMHUDWidget The name of the class
+ * @param UBMWidgetBase The parent class
  */
 UCLASS()
 class BLACKMYTH_API UBMHUDWidget : public UBMWidgetBase
@@ -38,15 +42,23 @@ class BLACKMYTH_API UBMHUDWidget : public UBMWidgetBase
 public:
     // Bound from WBP_HUD
     UPROPERTY(meta=(BindWidget)) class UProgressBar* HealthBar = nullptr;
+    // Stamina bar binding
     UPROPERTY(meta=(BindWidget)) class UProgressBar* StaminaBar = nullptr;
+    // Skill 1 cooldown text binding
     UPROPERTY(meta=(BindWidget)) class UTextBlock* Skill1CooldownText = nullptr;
+    // Skill 2 cooldown text binding
     UPROPERTY(meta=(BindWidget)) class UTextBlock* Skill2CooldownText = nullptr;
+    // Skill 3 cooldown text binding
     UPROPERTY(meta=(BindWidget)) class UTextBlock* Skill3CooldownText = nullptr;
-    UPROPERTY(meta=(BindWidget)) class UTextBlock* LevelText = nullptr; // 显示当前等级
+    // Level text binding
+    UPROPERTY(meta=(BindWidget)) class UTextBlock* LevelText = nullptr;
 
 protected:
+    // Bind event bus
     virtual void BindEventBus(class UBMEventBusSubsystem* EventBus) override;
+    // Unbind event bus
     virtual void UnbindEventBus(class UBMEventBusSubsystem* EventBus) override;
+    // Native tick
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 private:
@@ -60,12 +72,18 @@ private:
     TWeakObjectPtr<UBMExperienceComponent> CachedXP;
     FDelegateHandle XPLevelUpHandle;
 
+    // Handle health changed
     void HandleHealthChanged(float Normalized);
+    // Handle mana changed
     void HandleManaChanged(float Normalized);
+    // Handle stamina changed
     void HandleStaminaChanged(float Normalized);
+    // Handle skill cooldown changed
     void HandleSkillCooldownChanged(FName SkillId, float RemainingSeconds);
+    // Handle level changed
     void HandleLevelChanged(int32 NewLevel);
 
+    // Sync initial values
     void SyncInitialValues();
 
     // Format cooldown according to UX rules. Returns empty when ready.

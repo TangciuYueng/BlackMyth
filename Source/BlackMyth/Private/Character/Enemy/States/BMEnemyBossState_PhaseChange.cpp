@@ -6,6 +6,10 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Core/BMTypes.h"
 
+/*
+ * @brief On enter, it enters the phase change state
+ * @param DeltaTime The delta time
+ */
 void UBMEnemyBossState_PhaseChange::OnEnter(float)
 {
     ABMEnemyBoss* Boss = Cast<ABMEnemyBoss>(GetContext());
@@ -15,13 +19,13 @@ void UBMEnemyBossState_PhaseChange::OnEnter(float)
 
     Boss->GetWorldTimerManager().ClearTimer(StepTimer);
 
-    // Ëø¶¯×÷£¬·ÀÖ¹ÆäËü×´Ì¬ÇÀÕ¼
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½Õ¼
     if (UBMCombatComponent* C = Boss->GetCombat())
     {
         C->SetActionLock(true);
     }
 
-    // Í£Ö¹ÒÆ¶¯ + ½ûÖ¹ÒÆ¶¯
+    // Í£Ö¹ï¿½Æ¶ï¿½ + ï¿½ï¿½Ö¹ï¿½Æ¶ï¿½
     Boss->RequestStopMovement();
     if (UCharacterMovementComponent* Move = Boss->GetCharacterMovement())
     {
@@ -29,10 +33,10 @@ void UBMEnemyBossState_PhaseChange::OnEnter(float)
         Move->DisableMovement();
     }
 
-    // ¹ý¶ÉÆÚ¼äÎÞµÐ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½Þµï¿½
     Boss->SetPhaseTransition(true);
 
-    // ÏÈ²¥ËÀÍö¶¯»­
+    // ï¿½È²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     const float DeathDur = Boss->PlayDeathOnce();
     if (DeathDur <= 0.f)
     {
@@ -67,6 +71,9 @@ void UBMEnemyBossState_PhaseChange::StartHoldAfterDeath()
     Boss->GetWorldTimerManager().SetTimer(StepTimer, D, Hold, false);
 }
 
+/*
+ * @brief Start death reverse, it starts the death reverse, it plays the death reverse animation and starts the energize
+ */
 void UBMEnemyBossState_PhaseChange::StartDeathReverse()
 {
     ABMEnemyBoss* Boss = Cast<ABMEnemyBoss>(GetContext());
@@ -90,6 +97,10 @@ void UBMEnemyBossState_PhaseChange::StartDeathReverse()
     Boss->GetWorldTimerManager().SetTimer(StepTimer, D, Dur, false);
 }
 
+/*
+ * @brief On exit, it exits the phase change state
+ * @param DeltaTime The delta time
+ */
 void UBMEnemyBossState_PhaseChange::OnExit(float)
 {
     ABMEnemyBoss* Boss = Cast<ABMEnemyBoss>(GetContext());
@@ -97,17 +108,25 @@ void UBMEnemyBossState_PhaseChange::OnExit(float)
 
     Boss->GetWorldTimerManager().ClearTimer(StepTimer);
 
-    // ½â³ýËøÓëÎÞµÐÔÚ FinishPhaseChange ÀïÍ³Ò»×ö
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þµï¿½ï¿½ï¿½ FinishPhaseChange ï¿½ï¿½Í³Ò»ï¿½ï¿½
     bFinished = false;
 }
 
+/*
+ * @brief Can transition to, it checks if the state can transition to the given state
+ * @param StateName The name of the state to transition to
+ * @return True if the state can transition to the given state, false otherwise
+ */
 bool UBMEnemyBossState_PhaseChange::CanTransitionTo(FName StateName) const
 {
-    // ¹ý¶ÉÆÚ¼ä²»¿É±»´ò¶Ï
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ú¼ä²»ï¿½É±ï¿½ï¿½ï¿½ï¿½
     if (StateName == BMEnemyStateNames::Death) return true;
     return bFinished;
 }
 
+/*
+ * @brief Start energize, it starts the energize
+ */
 void UBMEnemyBossState_PhaseChange::StartEnergize()
 {
     ABMEnemyBoss* Boss = Cast<ABMEnemyBoss>(GetContext());
@@ -128,21 +147,24 @@ void UBMEnemyBossState_PhaseChange::StartEnergize()
     Boss->GetWorldTimerManager().SetTimer(StepTimer, D, EnergizeDur, false);
 }
 
+/*
+ * @brief Finish phase change, it finishes the phase change
+ */
 void UBMEnemyBossState_PhaseChange::FinishPhaseChange()
 {
     ABMEnemyBoss* Boss = Cast<ABMEnemyBoss>(GetContext());
     if (!Boss) return;
 
-    // ½øÈë¶þ½×¶Î
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¶ï¿½
     Boss->EnterPhase2();
 
-    // »Ö¸´ÒÆ¶¯
+    // ï¿½Ö¸ï¿½ï¿½Æ¶ï¿½
     if (UCharacterMovementComponent* Move = Boss->GetCharacterMovement())
     {
         Move->SetMovementMode(MOVE_Walking);
     }
 
-    // ½â³ýÎÞµÐÓë¶¯×÷Ëø
+    // ï¿½ï¿½ï¿½ï¿½Þµï¿½ï¿½ë¶¯ï¿½ï¿½ï¿½ï¿½
     Boss->SetPhaseTransition(false);
     if (UBMCombatComponent* C = Boss->GetCombat())
     {
@@ -151,11 +173,9 @@ void UBMEnemyBossState_PhaseChange::FinishPhaseChange()
 
     bFinished = true;
 
-    // »Øµ½ Idle
+    // ï¿½Øµï¿½ Idle
     if (UBMStateMachineComponent* FSM = Boss->GetFSM())
     {
         FSM->ChangeStateByName(BMEnemyStateNames::Idle);
     }
-
-    
 }

@@ -9,10 +9,20 @@
 
 DEFINE_LOG_CATEGORY(LogBMHitBoxWindow);
 
+/*
+ * @brief Constructor of the UBMAnimNotifyState_HitBoxWindow class
+ */
 UBMAnimNotifyState_HitBoxWindow::UBMAnimNotifyState_HitBoxWindow()
 {
 }
 
+/*
+ * @brief Notify begin
+ * @param MeshComp The mesh component
+ * @param Animation The animation
+ * @param TotalDuration The total duration
+ * @param EventReference The event reference
+ */
 void UBMAnimNotifyState_HitBoxWindow::NotifyBegin(
     USkeletalMeshComponent* MeshComp,
     UAnimSequenceBase* Animation,
@@ -49,6 +59,12 @@ void UBMAnimNotifyState_HitBoxWindow::NotifyBegin(
     HB->ActivateHitBoxesByNames(Names, Params);
 }
 
+/*
+ * @brief Notify end
+ * @param MeshComp The mesh component
+ * @param Animation The animation
+ * @param EventReference The event reference
+ */
 void UBMAnimNotifyState_HitBoxWindow::NotifyEnd(
     USkeletalMeshComponent* MeshComp,
     UAnimSequenceBase* Animation,
@@ -63,7 +79,7 @@ void UBMAnimNotifyState_HitBoxWindow::NotifyEnd(
 
     if (UBMHitBoxComponent* HB = OwnerChar->GetHitBox())
     {
-        // ²»ÒÀÀµÉÏÏÂÎÄ
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         HB->DeactivateAllHitBoxes();
     }
 }

@@ -6,6 +6,9 @@
 #include "Engine/SkeletalMesh.h"
 #include "Core/BMTypes.h"
 
+/*
+ * @brief Constructor of the ABMEnemyDemon class
+ */
 ABMEnemyDemon::ABMEnemyDemon()
 {
 
@@ -19,7 +22,7 @@ ABMEnemyDemon::ABMEnemyDemon()
     DodgeCooldownKey = DemonDodgeCooldownKey;
 
 
-    // Íø¸ñÆ«ÒÆ
+    // ï¿½ï¿½ï¿½ï¿½Æ«ï¿½ï¿½
     GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -90.f));
     GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 
@@ -31,14 +34,17 @@ ABMEnemyDemon::ABMEnemyDemon()
     AttackHeavy2Asset = TSoftObjectPtr<UAnimSequence>(FSoftObjectPath(TEXT("/Script/Engine.AnimSequence'/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_03.MM_Attack_03'")));
 }
 
+/*
+ * @brief Begin play, it begins the play
+ */
 void ABMEnemyDemon::BeginPlay()
 {
-    // ÓÅÏÈ´Ó DataTable ¶ÁÈ¡ÅäÖÃ
+    // ï¿½ï¿½ï¿½È´ï¿½ DataTable ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½
     LoadStatsFromDataTable();
     
     BuildAttackSpecs();
     BuildLootTable();
-    // µ÷ÊÔ£ºÆôÓÃ HitBox/HurtBox ¿ÉÊÓ»¯
+    // ï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½ï¿½ï¿½ HitBox/HurtBox ï¿½ï¿½ï¿½Ó»ï¿½
     //if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
     //for (UBMHurtBoxComponent* HB : HurtBoxes)
     //{
@@ -48,6 +54,9 @@ void ABMEnemyDemon::BeginPlay()
     Super::BeginPlay();
 }
 
+/*
+ * @brief Apply configured assets, it applies the configured assets
+ */
 void ABMEnemyDemon::ApplyConfiguredAssets()
 {
     // SkeletalMesh
@@ -59,7 +68,7 @@ void ABMEnemyDemon::ApplyConfiguredAssets()
         }
     }
 
-    // ÏÂÃæÕâÐ©ÊÇ ABMEnemyBase ÀïÓÃÓÚ FSM ²¥·ÅµÄ¶¯»­Ö¸Õë£¨Ñ²ÂßWalk/×·»÷Run/ÊÜ»÷/ËÀÍö£©
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð©ï¿½ï¿½ ABMEnemyBase ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ FSM ï¿½ï¿½ï¿½ÅµÄ¶ï¿½ï¿½ï¿½Ö¸ï¿½ë£¨Ñ²ï¿½ï¿½Walk/×·ï¿½ï¿½Run/ï¿½Ü»ï¿½/ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     AnimIdle = AnimIdleAsset.IsNull() ? nullptr : AnimIdleAsset.LoadSynchronous();
     AnimWalk = AnimWalkAsset.IsNull() ? nullptr : AnimWalkAsset.LoadSynchronous();
     AnimRun = AnimRunAsset.IsNull() ? nullptr : AnimRunAsset.LoadSynchronous();
@@ -69,13 +78,16 @@ void ABMEnemyDemon::ApplyConfiguredAssets()
     AnimDodge = AnimDodgeAsset.IsNull() ? nullptr : AnimDodgeAsset.LoadSynchronous();
 }
 
+/*
+ * @brief Build attack specs, it builds the attack specs
+ */
 void ABMEnemyDemon::BuildAttackSpecs()
 {
     AttackSpecs.Reset();
     auto MakeWindowParams = [](float DamageMul, EBMHitReaction OverrideReaction)
         {
             FBMHitBoxActivationParams P;
-            P.bResetHitRecords = true;                 // Ã¿´Î½øÈë¹¥»÷´°¿Ú¶¼ÇåÃüÖÐ¼ÇÂ¼
+            P.bResetHitRecords = true;                 // Ã¿ï¿½Î½ï¿½ï¿½ë¹¥ï¿½ï¿½ï¿½ï¿½ï¿½Ú¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¼ï¿½Â¼
             P.DedupPolicy = EBMHitDedupPolicy::PerWindow;
             P.MaxHitsPerTarget = 1;
             P.DamageMultiplier = DamageMul;
@@ -85,7 +97,7 @@ void ABMEnemyDemon::BuildAttackSpecs()
             return P;
         };
 
-    // Çá¹¥»÷
+    // ï¿½á¹¥ï¿½ï¿½
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Demon_Light_01");
@@ -108,7 +120,7 @@ void ABMEnemyDemon::BuildAttackSpecs()
         if (S.Anim) AttackSpecs.Add(S);
     }
 
-    // ÖØ¹¥»÷1
+    // ï¿½Ø¹ï¿½ï¿½ï¿½1
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Demon_Heavy_01");
@@ -131,7 +143,7 @@ void ABMEnemyDemon::BuildAttackSpecs()
         if (S.Anim) AttackSpecs.Add(S);
     }
 
-    // ÖØ¹¥»÷2
+    // ï¿½Ø¹ï¿½ï¿½ï¿½2
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Demon_Heavy_02");
@@ -155,6 +167,9 @@ void ABMEnemyDemon::BuildAttackSpecs()
     }
 }
 
+/*
+ * @brief Build hurt boxes, it builds the hurt boxes
+ */
 void ABMEnemyDemon::BuildHurtBoxes()
 {
 
@@ -179,6 +194,9 @@ void ABMEnemyDemon::BuildHurtBoxes()
     }
 }
 
+/*
+ * @brief Build hit boxes, it builds the hit boxes
+ */
 void ABMEnemyDemon::BuildHitBoxes()
 {
     UBMHitBoxComponent* HB = GetHitBox();
@@ -229,6 +247,9 @@ void ABMEnemyDemon::BuildHitBoxes()
 
 }
 
+/*
+ * @brief Build loot table, it builds the loot table
+ */
 void ABMEnemyDemon::BuildLootTable()
 {
     LootTable.Reset();
@@ -265,6 +286,10 @@ void ABMEnemyDemon::BuildLootTable()
         *GetName(), LootTable.Num());
 }
 
+/*
+ * @brief Play dodge once, it plays the dodge once
+ * @return The play time
+ */
 float ABMEnemyDemon::PlayDodgeOnce()
 {
     return PlayOnce(AnimDodge, DodgePlayRate, 0.0, 0.7);

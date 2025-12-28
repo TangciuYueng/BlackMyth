@@ -10,6 +10,10 @@
 #define LOCTEXT_NAMESPACE "BMHUD"
 #include "Character/Components/BMStatsComponent.h"
 
+/*
+ * @brief Bind event bus, it bind event bus
+ * @param EventBus The event bus
+ */
 void UBMHUDWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
 {
     if (!EventBus) return;
@@ -67,6 +71,10 @@ void UBMHUDWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
     SyncInitialValues();
 }
 
+/*
+ * @brief Unbind event bus, it unbind event bus
+ * @param EventBus The event bus
+ */
 void UBMHUDWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
 {
     if (!EventBus) return;
@@ -99,6 +107,10 @@ void UBMHUDWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
     }
 }
 
+/*
+ * @brief Handle level changed, it handle level changed
+ * @param NewLevel The new level
+ */
 void UBMHUDWidget::HandleLevelChanged(int32 NewLevel)
 {
     if (LevelText)
@@ -108,6 +120,10 @@ void UBMHUDWidget::HandleLevelChanged(int32 NewLevel)
     }
 }
 
+/*
+ * @brief Handle health changed, it handle health changed
+ * @param Normalized The normalized
+ */
 void UBMHUDWidget::HandleHealthChanged(float Normalized)
 {
     if (HealthBar)
@@ -116,15 +132,18 @@ void UBMHUDWidget::HandleHealthChanged(float Normalized)
     }
 }
 
+/*
+ * @brief Handle mana changed, it handle mana changed
+ * @param Normalized The normalized
+ */
 void UBMHUDWidget::HandleManaChanged(float Normalized)
 {
-    // TODO: Add mana bar if needed
-    // if (ManaBar)
-    // {
-    //     ManaBar->SetPercent(FMath::Clamp(Normalized, 0.f, 1.f));
-    // }
 }
 
+/*
+ * @brief Handle stamina changed, it handle stamina changed
+ * @param Normalized The normalized
+ */
 void UBMHUDWidget::HandleStaminaChanged(float Normalized)
 {
     if (StaminaBar)
@@ -133,26 +152,27 @@ void UBMHUDWidget::HandleStaminaChanged(float Normalized)
     }
 }
 
+/*
+ * @brief Handle skill cooldown changed, it handle skill cooldown changed
+ * @param SkillId The skill id
+ * @param RemainingSeconds The remaining seconds
+ */
 void UBMHUDWidget::HandleSkillCooldownChanged(FName SkillId, float RemainingSeconds)
 {
-    // 更新冷却数据
     FSkillCooldownData& CooldownData = SkillCooldowns.FindOrAdd(SkillId);
     
     if (RemainingSeconds > 0.f)
     {
-        // 开始冷却
         CooldownData.CooldownEndTime = GetCurrentWorldTime() + RemainingSeconds;
         CooldownData.TotalCooldown = RemainingSeconds;
         CooldownData.bIsCoolingDown = true;
     }
     else
     {
-        // 冷却结束
         CooldownData.bIsCoolingDown = false;
         CooldownData.CooldownEndTime = 0.f;
     }
     
-    // 立即更新一次显示
     UTextBlock* TextWidget = nullptr;
     if (SkillId == TEXT("Skill1"))
     {
@@ -173,24 +193,26 @@ void UBMHUDWidget::HandleSkillCooldownChanged(FName SkillId, float RemainingSeco
     }
 }
 
+/*
+ * @brief Format cooldown text, it format cooldown text
+ * @param RemainingSeconds The remaining seconds
+ * @return The cooldown text
+ */
 FText UBMHUDWidget::FormatCooldownText(float RemainingSeconds) const
 {
     const float Clamped = FMath::Max(0.f, RemainingSeconds);
     if (Clamped <= 0.05f)
     {
-        // Use ASCII default; provide zh-CN translation via localization if needed
         return LOCTEXT("CooldownReady", "Ready");
     }
 
     if (Clamped < 10.f)
     {
-        // One decimal below 10s
         return FText::AsNumber(FMath::RoundToFloat(Clamped * 10.f) / 10.f);
     }
 
     if (Clamped < 60.f)
     {
-        // Integer seconds
         return FText::AsNumber(FMath::RoundToInt(Clamped));
     }
 
@@ -203,6 +225,9 @@ FText UBMHUDWidget::FormatCooldownText(float RemainingSeconds) const
     return FText::FromString(FString::Printf(TEXT("%d:%s"), Minutes, *SecText.ToString()));
 }
 
+/*
+ * @brief Sync initial values, it sync initial values
+ */
 void UBMHUDWidget::SyncInitialValues()
 {
     const UWorld* World = GetWorld();
@@ -235,17 +260,24 @@ void UBMHUDWidget::SyncInitialValues()
     HandleStaminaChanged(1.f);
 }
 
+/*
+ * @brief Native tick, it native tick
+ * @param MyGeometry The geometry
+ * @param InDeltaTime The delta time
+ */
 void UBMHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
     Super::NativeTick(MyGeometry, InDeltaTime);
     
-    // 更新所有技能的冷却显示
     UpdateCooldownDisplays(InDeltaTime);
 }
 
+/*
+ * @brief Update cooldown displays, it update cooldown displays
+ * @param DeltaTime The delta time
+ */
 void UBMHUDWidget::UpdateCooldownDisplays(float DeltaTime)
 {
-    // 遍历所有正在冷却的技能
     for (TPair<FName, FSkillCooldownData>& Pair : SkillCooldowns)
     {
         FName SkillId = Pair.Key;
@@ -256,7 +288,6 @@ void UBMHUDWidget::UpdateCooldownDisplays(float DeltaTime)
             continue;
         }
         
-        // 获取对应的文本控件
         UTextBlock* TextWidget = nullptr;
         if (SkillId == TEXT("Skill1"))
         {
@@ -278,6 +309,12 @@ void UBMHUDWidget::UpdateCooldownDisplays(float DeltaTime)
     }
 }
 
+/*
+ * @brief Update single cooldown display, it update single cooldown display
+ * @param SkillId The skill id
+ * @param CooldownData The cooldown data
+ * @param TextWidget The text widget
+ */
 void UBMHUDWidget::UpdateSingleCooldownDisplay(FName SkillId, FSkillCooldownData& CooldownData, UTextBlock* TextWidget)
 {
     if (!TextWidget || !CooldownData.bIsCoolingDown)
@@ -288,7 +325,6 @@ void UBMHUDWidget::UpdateSingleCooldownDisplay(FName SkillId, FSkillCooldownData
     const float CurrentTime = GetCurrentWorldTime();
     const float RemainingSeconds = FMath::Max(0.f, CooldownData.CooldownEndTime - CurrentTime);
     
-    // 检查冷却是否结束
     if (RemainingSeconds <= 0.05f)
     {
         CooldownData.bIsCoolingDown = false;
@@ -297,11 +333,14 @@ void UBMHUDWidget::UpdateSingleCooldownDisplay(FName SkillId, FSkillCooldownData
         return;
     }
     
-    // 更新显示
     TextWidget->SetText(FormatCooldownText(RemainingSeconds));
     TextWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 }
 
+/*
+ * @brief Get current world time, it get current world time
+ * @return The current world time
+ */
 float UBMHUDWidget::GetCurrentWorldTime() const
 {
     const UWorld* World = GetWorld();

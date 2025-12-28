@@ -287,6 +287,11 @@ struct FBMStatBlock
     float MoveSpeed = 600.f;
 };
 
+/**
+ * @brief Define the FBMHitBoxActivationParams struct, hit box activation params struct, used to store the hit box activation params
+ * @param FBMHitBoxActivationParams The name of the struct
+ * @param UObject The parent struct
+ */
 USTRUCT(BlueprintType)
 struct FBMHitBoxActivationParams
 {
@@ -841,7 +846,10 @@ namespace BMStateNames
 
 }
 
-
+/**
+ * @brief Define the BMEnemyStateNames namespace, used to store the enemy state names
+ * @param BMEnemyStateNames The name of the namespace
+ */
 namespace BMEnemyStateNames
 {
     static const FName Idle = TEXT("Enemy.Idle");
@@ -854,6 +862,10 @@ namespace BMEnemyStateNames
     static const FName PhaseChange = TEXT("PhaseChange");
 }
 
+/**
+ * @brief Define the BMCombatUtils namespace, used to store the combat utils
+ * @param BMCombatUtils The name of the namespace
+ */
 namespace BMCombatUtils
 {
     inline bool IsHeavyIncoming(const FBMDamageInfo& Info)

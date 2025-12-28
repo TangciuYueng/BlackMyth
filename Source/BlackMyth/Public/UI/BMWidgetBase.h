@@ -13,6 +13,11 @@ class UBMDataSubsystem;
 
 #include "BMWidgetBase.generated.h"
 
+/**
+ * @brief Define the UBMWidgetBase class
+ * @param UBMWidgetBase The name of the class
+ * @param UUserWidget The parent class
+ */
 UCLASS()
 class BLACKMYTH_API UBMWidgetBase : public UUserWidget
 {

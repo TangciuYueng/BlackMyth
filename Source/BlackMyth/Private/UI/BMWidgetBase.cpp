@@ -9,11 +9,17 @@
 #include "Character/Components/BMInventoryComponent.h"
 #include "Core/BMDataSubsystem.h"
 
+/*
+ * @brief Native on initialized, it native on initialized
+ */
 void UBMWidgetBase::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
 }
 
+/*
+ * @brief Native construct, it native construct
+ */
 void UBMWidgetBase::NativeConstruct()
 {
     Super::NativeConstruct();
@@ -31,6 +37,9 @@ void UBMWidgetBase::NativeConstruct()
     RefreshNamedItemPrices();
 }
 
+/*
+ * @brief Native destruct, it native destruct
+ */
 void UBMWidgetBase::NativeDestruct()
 {
     if (CachedEventBus)
@@ -42,19 +51,35 @@ void UBMWidgetBase::NativeDestruct()
     Super::NativeDestruct();
 }
 
+/*
+ * @brief Bind event bus, it bind event bus
+ * @param EventBus The event bus
+ */
 void UBMWidgetBase::BindEventBus(UBMEventBusSubsystem* /*EventBus*/)
 {
 }
 
+/*
+ * @brief Unbind event bus, it unbind event bus
+ * @param EventBus The event bus
+ */
 void UBMWidgetBase::UnbindEventBus(UBMEventBusSubsystem* /*EventBus*/)
 {
 }
 
+/*
+ * @brief Get event bus, it get event bus
+ * @return The event bus
+ */
 UBMEventBusSubsystem* UBMWidgetBase::GetEventBus() const
 {
     return CachedEventBus;
 }
 
+/*
+ * @brief Get ui manager, it get ui manager
+ * @return The ui manager
+ */
 UBMUIManagerSubsystem* UBMWidgetBase::GetUIManager() const
 {
     if (UGameInstance* GI = GetGameInstance())
@@ -64,11 +89,19 @@ UBMUIManagerSubsystem* UBMWidgetBase::GetUIManager() const
     return nullptr;
 }
 
+/*
+ * @brief Refresh named item prices, it refresh named item prices
+ */
 void UBMWidgetBase::RefreshNamedItemPrices()
 {
     if (!WidgetTree) return;
 
     // Helper to resolve price by ItemID
+    /*
+     * @brief Resolve price, it resolve price
+     * @param ItemID The item id
+     * @return The price
+     */
     auto ResolvePrice = [this](const FName& ItemID) -> float
     {
         // Prefer player inventory (may apply testing overrides)
@@ -97,8 +130,14 @@ void UBMWidgetBase::RefreshNamedItemPrices()
         return 0.f;
     };
 
+    /*
+     * @brief Refresh named item prices, it refresh named item prices
+     */
     TArray<UWidget*> AllWidgets;
     WidgetTree->GetAllWidgets(AllWidgets);
+    /*
+     * @brief Refresh named item prices, it refresh named item prices
+     */
     for (UWidget* W : AllWidgets)
     {
         UTextBlock* TB = Cast<UTextBlock>(W);

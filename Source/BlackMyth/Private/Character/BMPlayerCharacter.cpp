@@ -26,8 +26,6 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
-
-
 #include "UObject/ConstructorHelpers.h"
 #include "Core/BMDataSubsystem.h"
 
@@ -37,7 +35,9 @@
 #include "BMGameInstance.h"
 #include "Engine/GameInstance.h"
 
-
+/*
+ * @brief Constructor of the ABMPlayerCharacter class
+ */
 ABMPlayerCharacter::ABMPlayerCharacter()
 {
     CharacterType = EBMCharacterType::Player;
@@ -79,6 +79,9 @@ ABMPlayerCharacter::ABMPlayerCharacter()
     BuildAttackSteps();
 }
 
+/*
+ * @brief Setup camera, it setups the camera
+ */
 void ABMPlayerCharacter::SetupCamera()
 {
     CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -98,6 +101,9 @@ void ABMPlayerCharacter::SetupCamera()
     FollowCamera->bUsePawnControlRotation = false;
 }
 
+/*
+ * @brief Setup mesh, it setups the mesh
+ */
 void ABMPlayerCharacter::SetupMesh()
 {
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshFinder(
@@ -114,6 +120,9 @@ void ABMPlayerCharacter::SetupMesh()
     GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
 }
 
+/*
+ * @brief Setup animations, it setups the animations
+ */
 void ABMPlayerCharacter::SetupAnimations()
 {
     static ConstructorHelpers::FObjectFinder<UAnimSequence> IdleFinder(
@@ -199,6 +208,9 @@ void ABMPlayerCharacter::SetupAnimations()
     if (DodgeFinder.Succeeded())                    AnimDodge = DodgeFinder.Object;
 }
 
+/*
+ * @brief Setup hurt boxes, it setups the hurt boxes
+ */
 void ABMPlayerCharacter::SetupHurtBoxes()
 {
     UBMHurtBoxComponent* Head = CreateDefaultSubobject<UBMHurtBoxComponent>(TEXT("HB_Head"));
@@ -222,6 +234,9 @@ void ABMPlayerCharacter::SetupHurtBoxes()
     Body->DamageMultiplier = 1.0f;
 }
 
+/*
+ * @brief Setup hit boxes, it setups the hit boxes
+ */
 void ABMPlayerCharacter::SetupHitBoxes()
 {
     if (UBMHitBoxComponent* HB = GetHitBox())
@@ -258,23 +273,26 @@ void ABMPlayerCharacter::SetupHitBoxes()
     }
 }
 
+/*
+ * @brief Begin play, it begins the play
+ */
 void ABMPlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
     InitFSMStates();
 
-    // °ó¶¨ Combat ÊÂ¼þ
+    // ï¿½ï¿½ Combat ï¿½Â¼ï¿½
     if (UBMCombatComponent* C = GetCombat())
     {
         C->OnActionRequested.AddUObject(this, &ABMPlayerCharacter::OnActionRequested);
     }
     bSprintHeld = false;
     ApplyGait();
-    // ³õÊ¼¶¯»­
+    // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
     PlayIdleLoop();
 
-	// µ÷ÊÔ£ºÆôÓÃ HitBox/HurtBox ¿ÉÊÓ»¯
+	// ï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½ï¿½ï¿½ HitBox/HurtBox ï¿½ï¿½ï¿½Ó»ï¿½
     //if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
     //for (UBMHurtBoxComponent* HB : HurtBoxes)
     //{
@@ -282,14 +300,14 @@ void ABMPlayerCharacter::BeginPlay()
     //    HB->bDebugDraw = true;
     //}
 
-    // ===== ÇÐ»»¹Ø¿¨ºó×Ô¶¯¼ÓÔØ´æµµ =====
+    // ===== ï¿½Ð»ï¿½ï¿½Ø¿ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ø´æµµ =====
     if (UWorld* World = GetWorld())
     {
         if (UGameInstance* GameInstance = World->GetGameInstance())
         {
             if (UBMSaveGameSubsystem* SaveSystem = GameInstance->GetSubsystem<UBMSaveGameSubsystem>())
             {
-                // ¼ì²éÊÇ·ñ´æÔÚ×Ô¶¯´æµµ£¨²ÛÎ»0£©
+                // ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½æµµï¿½ï¿½ï¿½ï¿½Î»0ï¿½ï¿½
                 if (SaveSystem->DoesSaveExist(0))
                 {
                     UE_LOG(LogTemp, Warning, TEXT("[BMPlayerCharacter] Auto-save found, loading player data (without position)..."));
@@ -297,14 +315,14 @@ void ABMPlayerCharacter::BeginPlay()
                     FTimerHandle LoadDelayTimer;
                     World->GetTimerManager().SetTimerForNextTick([this, SaveSystem]()
                     {
-                        // ¼ÓÔØ×Ô¶¯´æµµ£¨²»»Ö¸´Î»ÖÃ£©
+                        // ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½æµµï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½Î»ï¿½Ã£ï¿½
                         bool bLoadSuccess = SaveSystem->LoadGame(0, false);
                         
                         if (bLoadSuccess)
                         {
                             UE_LOG(LogTemp, Warning, TEXT("[BMPlayerCharacter] Player data loaded successfully (position from PlayerStart)!"));
                             
-                            // ¼ÓÔØºóÁ¢¼´É¾³ý×Ô¶¯´æµµ
+                            // ï¿½ï¿½ï¿½Øºï¿½ï¿½ï¿½ï¿½ï¿½É¾ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½æµµ
                             SaveSystem->DeleteSave(0);
                             UE_LOG(LogTemp, Warning, TEXT("[BMPlayerCharacter] Auto-save deleted (only for level transition)."));
                         }
@@ -324,6 +342,9 @@ void ABMPlayerCharacter::BeginPlay()
     }
 }
 
+/*
+ * @brief Build attack steps, it builds the attack steps
+ */
 void ABMPlayerCharacter::BuildAttackSteps()
 {
     NormalComboSteps.Reset();
@@ -489,7 +510,7 @@ void ABMPlayerCharacter::InitFSMStates()
     UBMStateMachineComponent* Machine = GetFSM();
     if (!Machine) return;
 
-    // ´´½¨²¢×¢²á×´Ì¬
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½×´Ì¬
     auto* SIdle = NewObject<UBMPlayerState_Idle>(Machine);
     auto* SMove = NewObject<UBMPlayerState_Move>(Machine);
     auto* SJump = NewObject<UBMPlayerState_Jump>(Machine);
@@ -514,7 +535,7 @@ void ABMPlayerCharacter::InitFSMStates()
     Machine->RegisterState(BMStateNames::Death, SDeath);
     Machine->RegisterState(BMStateNames::Dodge, SDodge);
 
-    // ³õÊ¼×´Ì¬
+    // ï¿½ï¿½Ê¼×´Ì¬
     Machine->ChangeStateByName(BMStateNames::Idle);
 }
 
@@ -522,7 +543,7 @@ void ABMPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-    // ´«Í³ÊäÈëÓ³Éä
+    // ï¿½ï¿½Í³ï¿½ï¿½ï¿½ï¿½Ó³ï¿½ï¿½
     // Axis: MoveForward / MoveRight
     PlayerInputComponent->BindAxis(TEXT("MoveForward"), this, &ABMPlayerCharacter::Input_MoveForward);
     PlayerInputComponent->BindAxis(TEXT("MoveRight"), this, &ABMPlayerCharacter::Input_MoveRight);
@@ -590,6 +611,10 @@ void ABMPlayerCharacter::HotbarSlot7() { TriggerHotbarSlot(7); }
 void ABMPlayerCharacter::HotbarSlot8() { TriggerHotbarSlot(8); }
 void ABMPlayerCharacter::HotbarSlot9() { TriggerHotbarSlot(9); }
 
+/*
+ * @brief Trigger hotbar slot, it triggers the hotbar slot
+ * @param SlotIndex The slot index
+ */
 void ABMPlayerCharacter::TriggerHotbarSlot(int32 SlotIndex)
 {
 	if (!Inventory)
@@ -624,7 +649,7 @@ void ABMPlayerCharacter::TriggerHotbarSlot(int32 SlotIndex)
 		const bool bCanAfford = (UnitCost == 0) || Inventory->CanAfford(UnitCost);
 		if (!bCanAfford)
 		{
-			// Í¨¹ýÊÂ¼þ×ÜÏßÍ¨ÖªÍæ¼Ò½ð±Ò²»×ã
+			// Í¨ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½Í¨Öªï¿½ï¿½Ò½ï¿½Ò²ï¿½ï¿½ï¿½
 			if (UWorld* World = GetWorld())
 			{
 				if (UGameInstance* GI = World->GetGameInstance())
@@ -654,7 +679,7 @@ void ABMPlayerCharacter::TriggerHotbarSlot(int32 SlotIndex)
 			Inventory->SpendCurrency(UnitCost);
 		}
 
-		// Í¨¹ýÊÂ¼þ×ÜÏßÍ¨Öª¹ºÂò³É¹¦
+		// Í¨ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½Í¨Öªï¿½ï¿½ï¿½ï¿½É¹ï¿½
 		if (UWorld* World = GetWorld())
 		{
 			if (UGameInstance* GI = World->GetGameInstance())
@@ -676,12 +701,20 @@ void ABMPlayerCharacter::TriggerHotbarSlot(int32 SlotIndex)
 	}
 }
 
+/*
+ * @brief Input move forward, it inputs the move forward
+ * @param Value The value
+ */
 void ABMPlayerCharacter::Input_MoveForward(float Value)
 {
     MoveIntent.X = Value;
     UpdateMoveIntent();
 }
 
+/*
+ * @brief Input move right, it inputs the move right
+ * @param Value The value
+ */
 void ABMPlayerCharacter::Input_MoveRight(float Value)
 {
     MoveIntent.Y = Value;
@@ -736,7 +769,7 @@ void ABMPlayerCharacter::ApplyGait()
     UCharacterMovementComponent* Move = GetCharacterMovement();
     if (!Move) return;
 
-    // ËÙ¶ÈÇÐ»»
+    // ï¿½Ù¶ï¿½ï¿½Ð»ï¿½
     Move->MaxWalkSpeed = bSprintHeld ? RunSpeed : WalkSpeed;
 
     if (UBMStateMachineComponent* Machine = GetFSM())
@@ -757,7 +790,7 @@ void ABMPlayerCharacter::Input_JumpPressed()
     UCharacterMovementComponent* Move = GetCharacterMovement();
     if (!Move || Move->IsFalling())
     {
-        return; // ¿ÕÖÐ²»ÔÊÐíÔÙ´ÎÆðÌø
+        return; // ï¿½ï¿½ï¿½Ð²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½
     }
 
     bPendingJump = true;
@@ -807,19 +840,31 @@ void ABMPlayerCharacter::Input_DodgePressed()
     }
 }
 
+/*
+ * @brief Input turn, it inputs the turn
+ * @param Value The value
+ */
 void ABMPlayerCharacter::Input_Turn(float Value)
 {
     AddControllerYawInput(Value);
 }
 
+/*
+ * @brief Input look up, it inputs the look up
+ * @param Value The value
+ */
 void ABMPlayerCharacter::Input_LookUp(float Value)
 {
     AddControllerPitchInput(Value);
 }
 
+/*
+ * @brief On action requested, it on action requested
+ * @param Action The action
+ */
 void ABMPlayerCharacter::OnActionRequested(EBMCombatAction Action)
 {
-    // ËÀÍö²»ÏìÓ¦
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦
     if (UBMStatsComponent* S = GetStats())
     {
         if (S->IsDead()) return;
@@ -827,7 +872,7 @@ void ABMPlayerCharacter::OnActionRequested(EBMCombatAction Action)
     UBMStateMachineComponent* Machine = GetFSM();
     if (!Machine) return;
     const FName CurState = Machine->GetCurrentStateName();
-    // ÆÕÍ¨¹¥»÷
+    // ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½
     if (Action == EBMCombatAction::NormalAttack)
     {
         EnqueueAction(Action);
@@ -842,12 +887,12 @@ void ABMPlayerCharacter::OnActionRequested(EBMCombatAction Action)
         return;
     }
 
-    // ¼¼ÄÜµ¥¶Î£¬ÒªÇóÀäÈ´¾ÍÐ÷
+    // ï¿½ï¿½ï¿½Üµï¿½ï¿½Î£ï¿½Òªï¿½ï¿½ï¿½ï¿½È´ï¿½ï¿½ï¿½ï¿½
     if (BMCombatUtils::IsSkillAction(Action))
     {
         if (CurState == BMStateNames::Attack || CurState == BMStateNames::Dodge)
         {
-            return; // ²»ÔÊÐí¹¥»÷ÖÐ²å¼¼ÄÜ
+            return; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð²å¼¼ï¿½ï¿½
         }
 
         if (UCharacterMovementComponent* Move = GetCharacterMovement())
@@ -878,7 +923,7 @@ void ABMPlayerCharacter::OnActionRequested(EBMCombatAction Action)
         return;
     }
 
-    // ²»ÔÊÐí¿ÕÖÐÉÁ±Ü
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     if (Action == EBMCombatAction::Dodge)
     {
         if (UCharacterMovementComponent* Move = GetCharacterMovement())
@@ -886,7 +931,7 @@ void ABMPlayerCharacter::OnActionRequested(EBMCombatAction Action)
             if (Move->IsFalling()) return;
         }
 
-        // ÀäÈ´¼ì²é
+        // ï¿½ï¿½È´ï¿½ï¿½ï¿½
         if (UBMCombatComponent* C = GetCombat())
         {
             if (!C->IsCooldownReady(DodgeCooldownKey))
@@ -912,6 +957,11 @@ void ABMPlayerCharacter::OnActionRequested(EBMCombatAction Action)
 
 }
 
+/*
+ * @brief Should interrupt current attack, it should interrupt the current attack
+ * @param Incoming The incoming
+ * @return True if the current attack should be interrupted, false otherwise
+ */
 bool ABMPlayerCharacter::ShouldInterruptCurrentAttack(const FBMDamageInfo& Incoming) const
 {
     if (!bHasActiveAttackContext)
@@ -928,19 +978,26 @@ bool ABMPlayerCharacter::ShouldInterruptCurrentAttack(const FBMDamageInfo& Incom
     return FMath::FRand() < P;
 }
 
+/*
+ * @brief Landed, it landed
+ * @param Hit The hit
+ */
 void ABMPlayerCharacter::Landed(const FHitResult& Hit)
 {
     Super::Landed(Hit);
 
     bPendingJump = false;
-    // ÂäµØºó»Øµ½ Move/Idle
+    // ï¿½ï¿½Øºï¿½Øµï¿½ Move/Idle
     if (UBMStateMachineComponent* Machine = GetFSM())
     {
         Machine->ChangeStateByName(HasMoveIntent() ? BMStateNames::Move : BMStateNames::Idle);
     }
 }
 
-// ===== ´¿C++¶¯»­²¥·Å =====
+/*
+ * @brief Play loop, it plays the loop
+ * @param Seq The sequence
+ */
 
 void ABMPlayerCharacter::PlayLoop(UAnimSequence* Seq)
 {
@@ -957,6 +1014,14 @@ void ABMPlayerCharacter::PlayLoop(UAnimSequence* Seq)
     GetMesh()->PlayAnimation(Seq, true);
 }
 
+/*
+ * @brief Play once, it plays the once
+ * @param Seq The sequence
+ * @param PlayRate The play rate
+ * @param StartTime The start time
+ * @param MaxPlayTime The max play time
+ * @return The play time
+ */
 float ABMPlayerCharacter::PlayOnce(UAnimSequence* Seq, float PlayRate, float StartTime, float MaxPlayTime)
 {
     if (!Seq || !GetMesh())
@@ -966,13 +1031,13 @@ float ABMPlayerCharacter::PlayOnce(UAnimSequence* Seq, float PlayRate, float Sta
 
     CurrentLoopAnim = nullptr;
 
-    // È·±£ÊÇµ¥½ÚµãÄ£Ê½
+    // È·ï¿½ï¿½ï¿½Çµï¿½ï¿½Úµï¿½Ä£Ê½
     GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
 
-    // ÓÃ SingleNodeInstance ¿ØÖÆÆðÊ¼Ê±¼ä/²¥·ÅÂÊ
+    // ï¿½ï¿½ SingleNodeInstance ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼Ê±ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     UAnimSingleNodeInstance* Inst = GetMesh()->GetSingleNodeInstance();
 
-    // µÚÒ»´ÎÃ»´´½¨ Instance£¬ÏÈ PlayAnimation Ò»´Î
+    // ï¿½ï¿½Ò»ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ Instanceï¿½ï¿½ï¿½ï¿½ PlayAnimation Ò»ï¿½ï¿½
     if (!Inst)
     {
         GetMesh()->PlayAnimation(Seq, false);
@@ -985,7 +1050,7 @@ float ABMPlayerCharacter::PlayOnce(UAnimSequence* Seq, float PlayRate, float Sta
     const float ClampedStart = FMath::Clamp(StartTime, 0.f, Len);
     const float Remaining = FMath::Max(0.f, Len - ClampedStart);
 
-    // MaxPlayTime <= 0 ±íÊ¾²¥ÍêÕûÊ£Óà¶Î£¬·ñÔò²Ã¼ô
+    // MaxPlayTime <= 0 ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê£ï¿½ï¿½Î£ï¿½ï¿½ï¿½ï¿½ï¿½Ã¼ï¿½
     const float EffectivePlayTime = (MaxPlayTime > 0.f) ? FMath::Min(Remaining, MaxPlayTime) : Remaining;
 
     if (Inst)
@@ -997,36 +1062,60 @@ float ABMPlayerCharacter::PlayOnce(UAnimSequence* Seq, float PlayRate, float Sta
     }
     else
     {
-        // ÈôÎÞ·¨¿ØÖÆÆðÊ¼Ê±¼ä/²Ã¼ô
+        // ï¿½ï¿½ï¿½Þ·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼Ê±ï¿½ï¿½/ï¿½Ã¼ï¿½
         GetMesh()->PlayAnimation(Seq, false);
         return Len / SafePlayRate;
     }
 
-    // ·µ»ØÊ±³¤
+    // ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½
     return EffectivePlayTime / SafePlayRate;
 }
 
+/*
+ * @brief Play idle loop, it plays the idle loop
+ */
 void ABMPlayerCharacter::PlayIdleLoop()
 {
     PlayLoop(AnimIdle);
 }
 
+/*
+ * @brief Play move loop, it plays the move loop
+ */
 void ABMPlayerCharacter::PlayMoveLoop()
 {
 	UAnimSequence* Seq = bSprintHeld ? AnimRun : AnimWalk;
 	PlayLoop(Seq);
 }
 
+/*
+ * @brief Play jump start once, it plays the jump start once
+ * @param PlayRate The play rate
+ * @return The play time
+ */
 float ABMPlayerCharacter::PlayJumpStartOnce(float PlayRate)
 {
     return PlayOnce(AnimJumpStart, PlayRate);
 }
 
+/*
+ * @brief Play attack once, it plays the attack once
+ * @param Spec The spec
+ * @return The play time
+ */
 float ABMPlayerCharacter::PlayAttackOnce(const FBMPlayerAttackSpec& Spec)
 {
     return PlayOnce(Spec.Anim, Spec.PlayRate, Spec.StartTime, Spec.MaxPlayTime);
 }
 
+/*
+ * @brief Play normal attack once, it plays the normal attack once
+ * @param Seq The sequence
+ * @param PlayRate The play rate
+ * @param StartTime The start time
+ * @param MaxPlayTime The max play time
+ * @return The play time
+ */
 float ABMPlayerCharacter::PlayNormalAttackOnce(
     UAnimSequence* Seq,
     float PlayRate,
@@ -1036,6 +1125,11 @@ float ABMPlayerCharacter::PlayNormalAttackOnce(
 	return PlayOnce(Seq, PlayRate, StartTime, MaxPlayTime);
 }
 
+/*
+ * @brief Play hit once, it plays the hit once
+ * @param Info The info
+ * @return The play time
+ */
 float ABMPlayerCharacter::PlayHitOnce(const FBMDamageInfo& Info)
 {
     UAnimSequence* Seq = BMCombatUtils::IsHeavyIncoming(Info) ? (AnimHitHeavy ? AnimHitHeavy : AnimHitLight)
@@ -1043,16 +1137,29 @@ float ABMPlayerCharacter::PlayHitOnce(const FBMDamageInfo& Info)
     return PlayOnce(Seq, 1.0f);
 }
 
+/*
+ * @brief Play death once, it plays the death once
+ * @return The play time
+ */
 float ABMPlayerCharacter::PlayDeathOnce()
 {
     return PlayOnce(AnimDeath, 1.0f);
 }
 
+/*
+ * @brief Play dodge once, it plays the dodge once
+ * @return The play time
+ */
 float ABMPlayerCharacter::PlayDodgeOnce()
 {
     return PlayOnce(AnimDodge, DodgePlayRate, 0.0, 0.7);
 }
 
+/*
+ * @brief Play combo recover once, it plays the combo recover once
+ * @param Step The step
+ * @return The play time
+ */
 float ABMPlayerCharacter::PlayComboRecoverOnce(const FBMPlayerComboStep& Step)
 {
     if (!Step.RecoverAnim)
@@ -1068,9 +1175,13 @@ float ABMPlayerCharacter::PlayComboRecoverOnce(const FBMPlayerComboStep& Step)
     );
 }
 
+/*
+ * @brief Compute dodge direction locked, it computes the dodge direction locked
+ * @return The dodge direction locked
+ */
 FVector ABMPlayerCharacter::ComputeDodgeDirectionLocked() const
 {
-    // ÓÅÏÈ°´µ±Ç°ÊäÈë·½ÏòÉÁ±Ü
+    // ï¿½ï¿½ï¿½È°ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ë·½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     FVector Dir = GetActorForwardVector();
 
     if (HasMoveIntent() && Controller)
@@ -1091,11 +1202,18 @@ FVector ABMPlayerCharacter::ComputeDodgeDirectionLocked() const
     return Dir.IsNearlyZero() ? GetActorForwardVector() : Dir.GetSafeNormal();
 }
 
+/*
+ * @brief Play fall loop, it plays the fall loop
+ */
 void ABMPlayerCharacter::PlayFallLoop()
 {
     PlayLoop(AnimFallLoop);
 }
 
+/*
+ * @brief Handle damage taken, it handles the damage taken
+ * @param FinalInfo The final info
+ */
 void ABMPlayerCharacter::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
 {
     Super::HandleDamageTaken(FinalInfo);
@@ -1115,21 +1233,25 @@ void ABMPlayerCharacter::HandleDamageTaken(const FBMDamageInfo& FinalInfo)
 
     const FName Cur = Machine->GetCurrentStateName();
 
-    // ·Ç¹¥»÷±Ø½ø Hit
+    // ï¿½Ç¹ï¿½ï¿½ï¿½ï¿½Ø½ï¿½ Hit
     if (Cur != BMStateNames::Attack)
     {
         Machine->ChangeStateByName(BMStateNames::Hit);
         return;
     }
 
-    // ¹¥»÷ÖÐ°´µ±Ç°ÕÐÊ½¹æÔò¾ö¶¨ÊÇ·ñ´ò¶Ï
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ð°ï¿½ï¿½ï¿½Ç°ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½
     if (ShouldInterruptCurrentAttack(FinalInfo))
     {
         Machine->ChangeStateByName(BMStateNames::Hit);
     }
-    // ·ñÔòÖ»¿ÛÑª£¬²»ÇÐ×´Ì¬¡¢²»²¥ÊÜ»÷
+    // ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½Ñªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü»ï¿½
 }
 
+/*
+ * @brief Handle death, it handles the death
+ * @param LastHitInfo The last hit info
+ */
 void ABMPlayerCharacter::HandleDeath(const FBMDamageInfo& LastHitInfo)
 {
     LastDamageInfo = LastHitInfo;
@@ -1165,6 +1287,13 @@ void ABMPlayerCharacter::HandleDeath(const FBMDamageInfo& LastHitInfo)
     Super::HandleDeath(LastHitInfo);
 }
 
+/*
+ * @brief Resolve hit box window, it resolves the hit box window
+ * @param WindowId The window id
+ * @param OutHitBoxNames The out hit box names
+ * @param OutParams The out params
+ * @return True if the hit box window is resolved, false otherwise
+ */
 bool ABMPlayerCharacter::ResolveHitBoxWindow(
     FName WindowId,
     TArray<FName>& OutHitBoxNames,
@@ -1179,7 +1308,7 @@ bool ABMPlayerCharacter::ResolveHitBoxWindow(
         return false;
     }
 
-    // Ä¬ÈÏ´°¿ÚÃû¾ÍÊÇ "HitWindow"
+    // Ä¬ï¿½Ï´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ "HitWindow"
     static const FName DefaultWindowId(TEXT("HitWindow"));
 
     if (WindowId.IsNone() || WindowId == DefaultWindowId)
@@ -1192,12 +1321,21 @@ bool ABMPlayerCharacter::ResolveHitBoxWindow(
     return false;
 }
 
+/*
+ * @brief Enqueue action, it enqueues the action
+ * @param Action The action
+ */
 void ABMPlayerCharacter::EnqueueAction(EBMCombatAction Action)
 {
     ActionQueue.Reset();
     ActionQueue.Add(Action);
 }
 
+/*
+ * @brief Consume next queued action, it consumes the next queued action
+ * @param OutAction The out action
+ * @return True if the next queued action is consumed, false otherwise
+ */
 bool ABMPlayerCharacter::ConsumeNextQueuedAction(EBMCombatAction& OutAction)
 {
     if (ActionQueue.Num() <= 0) return false;
@@ -1206,6 +1344,10 @@ bool ABMPlayerCharacter::ConsumeNextQueuedAction(EBMCombatAction& OutAction)
     return true;
 }
 
+/*
+ * @brief Consume one queued normal attack, it consumes the one queued normal attack
+ * @return True if the one queued normal attack is consumed, false otherwise
+ */
 bool ABMPlayerCharacter::ConsumeOneQueuedNormalAttack()
 {
     for (int32 i = 0; i < ActionQueue.Num(); ++i)
@@ -1219,6 +1361,13 @@ bool ABMPlayerCharacter::ConsumeOneQueuedNormalAttack()
     return false;
 }
 
+/*
+ * @brief Select skill spec, it selects the skill spec
+ * @param Action The action
+ * @param OutSpec The out spec
+ * @param OutStaminaCost The out stamina cost
+ * @return True if the skill spec is selected, false otherwise
+ */
 bool ABMPlayerCharacter::SelectSkillSpec(EBMCombatAction Action, FBMPlayerAttackSpec& OutSpec, float& OutStaminaCost) const
 {
     for (const FBMPlayerSkillSlot& S : SkillSlots)
@@ -1233,6 +1382,12 @@ bool ABMPlayerCharacter::SelectSkillSpec(EBMCombatAction Action, FBMPlayerAttack
     return false;
 }
 
+/*
+ * @brief Get combo step, it gets the combo step
+ * @param Index The index
+ * @param Out The out
+ * @return True if the combo step is got, false otherwise
+ */
 bool ABMPlayerCharacter::GetComboStep(int32 Index, FBMPlayerComboStep& Out) const
 {
     if (!NormalComboSteps.IsValidIndex(Index)) return false;
@@ -1240,6 +1395,14 @@ bool ABMPlayerCharacter::GetComboStep(int32 Index, FBMPlayerComboStep& Out) cons
     return Out.Anim != nullptr;
 }
 
+/*
+ * @brief Set active attack context, it sets the active attack context
+ * @param HitBoxNames The hit box names
+ * @param Params The params
+ * @param bUninterruptible The uninterruptible
+ * @param InterruptChance The interrupt chance
+ * @param InterruptChanceOnHeavyHit The interrupt chance on heavy hit
+ */
 void ABMPlayerCharacter::SetActiveAttackContext(
     const TArray<FName>& HitBoxNames,
     const FBMHitBoxActivationParams& Params,
@@ -1258,6 +1421,9 @@ void ABMPlayerCharacter::SetActiveAttackContext(
     bHasActiveAttackContext = true;
 }
 
+/*
+ * @brief Clear active attack context, it clears the active attack context
+ */
 void ABMPlayerCharacter::ClearActiveAttackContext()
 {
     bHasActiveAttackContext = false;

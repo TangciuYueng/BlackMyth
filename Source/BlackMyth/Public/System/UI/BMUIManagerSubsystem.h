@@ -7,7 +7,9 @@
 #include "BMUIManagerSubsystem.generated.h"
 
 /**
- * 
+ * @brief Define the UBMUIManagerSubsystem class, manager for the UI, used to show and hide the UI widgets
+ * @param UBMUIManagerSubsystem The name of the class
+ * @param UGameInstanceSubsystem The parent class
  */
 UCLASS()
 class BLACKMYTH_API UBMUIManagerSubsystem : public UGameInstanceSubsystem
@@ -77,6 +79,7 @@ public:
     bool IsSaveLoadMenuVisible() const;
 
 private:
+    // Use weak pointers to avoid circular references
     TWeakObjectPtr<class UBMHUDWidget> HUD;
     TWeakObjectPtr<class UBMBossBarBase> BossBar;
     TWeakObjectPtr<class UBMNotificationWidget> Notification;

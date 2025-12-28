@@ -18,6 +18,9 @@
 #include "System/UI/BMUIManagerSubsystem.h"
 #include "UI/BMBossBarBase.h"
 
+/*
+ * @brief Constructor of the ABMEnemyBoss class
+ */
 ABMEnemyBoss::ABMEnemyBoss()
 {
     AggroRange = BossAggroRange;
@@ -59,6 +62,9 @@ ABMEnemyBoss::ABMEnemyBoss()
     
 }
 
+/*
+ * @brief Apply boss body tuning, it applies the boss body tuning
+ */
 void ABMEnemyBoss::ApplyBossBodyTuning()
 {
     // Capsule
@@ -80,6 +86,9 @@ void ABMEnemyBoss::ApplyBossBodyTuning()
     }
 }
 
+/*
+ * @brief Begin play, it begins the play
+ */
 void ABMEnemyBoss::BeginPlay()
 {
     // Tag this actor as Boss so StatsComponent can identify it
@@ -155,11 +164,17 @@ void ABMEnemyBoss::BeginPlay()
     }
 }
 
+/*
+ * @brief Apply configured assets, it applies the configured assets
+ */
 void ABMEnemyBoss::ApplyConfiguredAssets()
 {
     AnimEnergize = AnimEnergizeAsset.IsNull() ? nullptr : AnimEnergizeAsset.LoadSynchronous();
 }
 
+/*
+ * @brief Build hurt boxes, it builds the hurt boxes
+ */
 void ABMEnemyBoss::BuildHurtBoxes()
 {
     if (!HurtBody)
@@ -190,6 +205,9 @@ void ABMEnemyBoss::BuildHurtBoxes()
     }
 }
 
+/*
+ * @brief Build hit boxes, it builds the hit boxes
+ */
 void ABMEnemyBoss::BuildHitBoxes()
 {
     UBMHitBoxComponent* HB = GetHitBox();
@@ -253,6 +271,9 @@ void ABMEnemyBoss::BuildHitBoxes()
 
 }
 
+/*
+ * @brief Build attack specs, it builds the attack specs
+ */
 void ABMEnemyBoss::BuildAttackSpecs()
 {
     AttackSpecs.Reset();
@@ -354,16 +375,28 @@ void ABMEnemyBoss::BuildAttackSpecs()
     }
 }
 
+/*
+ * @brief Play dodge once, it plays the dodge once
+ * @return The play time
+ */
 float ABMEnemyBoss::PlayDodgeOnce()
 {
     return PlayOnce(AnimDodge, DodgePlayRate, 0.0, 0.75f);
 }
 
+/*
+ * @brief Play energize once, it plays the energize once
+ * @return The play time
+ */
 float ABMEnemyBoss::PlayEnergizeOnce()
 {
     return PlayOnce(AnimEnergize, 0.7f);
 }
 
+/*
+ * @brief Handle death, it handles the death
+ * @param LastHitInfo The last hit info
+ */
 void ABMEnemyBoss::HandleDeath(const FBMDamageInfo& LastHitInfo)
 {
     LastDamageInfo = LastHitInfo;
@@ -396,6 +429,11 @@ void ABMEnemyBoss::HandleDeath(const FBMDamageInfo& LastHitInfo)
     Super::HandleDeath(LastHitInfo);
 }
 
+/*
+ * @brief Can be damaged by, it checks if the enemy can be damaged by the info
+ * @param Info The info
+ * @return True if the enemy can be damaged by the info, false otherwise
+ */
 bool ABMEnemyBoss::CanBeDamagedBy(const FBMDamageInfo& Info) const
 {
     if (bInPhaseTransition)
@@ -533,6 +571,12 @@ void ABMEnemyBoss::AddPhase2AttackSpecs()
     }
 }
 
+/*
+ * @brief Play death reverse once, it plays the death reverse once
+ * @param ReversePlayRate The reverse play rate
+ * @param ReverseMaxTime The reverse max time
+ * @return The play time
+ */
 float ABMEnemyBoss::PlayDeathReverseOnce(float ReversePlayRate, float ReverseMaxTime)
 {
     UAnimSequence* Seq = AnimDeath;
@@ -567,6 +611,11 @@ float ABMEnemyBoss::PlayDeathReverseOnce(float ReversePlayRate, float ReverseMax
 
     return Effective / ReversePlayRate;
 }
+
+/*
+ * @brief Set alert state, it sets the alert state
+ * @param bAlert The alert state
+ */
 void ABMEnemyBoss::SetAlertState(bool bAlert)
 {
     const bool bPrevAlert = IsAlerted();

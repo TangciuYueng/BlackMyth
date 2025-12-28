@@ -46,6 +46,7 @@ protected:
 	/** Input mapping context setup */
 	virtual void SetupInputComponent() override;
 
+	/** These are the hotbar slots for the player controller**/
 	void Hotbar1();
 	void Hotbar2();
 	void Hotbar3();

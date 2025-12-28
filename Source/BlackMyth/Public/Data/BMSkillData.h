@@ -4,6 +4,11 @@
 #include "Engine/DataTable.h"
 #include "BMSkillData.generated.h"
 
+/*
+ * @brief Define the FBMSkillData struct, skill data struct, used to store the skill data
+ * @param FBMSkillData The name of the struct
+ * @param FTableRowBase The parent struct
+ */
 USTRUCT(BlueprintType)
 struct FBMSkillData : public FTableRowBase
 {

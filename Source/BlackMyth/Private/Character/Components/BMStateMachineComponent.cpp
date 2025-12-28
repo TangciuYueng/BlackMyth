@@ -2,17 +2,29 @@
 #include "Character/Components/BMCharacterState.h"
 #include "Core/BMTypes.h"
 
+/*
+ * @brief Constructor of the UBMStateMachineComponent class
+ */
 UBMStateMachineComponent::UBMStateMachineComponent()
 {
-    PrimaryComponentTick.bCanEverTick = false; // ÓÉ ABMCharacterBase Tick Í³Ò»Çý¶¯
+    PrimaryComponentTick.bCanEverTick = false; // ï¿½ï¿½ ABMCharacterBase Tick Í³Ò»ï¿½ï¿½ï¿½ï¿½
 }
 
+/*
+ * @brief Register state, it registers the state
+ * @param Name The name of the state
+ * @param State The state
+ */
 void UBMStateMachineComponent::RegisterState(FName Name, UBMCharacterState* State)
 {
     if (Name.IsNone() || !State) return;
     States.Add(Name, State);
 }
 
+/*
+ * @brief Change state, it changes the state
+ * @param NewState The new state
+ */
 void UBMStateMachineComponent::ChangeState(UBMCharacterState* NewState)
 {
     if (NewState == Current) return;
@@ -23,7 +35,7 @@ void UBMStateMachineComponent::ChangeState(UBMCharacterState* NewState)
     }
     Current = NewState;
 
-    // ·´²éÃû×Ö
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     CurrentStateName = NAME_None;
     for (const auto& It : States)
     {
@@ -40,6 +52,11 @@ void UBMStateMachineComponent::ChangeState(UBMCharacterState* NewState)
     }
 }
 
+/*
+ * @brief Change state by name, it changes the state by name
+ * @param Name The name of the state
+ * @return True if the state is changed, false otherwise
+ */
 bool UBMStateMachineComponent::ChangeStateByName(FName Name)
 {
     TObjectPtr<UBMCharacterState>* Found = States.Find(Name);
@@ -54,6 +71,10 @@ bool UBMStateMachineComponent::ChangeStateByName(FName Name)
     return true;
 }
 
+/*
+ * @brief Tick state, it ticks the state
+ * @param DeltaSeconds The delta seconds
+ */
 void UBMStateMachineComponent::TickState(float DeltaSeconds)
 {
     if (Current)

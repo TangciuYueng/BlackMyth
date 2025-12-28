@@ -1,6 +1,10 @@
 #include "Core/BMAssetManager.h"
 #include "Engine/StreamableManager.h"
 
+/*
+ * @brief Get the asset manager
+ * @return The asset manager
+ */
 UBMAssetManager& UBMAssetManager::Get()
 {
     // AssetManager
@@ -17,6 +21,11 @@ UBMAssetManager& UBMAssetManager::Get()
     }
 }
 
+/*
+ * @brief Async load asset, it async loads the asset
+ * @param Path The path
+ * @param OnLoaded The on loaded
+ */
 void UBMAssetManager::AsyncLoadAsset(const FSoftObjectPath& Path, FOnAssetLoaded OnLoaded)
 {
     if (Path.IsNull())
@@ -35,6 +44,11 @@ void UBMAssetManager::AsyncLoadAsset(const FSoftObjectPath& Path, FOnAssetLoaded
         }));
 }
 
+/*
+ * @brief Sync load asset, it sync loads the asset
+ * @param Path The path
+ * @return The object
+ */
 UObject* UBMAssetManager::SyncLoadAsset(const FSoftObjectPath& Path)
 {
     if (Path.IsNull()) return nullptr;

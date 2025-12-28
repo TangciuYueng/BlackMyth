@@ -3,6 +3,10 @@
 #include "Character/Components/BMStateMachineComponent.h"
 #include "Core/BMTypes.h"
 
+/*
+ * @brief On enter, it enters the hit state, it stops the enemy movement, plays the hit animation and sets the hit finish handle
+ * @param DeltaTime The delta time
+ */
 void UBMEnemyState_Hit::OnEnter(float)
 {
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());
@@ -11,7 +15,7 @@ void UBMEnemyState_Hit::OnEnter(float)
     bFinished = false;
     E->GetWorldTimerManager().ClearTimer(HitFinishHandle);
 
-    // ÊÜ»÷Ê±Í£Ö¹Â·¾¶¸úËæ
+    // ï¿½Ü»ï¿½Ê±Í£Ö¹Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     E->RequestStopMovement();
 
     const float Duration = E->PlayHitOnce(E->GetLastDamageInfo());
@@ -25,6 +29,10 @@ void UBMEnemyState_Hit::OnEnter(float)
     E->GetWorldTimerManager().SetTimer(HitFinishHandle, D, Duration, false);
 }
 
+/*
+ * @brief On exit, it exits the hit state, it clears the hit finish handle
+ * @param DeltaTime The delta time
+ */
 void UBMEnemyState_Hit::OnExit(float)
 {
     if (ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext()))
@@ -34,13 +42,21 @@ void UBMEnemyState_Hit::OnExit(float)
     bFinished = false;
 }
 
+/*
+ * @brief Can transition to, it checks if the state can transition to the given state
+ * @param StateName The name of the state to transition to
+ * @return True if the state can transition to the given state, false otherwise
+ */
 bool UBMEnemyState_Hit::CanTransitionTo(FName StateName) const
 {
-    // ÊÜ»÷¿ÉÒÔ±»ËÀÍöÇ¿ÖÆ´ò¶Ï
+    // ï¿½Ü»ï¿½ï¿½ï¿½ï¿½Ô±ï¿½ï¿½ï¿½ï¿½ï¿½Ç¿ï¿½Æ´ï¿½ï¿½
     if (StateName == BMEnemyStateNames::Death) return true;
     return bFinished;
 }
 
+/*
+ * @brief Finish hit, it finishes the hit, it changes the state to chase or patrol or idle
+ */
 void UBMEnemyState_Hit::FinishHit()
 {
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());

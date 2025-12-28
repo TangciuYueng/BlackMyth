@@ -14,6 +14,9 @@
 
 #define LOCTEXT_NAMESPACE "BMPauseMenu"
 
+/*
+ * @brief Native construct, it native construct
+ */
 void UBMPauseMenuWidget::NativeConstruct()
 {
     Super::NativeConstruct();
@@ -31,6 +34,9 @@ void UBMPauseMenuWidget::NativeConstruct()
     }
 }
 
+/*
+ * @brief Native destruct, it native destruct
+ */
 void UBMPauseMenuWidget::NativeDestruct()
 {
     if (ResumeButton)
@@ -48,6 +54,9 @@ void UBMPauseMenuWidget::NativeDestruct()
     Super::NativeDestruct();
 }
 
+/*
+ * @brief On resume clicked, it on resume clicked
+ */
 void UBMPauseMenuWidget::OnResumeClicked()
 {
     if (UBMEventBusSubsystem* Bus = GetEventBus())
@@ -68,6 +77,9 @@ void UBMPauseMenuWidget::OnResumeClicked()
     }
 }
 
+/*
+ * @brief On save clicked, it on save clicked
+ */
 void UBMPauseMenuWidget::OnSaveClicked()
 {
     // Optional: notify via event bus
@@ -98,6 +110,9 @@ void UBMPauseMenuWidget::OnSaveClicked()
     }
 }
 
+/*
+ * @brief On settings clicked, it on settings clicked
+ */
 void UBMPauseMenuWidget::OnSettingsClicked()
 {
     if (UBMEventBusSubsystem* Bus = GetEventBus())
@@ -106,6 +121,9 @@ void UBMPauseMenuWidget::OnSettingsClicked()
     }
 }
 
+/*
+ * @brief On return to main clicked, it on return to main clicked
+ */
 void UBMPauseMenuWidget::OnReturnToMainClicked()
 {
     if (UBMEventBusSubsystem* Bus = GetEventBus())
@@ -142,6 +160,9 @@ void UBMPauseMenuWidget::OnReturnToMainClicked()
     UGameplayStatics::OpenLevel(World, FName(TEXT("emptymap")));
 }
 
+/*
+ * @brief On skill tree clicked, it on skill tree clicked
+ */
 void UBMPauseMenuWidget::OnSkillTreeClicked()
 {
     if (UBMEventBusSubsystem* Bus = GetEventBus())
@@ -150,6 +171,9 @@ void UBMPauseMenuWidget::OnSkillTreeClicked()
     }
 }
 
+/*
+ * @brief On equipment upgrade clicked, it on equipment upgrade clicked
+ */
 void UBMPauseMenuWidget::OnEquipmentUpgradeClicked()
 {
     if (UBMEventBusSubsystem* Bus = GetEventBus())
@@ -158,11 +182,19 @@ void UBMPauseMenuWidget::OnEquipmentUpgradeClicked()
     }
 }
 
+/*
+ * @brief Bind event bus, it bind event bus
+ * @param EventBus The event bus
+ */
 void UBMPauseMenuWidget::BindEventBus(UBMEventBusSubsystem* EventBus)
 {
     if (!EventBus) return;
 }
 
+/*
+ * @brief Unbind event bus, it unbind event bus
+ * @param EventBus The event bus
+ */
 void UBMPauseMenuWidget::UnbindEventBus(UBMEventBusSubsystem* EventBus)
 {
     if (!EventBus) return;

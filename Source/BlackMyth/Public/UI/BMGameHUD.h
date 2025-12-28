@@ -5,11 +5,12 @@
 #include "BMGameHUD.generated.h"
 
 /**
- * Minimal HUD actor to satisfy GameMode HUDClass.
- * UMG HUD widgets are managed by UBMUIManagerSubsystem.
+ * @brief Define the ABMGameHUD class
+ * @param ABMGameHUD The name of the class
+ * @param AHUD The parent class
  */
 UCLASS()
 class BLACKMYTH_API ABMGameHUD : public AHUD
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 };

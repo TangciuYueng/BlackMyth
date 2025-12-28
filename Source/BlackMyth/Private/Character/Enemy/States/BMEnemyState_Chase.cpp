@@ -5,6 +5,10 @@
 #include "Core/BMTypes.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
+/*
+ * @brief On enter, it enters the chase state, it plays the run loop and sets the max walk speed to the chase speed
+ * @param DeltaTime The delta time
+ */
 void UBMEnemyState_Chase::OnEnter(float)
 {
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());
@@ -15,6 +19,11 @@ void UBMEnemyState_Chase::OnEnter(float)
 
 }
 
+/*
+ * @brief On update, it updates the chase state, it checks if the enemy is alerted and has a valid target
+ * if not, it changes the state to patrol or idle, if the enemy is in attack range, it changes the state to attack, if the enemy is not in attack range, it moves to the target
+ * @param DeltaTime The delta time
+ */
 void UBMEnemyState_Chase::OnUpdate(float DeltaTime)
 {
     ABMEnemyBase* E = Cast<ABMEnemyBase>(GetContext());
@@ -26,7 +35,7 @@ void UBMEnemyState_Chase::OnUpdate(float DeltaTime)
         return;
     }
 
-    // ½ø¹¥»÷¾àÀë£ºÈç¹ûÄÜ³öÊÖ -> Attack£¬·ñÔòÍ£ÏÂÀ´ÃæÏòÄ¿±ê²¢²¥Idle
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë£ºï¿½ï¿½ï¿½ï¿½Ü³ï¿½ï¿½ï¿½ -> Attackï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ê²¢ï¿½ï¿½Idle
     if (E->IsInAttackRange())
     {
         E->RequestStopMovement();
@@ -40,10 +49,10 @@ void UBMEnemyState_Chase::OnUpdate(float DeltaTime)
         return;
     }
 
-    // ×·»÷
+    // ×·ï¿½ï¿½
     E->RequestMoveToTarget(1.f);
 
-    // ÃæÏòÄ¿±ê
+    // ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½
     E->FaceTarget(DeltaTime);
 
 

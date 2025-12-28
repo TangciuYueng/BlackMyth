@@ -6,6 +6,9 @@
 #include "Engine/SkeletalMesh.h"
 #include "Core/BMTypes.h"
 
+/*
+ * @brief Constructor of the ABMEnemyWhisper class
+ */
 ABMEnemyWhisper::ABMEnemyWhisper()
 {
     AggroRange = WhisperAggroRange;
@@ -33,15 +36,18 @@ ABMEnemyWhisper::ABMEnemyWhisper()
         TEXT("/Script/Engine.AnimSequence'/Game/Whisper/Animations/Anim_Whisper_Attack3.Anim_Whisper_Attack3'")));
 }
 
+/*
+ * @brief Begin play, it begins the play
+ */
 void ABMEnemyWhisper::BeginPlay()
 {
-    // ÓÅÏÈ´Ó DataTable ¶ÁÈ¡ÅäÖÃ
+    // ï¿½ï¿½ï¿½È´ï¿½ DataTable ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½
     LoadStatsFromDataTable();
 
     BuildAttackSpecs();
     BuildLootTable();
 
-    // µ÷ÊÔ¿ÉÊÓ»¯
+    // ï¿½ï¿½ï¿½Ô¿ï¿½ï¿½Ó»ï¿½
     //if (UBMHitBoxComponent* HB = GetHitBox()) HB->bDebugDraw = true;
     //for (UBMHurtBoxComponent* HB : HurtBoxes)
     //{
@@ -51,6 +57,9 @@ void ABMEnemyWhisper::BeginPlay()
     Super::BeginPlay();
 }
 
+/*
+ * @brief Apply configured assets, it applies the configured assets
+ */
 void ABMEnemyWhisper::ApplyConfiguredAssets()
 {
     if (!MeshAsset.IsNull())
@@ -72,6 +81,9 @@ void ABMEnemyWhisper::ApplyConfiguredAssets()
     AnimDodge = AnimDodgeAsset.IsNull() ? nullptr : AnimDodgeAsset.LoadSynchronous();
 }
 
+/*
+ * @brief Build hurt boxes, it builds the hurt boxes
+ */
 void ABMEnemyWhisper::BuildHurtBoxes()
 {
     if (!HurtBody)
@@ -102,12 +114,15 @@ void ABMEnemyWhisper::BuildHurtBoxes()
     }
 }
 
+/*
+ * @brief Build hit boxes, it builds the hit boxes
+ */
 void ABMEnemyWhisper::BuildHitBoxes()
 {
     UBMHitBoxComponent* HB = GetHitBox();
     if (!HB) return;
 
-    // ÓÒÊÖ
+    // ï¿½ï¿½ï¿½ï¿½
     {
         FBMHitBoxDefinition Def;
         Def.Name = TEXT("whisper_hand_r");
@@ -122,7 +137,7 @@ void ABMEnemyWhisper::BuildHitBoxes()
         HB->RegisterDefinition(Def);
     }
 
-    // ×óÊÖ
+    // ï¿½ï¿½ï¿½ï¿½
     {
         FBMHitBoxDefinition Def;
         Def.Name = TEXT("whisper_hand_l");
@@ -139,6 +154,9 @@ void ABMEnemyWhisper::BuildHitBoxes()
 
 }
 
+/*
+ * @brief Build attack specs, it builds the attack specs
+ */
 void ABMEnemyWhisper::BuildAttackSpecs()
 {
     AttackSpecs.Reset();
@@ -156,7 +174,7 @@ void ABMEnemyWhisper::BuildAttackSpecs()
             return P;
         };
 
-    // Çá¹¥»÷1
+    // ï¿½á¹¥ï¿½ï¿½1
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Whisper_Light_01");
@@ -182,7 +200,7 @@ void ABMEnemyWhisper::BuildAttackSpecs()
         if (S.Anim) AttackSpecs.Add(S);
     }
 
-    // Çá¹¥»÷2
+    // ï¿½á¹¥ï¿½ï¿½2
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Whisper_Light_02");
@@ -208,7 +226,7 @@ void ABMEnemyWhisper::BuildAttackSpecs()
         if (S.Anim) AttackSpecs.Add(S);
     }
 
-    // ÖØ¹¥»÷
+    // ï¿½Ø¹ï¿½ï¿½ï¿½
     {
         FBMEnemyAttackSpec S;
         S.Id = TEXT("Whisper_Heavy_01");
@@ -235,6 +253,9 @@ void ABMEnemyWhisper::BuildAttackSpecs()
     }
 }
 
+/*
+ * @brief Build loot table, it builds the loot table
+ */
 void ABMEnemyWhisper::BuildLootTable()
 {
     LootTable.Reset();
@@ -271,6 +292,10 @@ void ABMEnemyWhisper::BuildLootTable()
         *GetName(), LootTable.Num());
 }
 
+/*
+ * @brief Play dodge once, it plays the dodge once
+ * @return The play time
+ */
 float ABMEnemyWhisper::PlayDodgeOnce()
 {
     return PlayOnce(AnimDodge, DodgePlayRate, 0.0, 0.7);

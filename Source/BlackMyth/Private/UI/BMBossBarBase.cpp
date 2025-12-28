@@ -6,6 +6,9 @@
 #include "Components/TextBlock.h"
 #include "System/Event/BMEventBusSubsystem.h"
 
+/*
+ * @brief Native construct, it native constructs the boss bar base
+ */
 void UBMBossBarBase::NativeConstruct()
 {
     Super::NativeConstruct();
@@ -22,6 +25,10 @@ void UBMBossBarBase::NativeConstruct()
     }
 }
 
+/*
+ * @brief Bind event bus, it binds the event bus
+ * @param EventBus The event bus
+ */
 void UBMBossBarBase::BindEventBus(UBMEventBusSubsystem* EventBus)
 {
     if (!EventBus) return;
@@ -42,6 +49,10 @@ void UBMBossBarBase::BindEventBus(UBMEventBusSubsystem* EventBus)
     }
 }
 
+/*
+ * @brief Unbind event bus, it unbinds the event bus
+ * @param EventBus The event bus
+ */
 void UBMBossBarBase::UnbindEventBus(UBMEventBusSubsystem* EventBus)
 {
     if (!EventBus) return;
@@ -58,6 +69,10 @@ void UBMBossBarBase::UnbindEventBus(UBMEventBusSubsystem* EventBus)
     }
 }
 
+/*
+ * @brief Handle boss health, it handles the boss health
+ * @param Normalized The normalized
+ */
 void UBMBossBarBase::HandleBossHealth(float Normalized)
 {
     if (BossHealthBar)
@@ -66,6 +81,11 @@ void UBMBossBarBase::HandleBossHealth(float Normalized)
     }
 }
 
+/*
+ * @brief Handle boss phase, it handles the boss phase
+ * @param Phase The phase
+ * @param Hint The hint
+ */
 void UBMBossBarBase::HandleBossPhase(int32 Phase, const FText& Hint)
 {
     // Show boss bar when phase changes (boss becomes alert)

@@ -9,6 +9,9 @@
 
 DEFINE_LOG_CATEGORY(LogBMExperience);
 
+/*
+ * @brief Constructor of the UBMExperienceComponent class
+ */
 UBMExperienceComponent::UBMExperienceComponent()
 {
     PrimaryComponentTick.bCanEverTick = false;
@@ -27,6 +30,9 @@ UBMExperienceComponent::UBMExperienceComponent()
     MaxLevel = 0; // 默认无限制
 }
 
+/*
+ * @brief Begin play
+ */
 void UBMExperienceComponent::BeginPlay()
 {
     Super::BeginPlay();
@@ -44,6 +50,11 @@ void UBMExperienceComponent::BeginPlay()
     EmitAttributePointsChangedToEventBus(AttributePoints);
 }
 
+/*
+ * @brief Add XP
+ * @param Amount The amount of XP to add
+ * @return The number of levels gained
+ */
 int32 UBMExperienceComponent::AddXP(float Amount)
 {
     if (Amount <= 0.0f)
@@ -81,6 +92,10 @@ int32 UBMExperienceComponent::AddXP(float Amount)
     return LevelsGained;
 }
 
+/*
+ * @brief Check level up
+ * @return The number of levels gained
+ */
 int32 UBMExperienceComponent::CheckLevelUp()
 {
     // 检查是否达到最大等级
@@ -99,6 +114,10 @@ int32 UBMExperienceComponent::CheckLevelUp()
     return 0;
 }
 
+/*
+ * @brief Perform level up
+ * @return True if the level up is performed, false otherwise
+ */
 bool UBMExperienceComponent::PerformLevelUp()
 {
     if (MaxLevel > 0 && Level >= MaxLevel)
@@ -145,6 +164,9 @@ bool UBMExperienceComponent::PerformLevelUp()
     return true;
 }
 
+/*
+ * @brief Apply level up bonuses
+ */
 void UBMExperienceComponent::ApplyLevelUpBonuses()
 {
     // 根据 PlayerGrowthData 表中的数据应用属性增长
@@ -257,6 +279,10 @@ void UBMExperienceComponent::ApplyLevelUpBonuses()
 
 }
 
+/*
+ * @brief Get exp percent
+ * @return The exp percent
+ */
 float UBMExperienceComponent::GetExpPercent() const
 {
     const float MaxXP = GetMaxXPForNextLevel();
@@ -267,6 +293,10 @@ float UBMExperienceComponent::GetExpPercent() const
     return FMath::Clamp(CurrentXP / MaxXP, 0.0f, 1.0f);
 }
 
+/*
+ * @brief Spend skill point
+ * @return True if the skill point is spent, false otherwise
+ */
 bool UBMExperienceComponent::SpendSkillPoint()
 {
     if (SkillPoints <= 0)
@@ -282,6 +312,10 @@ bool UBMExperienceComponent::SpendSkillPoint()
     return true;
 }
 
+/*
+ * @brief Spend attribute point
+ * @return True if the attribute point is spent, false otherwise
+ */
 bool UBMExperienceComponent::SpendAttributePoint()
 {
     if (AttributePoints <= 0)
@@ -297,6 +331,11 @@ bool UBMExperienceComponent::SpendAttributePoint()
     return true;
 }
 
+/*
+ * @brief Set level
+ * @param NewLevel The new level
+ * @param bApplyGrowth If true, applies growth
+ */
 void UBMExperienceComponent::SetLevel(int32 NewLevel, bool bApplyGrowth)
 {
     if (NewLevel < 1)
@@ -368,6 +407,11 @@ void UBMExperienceComponent::SetLevel(int32 NewLevel, bool bApplyGrowth)
         Level, bApplyGrowth ? TEXT("true") : TEXT("false"));
 }
 
+/*
+ * @brief Set current XP
+ * @param NewXP The new XP
+ * @param bCheckLevelUp If true, checks for level up
+ */
 void UBMExperienceComponent::SetCurrentXP(float NewXP, bool bCheckLevelUp)
 {
     if (NewXP < 0.0f)
@@ -399,6 +443,10 @@ void UBMExperienceComponent::SetCurrentXP(float NewXP, bool bCheckLevelUp)
     EmitXPChangedToEventBus(CurrentXP, MaxXP, Percent);
 }
 
+/*
+ * @brief Set skill points
+ * @param NewSkillPoints The new skill points
+ */
 void UBMExperienceComponent::SetSkillPoints(int32 NewSkillPoints)
 {
     if (NewSkillPoints < 0)
@@ -412,6 +460,10 @@ void UBMExperienceComponent::SetSkillPoints(int32 NewSkillPoints)
     EmitSkillPointsChangedToEventBus(SkillPoints);
 }
 
+/*
+ * @brief Set attribute points
+ * @param NewAttributePoints The new attribute points
+ */
 void UBMExperienceComponent::SetAttributePoints(int32 NewAttributePoints)
 {
     if (NewAttributePoints < 0)
@@ -425,6 +477,11 @@ void UBMExperienceComponent::SetAttributePoints(int32 NewAttributePoints)
     EmitAttributePointsChangedToEventBus(AttributePoints);
 }
 
+/*
+ * @brief Calculate XP for level
+ * @param TargetLevel The target level
+ * @return The XP for the level
+ */
 float UBMExperienceComponent::CalculateXPForLevel(int32 TargetLevel) const
 {
     if (TargetLevel <= 1)
@@ -447,6 +504,11 @@ float UBMExperienceComponent::CalculateXPForLevel(int32 TargetLevel) const
     return TotalXP;
 }
 
+/*
+ * @brief Calculate XP for next level
+ * @param FromLevel The from level
+ * @return The XP for the next level
+ */
 float UBMExperienceComponent::CalculateXPForNextLevel(int32 FromLevel) const
 {
     if (FromLevel < 1)
@@ -479,6 +541,10 @@ float UBMExperienceComponent::CalculateXPForNextLevel(int32 FromLevel) const
 
 // === EventBus Integration ===
 
+/*
+ * @brief Get event bus subsystem
+ * @return The event bus subsystem
+ */
 UBMEventBusSubsystem* UBMExperienceComponent::GetEventBusSubsystem() const
 {
     if (UWorld* World = GetWorld())
@@ -491,6 +557,12 @@ UBMEventBusSubsystem* UBMExperienceComponent::GetEventBusSubsystem() const
     return nullptr;
 }
 
+/*
+ * @brief Emit level up to event bus
+ * @param OldLevel The old level
+ * @param NewLevel The new level
+ * @param Notify If true, notifies the event bus
+ */
 void UBMExperienceComponent::EmitLevelUpToEventBus(int32 OldLevel, int32 NewLevel, bool Notify)
 {
     if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
@@ -507,6 +579,12 @@ void UBMExperienceComponent::EmitLevelUpToEventBus(int32 OldLevel, int32 NewLeve
     }
 }
 
+/*
+ * @brief Emit XP changed to event bus
+ * @param InCurrentXP The current XP
+ * @param InMaxXP The max XP
+ * @param InPercent The percent
+ */
 void UBMExperienceComponent::EmitXPChangedToEventBus(float InCurrentXP, float InMaxXP, float InPercent)
 {
     if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
@@ -515,6 +593,10 @@ void UBMExperienceComponent::EmitXPChangedToEventBus(float InCurrentXP, float In
     }
 }
 
+/*
+ * @brief Emit skill points changed to event bus
+ * @param NewSkillPoints The new skill points
+ */
 void UBMExperienceComponent::EmitSkillPointsChangedToEventBus(int32 NewSkillPoints)
 {
     if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())
@@ -523,6 +605,10 @@ void UBMExperienceComponent::EmitSkillPointsChangedToEventBus(int32 NewSkillPoin
     }
 }
 
+/*
+ * @brief Emit attribute points changed to event bus
+ * @param NewAttributePoints The new attribute points
+ */
 void UBMExperienceComponent::EmitAttributePointsChangedToEventBus(int32 NewAttributePoints)
 {
     if (UBMEventBusSubsystem* EventBus = GetEventBusSubsystem())

@@ -9,7 +9,9 @@
 #define BM_SAVE_DATA_VERSION 1
 
 /**
- * Actual save game data class
+ * @brief Define the UBMSaveData class, save data class, used to save the game data, derived from USaveGame
+ * @param UBMSaveData The name of the class
+ * @param USaveGame The parent class
  */
 UCLASS()
 class BLACKMYTH_API UBMSaveData : public USaveGame

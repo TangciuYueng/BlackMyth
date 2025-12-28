@@ -11,6 +11,9 @@
 #include "GameFramework/PlayerController.h"
 #include "BMGameInstance.h"
 
+/*
+ * @brief Native construct, it native construct
+ */
 void UBMMainWidget::NativeConstruct()
 {
     Super::NativeConstruct();
@@ -32,6 +35,9 @@ void UBMMainWidget::NativeConstruct()
     }
 }
 
+/*
+ * @brief Native destruct, it native destruct
+ */
 void UBMMainWidget::NativeDestruct()
 {
     if (StartButton)
@@ -53,6 +59,9 @@ void UBMMainWidget::NativeDestruct()
     Super::NativeDestruct();
 }
 
+/*
+ * @brief On start clicked, it on start clicked
+ */
 void UBMMainWidget::OnStartClicked()
 {
     // �л�����Ϸ����ģʽ�����ز˵�
@@ -79,6 +88,9 @@ void UBMMainWidget::OnStartClicked()
     }
 }
 
+/*
+ * @brief On quit clicked, it on quit clicked
+ */
 void UBMMainWidget::OnQuitClicked()
 {
     if (UWorld* World = GetWorld())
@@ -90,6 +102,9 @@ void UBMMainWidget::OnQuitClicked()
     }
 }
 
+/*
+ * @brief On boss battle clicked, it on boss battle clicked
+ */
 void UBMMainWidget::OnBossBattleClicked()
 {
     // �е���Ϸ���롢���ز˵����л��� Boss ս��ͼ
@@ -117,6 +132,9 @@ void UBMMainWidget::OnBossBattleClicked()
     }
 }
 
+/*
+ * @brief On save load clicked, it on save load clicked
+ */
 void UBMMainWidget::OnSaveLoadClicked()
 {
     if (UBMEventBusSubsystem* Bus = GetEventBus())

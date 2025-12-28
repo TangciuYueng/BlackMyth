@@ -8,7 +8,9 @@
 #include "BMEventBusSubsystem.generated.h"
 
 /**
- * 
+ * @brief Define the UBMEventBusSubsystem class, event bus subsystem, used to manage the events
+ * @param UBMEventBusSubsystem The name of the class
+ * @param UGameInstanceSubsystem The parent class
  */
 UCLASS()
 class BLACKMYTH_API UBMEventBusSubsystem : public UGameInstanceSubsystem
@@ -44,19 +46,22 @@ public:
     FOnPlayerStaminaChanged OnPlayerStaminaChanged;
     FOnSkillCooldownChanged OnSkillCooldownChanged;
 
+    // Boss phase
     FOnBossPhaseChanged OnBossPhaseChanged;
     FOnBossHealthChanged OnBossHealthChanged;
 
+    // Notifications
     FOnNotifyMessage OnNotifyMessage;
     FOnPlayerDied OnPlayerDied;
 
+    // Experience/Level events
     FOnPlayerLevelUp OnPlayerLevelUp;
     FOnPlayerXPChanged OnPlayerXPChanged;
     FOnPlayerSkillPointsChanged OnPlayerSkillPointsChanged;
     FOnPlayerAttributePointsChanged OnPlayerAttributePointsChanged;
 
 public:
-    // Convenience emitters
+    // Convenience emitters for the events
     void EmitPlayerHealth(float Normalized) { OnPlayerHealthChanged.Broadcast(Normalized); }
     void EmitPlayerMana(float Normalized) { OnPlayerManaChanged.Broadcast(Normalized); }
     void EmitPlayerStamina(float Normalized) { OnPlayerStaminaChanged.Broadcast(Normalized); }
@@ -66,6 +71,7 @@ public:
     void EmitNotify(const FText& Msg) { OnNotifyMessage.Broadcast(Msg); }
     void EmitPlayerDied() { OnPlayerDied.Broadcast(); }
     
+    // Experience/Level events
     void EmitPlayerLevelUp(int32 OldLevel, int32 NewLevel) { OnPlayerLevelUp.Broadcast(OldLevel, NewLevel); }
     void EmitPlayerXPChanged(float CurrentXP, float MaxXP, float Percent) { OnPlayerXPChanged.Broadcast(CurrentXP, MaxXP, Percent); }
     void EmitPlayerSkillPointsChanged(int32 NewSkillPoints) { OnPlayerSkillPointsChanged.Broadcast(NewSkillPoints); }

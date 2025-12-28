@@ -12,6 +12,10 @@
 #include "GameFramework/PlayerController.h"
 #include "UI/UBMInventoryWidget.h"
 
+/*
+ * @brief Constructor of the UBMInventoryComponent class
+ * @param ObjectInitializer The object initializer
+ */
 UBMInventoryComponent::UBMInventoryComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -24,12 +28,18 @@ UBMInventoryComponent::UBMInventoryComponent(const FObjectInitializer& ObjectIni
 	Items.Empty();
 }
 
+/*
+ * @brief Begin play, it starts the test auto add currency
+ */
 void UBMInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	StartTestAutoAddCurrency();
 }
 
+/*
+ * @brief Start test auto add currency, it starts the test auto add currency
+ */
 void UBMInventoryComponent::StartTestAutoAddCurrency()
 {
 	if (!bTestAutoAddCurrency)
@@ -43,6 +53,10 @@ void UBMInventoryComponent::StartTestAutoAddCurrency()
 		return;
 	}
 
+	/*
+	 * @brief Set timer for test auto add currency, it sets the timer for test auto add currency
+	 * @param Interval The interval
+	 */
 	const float Interval = FMath::Max(0.01f, TestAutoAddCurrencyIntervalSeconds);
 	World->GetTimerManager().SetTimer(
 		TestAutoAddCurrencyTimer,
@@ -54,6 +68,9 @@ void UBMInventoryComponent::StartTestAutoAddCurrency()
 	HandleTestAutoAddCurrencyTick();
 }
 
+/*
+ * @brief Handle test auto add currency tick, it handles the test auto add currency tick
+ */
 void UBMInventoryComponent::HandleTestAutoAddCurrencyTick()
 {
 	if (!bTestAutoAddCurrency)
@@ -69,6 +86,12 @@ void UBMInventoryComponent::HandleTestAutoAddCurrencyTick()
 	AddCurrency(Amount);
 }
 
+/*
+ * @brief Add item, it adds the item to the inventory
+ * @param ItemID The item ID
+ * @param Count The count
+ * @return True if the item is added, false otherwise
+ */
 bool UBMInventoryComponent::AddItem(FName ItemID, int32 Count)
 {
 	// 检查ItemID是否有效
@@ -166,6 +189,12 @@ bool UBMInventoryComponent::AddItem(FName ItemID, int32 Count)
 	return bChanged;
 }
 
+/*
+ * @brief Remove item, it removes the item from the inventory
+ * @param ItemID The item ID
+ * @param Count The count
+ * @return True if the item is removed, false otherwise
+ */
 bool UBMInventoryComponent::RemoveItem(FName ItemID, int32 Count)
 {
 	// 参数验证：检查ItemID是否有效
@@ -219,6 +248,12 @@ bool UBMInventoryComponent::RemoveItem(FName ItemID, int32 Count)
 	return true;
 }
 
+/*
+ * @brief Use item, it uses the item
+ * @param ItemID The item ID
+ * @param Count The count
+ * @return True if the item is used, false otherwise
+ */
 bool UBMInventoryComponent::UseItem(FName ItemID, int32 Count)
 {
 	if (Count <= 0)
@@ -424,6 +459,11 @@ bool UBMInventoryComponent::UseItem(FName ItemID, int32 Count)
 	return true;
 }
 
+/*
+ * @brief Equip item, it equips the item
+ * @param ItemID The item ID
+ * @return True if the item is equipped, false otherwise
+ */
 bool UBMInventoryComponent::EquipItem(FName ItemID)
 {
 	if (!HasItem(ItemID))
@@ -445,6 +485,12 @@ bool UBMInventoryComponent::EquipItem(FName ItemID)
 	return true;
 }
 
+/*
+ * @brief Drop item, it drops the item
+ * @param ItemID The item ID
+ * @param Count The count
+ * @return True if the item is dropped, false otherwise
+ */
 bool UBMInventoryComponent::DropItem(FName ItemID, int32 Count)
 {
 	if (Count <= 0)
@@ -464,6 +510,11 @@ bool UBMInventoryComponent::DropItem(FName ItemID, int32 Count)
 	return RemoveItem(ItemID, Count);
 }
 
+/*
+ * @brief Has item, it checks if the item is in the inventory
+ * @param ItemID The item ID
+ * @return True if the item is in the inventory, false otherwise
+ */
 bool UBMInventoryComponent::HasItem(FName ItemID) const
 {
 	// 检查ItemID是否有效
@@ -476,6 +527,11 @@ bool UBMInventoryComponent::HasItem(FName ItemID) const
 	return Items.Contains(ItemID);
 }
 
+/*
+ * @brief Get item count, it gets the count of the item
+ * @param ItemID The item ID
+ * @return The count of the item
+ */
 int32 UBMInventoryComponent::GetItemCount(FName ItemID) const
 {
 	// 检查ItemID是否有效
@@ -489,6 +545,11 @@ int32 UBMInventoryComponent::GetItemCount(FName ItemID) const
 	return CountPtr ? *CountPtr : 0;
 }
 
+/*
+ * @brief Can afford, it checks if the currency can afford the cost
+ * @param Cost The cost
+ * @return True if the currency can afford the cost, false otherwise
+ */
 bool UBMInventoryComponent::CanAfford(int32 Cost) const
 {
 	// 检查Cost是否有效
@@ -502,6 +563,11 @@ bool UBMInventoryComponent::CanAfford(int32 Cost) const
 	return Currency >= Cost;
 }
 
+/*
+ * @brief Add currency, it adds the currency to the inventory
+ * @param Amount The amount
+ * @return True if the currency is added, false otherwise
+ */
 bool UBMInventoryComponent::AddCurrency(int32 Amount)
 {
 	// 参数验证：检查Amount是否为正数
@@ -519,6 +585,11 @@ bool UBMInventoryComponent::AddCurrency(int32 Amount)
 	return true;
 }
 
+/*
+ * @brief Spend currency, it spends the currency from the inventory
+ * @param Amount The amount
+ * @return True if the currency is spent, false otherwise
+ */
 bool UBMInventoryComponent::SpendCurrency(int32 Amount)
 {
 	// 参数验证：检查Amount是否为正数
@@ -570,12 +641,20 @@ bool UBMInventoryComponent::SpendCurrency(int32 Amount)
 	return true;
 }
 
+/*
+ * @brief Get item type count, it gets the count of the item type
+ * @return The count of the item type
+ */
 int32 UBMInventoryComponent::GetItemTypeCount() const
 {
 	// 返回当前背包中不同物品的种类数量
 	return Items.Num();
 }
 
+/*
+ * @brief Get remaining capacity, it gets the remaining capacity
+ * @return The remaining capacity
+ */
 int32 UBMInventoryComponent::GetRemainingCapacity() const
 {
 	// 计算剩余容量 = 总容量 - 当前物品种类数量
@@ -583,12 +662,20 @@ int32 UBMInventoryComponent::GetRemainingCapacity() const
 	return FMath::Max(0, Remaining); // 确保不为负数
 }
 
+/*
+ * @brief Is full, it checks if the inventory is full
+ * @return True if the inventory is full, false otherwise
+ */
 bool UBMInventoryComponent::IsFull() const
 {
 	// 检查当前物品种类数量是否达到容量上限
 	return GetItemTypeCount() >= Capacity;
 }
 
+/*
+ * @brief Set capacity, it sets the capacity
+ * @param NewCapacity The new capacity
+ */
 void UBMInventoryComponent::SetCapacity(int32 NewCapacity)
 {
 	// 参数验证：检查NewCapacity是否为正数
@@ -614,6 +701,9 @@ void UBMInventoryComponent::SetCapacity(int32 NewCapacity)
 	OnInventoryChanged.Broadcast();
 }
 
+/*
+ * @brief Clear inventory, it clears the inventory
+ */
 void UBMInventoryComponent::ClearInventory()
 {
 	// 清空所有物品
@@ -630,6 +720,11 @@ void UBMInventoryComponent::ClearInventory()
 
 // ==================== 物品信息查询方法实现 ====================
 
+/*
+ * @brief Get item name, it gets the name of the item
+ * @param ItemID The item ID
+ * @return The name of the item
+ */
 FText UBMInventoryComponent::GetItemName(FName ItemID) const
 {
 	const FBMItemData* ItemData = GetItemData(ItemID);
@@ -640,6 +735,11 @@ FText UBMInventoryComponent::GetItemName(FName ItemID) const
 	return FText::GetEmpty();
 }
 
+/*
+ * @brief Get item icon, it gets the icon of the item
+ * @param ItemID The item ID
+ * @return The icon of the item
+ */
 FSoftObjectPath UBMInventoryComponent::GetItemIcon(FName ItemID) const
 {
 	const FBMItemData* ItemData = GetItemData(ItemID);
@@ -650,6 +750,11 @@ FSoftObjectPath UBMInventoryComponent::GetItemIcon(FName ItemID) const
 	return FSoftObjectPath();
 }
 
+/*
+ * @brief Get item price, it gets the price of the item
+ * @param ItemID The item ID
+ * @return The price of the item
+ */
 float UBMInventoryComponent::GetItemPrice(FName ItemID) const
 {
 	if (bTestForceItemPrice)
@@ -665,6 +770,11 @@ float UBMInventoryComponent::GetItemPrice(FName ItemID) const
 	return 0.0f;
 }
 
+/*
+ * @brief Get item max stack, it gets the max stack of the item
+ * @param ItemID The item ID
+ * @return The max stack of the item
+ */
 int32 UBMInventoryComponent::GetItemMaxStack(FName ItemID) const
 {
 	const FBMItemData* ItemData = GetItemData(ItemID);
@@ -675,6 +785,12 @@ int32 UBMInventoryComponent::GetItemMaxStack(FName ItemID) const
 	return 0;
 }
 
+/*
+ * @brief Can stack more, it checks if the item can stack more
+ * @param ItemID The item ID
+ * @param AdditionalCount The additional count
+ * @return True if the item can stack more, false otherwise
+ */
 bool UBMInventoryComponent::CanStackMore(FName ItemID, int32 AdditionalCount) const
 {
 	// 检查ItemID是否有效
@@ -712,6 +828,11 @@ bool UBMInventoryComponent::CanStackMore(FName ItemID, int32 AdditionalCount) co
 	return (CurrentCount + AdditionalCount) <= MaxStack;
 }
 
+/*
+ * @brief Get item data, it gets the data of the item
+ * @param ItemID The item ID
+ * @return The data of the item
+ */
 const FBMItemData* UBMInventoryComponent::GetItemData(FName ItemID) const
 {
 	// 检查ItemID是否有效
@@ -731,6 +852,10 @@ const FBMItemData* UBMInventoryComponent::GetItemData(FName ItemID) const
 	return DataSubsystem->GetItemData(ItemID);
 }
 
+/*
+ * @brief Get data subsystem, it gets the data subsystem
+ * @return The data subsystem
+ */
 UBMDataSubsystem* UBMInventoryComponent::GetDataSubsystem() const
 {
 	// 从World获取GameInstance，再获取DataSubsystem
@@ -746,11 +871,19 @@ UBMDataSubsystem* UBMInventoryComponent::GetDataSubsystem() const
 
 // ==================== UI 相关方法实现 ====================
 
+/*
+ * @brief Get all item IDs, it gets all the item IDs
+ * @param OutItemIDs The out item IDs
+ */
 void UBMInventoryComponent::GetAllItemIDs(TArray<FName>& OutItemIDs) const
 {
 	Items.GetKeys(OutItemIDs);
 }
 
+/*
+ * @brief Select item, it selects the item
+ * @param ItemID The item ID
+ */
 void UBMInventoryComponent::SelectItem(FName ItemID)
 {
 	// 检查物品是否存在
@@ -772,6 +905,10 @@ void UBMInventoryComponent::SelectItem(FName ItemID)
 	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::SelectItem - 选中物品 %s，数量: %d"), *ItemID.ToString(), Count);
 }
 
+/*
+ * @brief Open inventory UI, it opens the inventory UI
+ * @return True if the inventory UI is opened, false otherwise
+ */
 bool UBMInventoryComponent::OpenInventoryUI()
 {
 	// 检查是否已设置Widget类
@@ -827,6 +964,9 @@ bool UBMInventoryComponent::OpenInventoryUI()
 	return true;
 }
 
+/*
+ * @brief Close inventory UI, it closes the inventory UI
+ */
 void UBMInventoryComponent::CloseInventoryUI()
 {
 	if (!InventoryWidgetInstance)
@@ -856,6 +996,9 @@ void UBMInventoryComponent::CloseInventoryUI()
 	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::CloseInventoryUI - 背包UI已关闭"));
 }
 
+/*
+ * @brief Toggle inventory UI, it toggles the inventory UI
+ */
 void UBMInventoryComponent::ToggleInventoryUI()
 {
 	if (IsInventoryUIVisible())
@@ -868,11 +1011,18 @@ void UBMInventoryComponent::ToggleInventoryUI()
 	}
 }
 
+/*
+ * @brief Is inventory UI visible, it checks if the inventory UI is visible
+ * @return True if the inventory UI is visible, false otherwise
+ */
 bool UBMInventoryComponent::IsInventoryUIVisible() const
 {
 	return InventoryWidgetInstance && InventoryWidgetInstance->IsInViewport();
 }
 
+/*
+ * @brief Refresh inventory UI, it refreshes the inventory UI
+ */
 void UBMInventoryComponent::RefreshInventoryUI()
 {
 	// 广播背包变化事件，让UI自行刷新
@@ -881,6 +1031,10 @@ void UBMInventoryComponent::RefreshInventoryUI()
 	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::RefreshInventoryUI - 已请求UI刷新"));
 }
 
+/*
+ * @brief Set inventory widget class, it sets the inventory widget class
+ * @param InWidgetClass The inventory widget class
+ */
 void UBMInventoryComponent::SetInventoryWidgetClass(TSubclassOf<UUserWidget> InWidgetClass)
 {
 	if (IsInventoryUIVisible())
@@ -892,6 +1046,9 @@ void UBMInventoryComponent::SetInventoryWidgetClass(TSubclassOf<UUserWidget> InW
 	InventoryWidgetClass = InWidgetClass;
 }
 
+/*
+ * @brief Toggle test auto add currency, it toggles the test auto add currency
+ */
 void UBMInventoryComponent::ToggleTestAutoAddCurrency()
 {
 	bTestAutoAddCurrency = !bTestAutoAddCurrency;
@@ -911,6 +1068,9 @@ void UBMInventoryComponent::ToggleTestAutoAddCurrency()
 	}
 }
 
+/*
+ * @brief Toggle test force item price 10, it toggles the test force item price 10
+ */
 void UBMInventoryComponent::ToggleTestForceItemPrice10()
 {
 	bTestForceItemPrice = !bTestForceItemPrice;
@@ -927,6 +1087,10 @@ void UBMInventoryComponent::ToggleTestForceItemPrice10()
 	OnInventoryChanged.Broadcast();
 }
 
+/*
+ * @brief Get player controller, it gets the player controller
+ * @return The player controller
+ */
 APlayerController* UBMInventoryComponent::GetPlayerController() const
 {
 	// 尝试从Owner获取
@@ -953,6 +1117,9 @@ APlayerController* UBMInventoryComponent::GetPlayerController() const
 	return nullptr;
 }
 
+/*
+ * @brief Bind UI events, it binds the UI events
+ */
 void UBMInventoryComponent::BindUIEvents()
 {
 	// 这里可以绑定额外的UI事件
@@ -961,6 +1128,9 @@ void UBMInventoryComponent::BindUIEvents()
 	UE_LOG(LogTemp, Log, TEXT("UBMInventoryComponent::BindUIEvents - UI事件已绑定"));
 }
 
+/*
+ * @brief Unbind UI events, it unbinds the UI events
+ */
 void UBMInventoryComponent::UnbindUIEvents()
 {
 	// 解绑UI事件
