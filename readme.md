@@ -162,6 +162,10 @@ git clone https://github.com/TangciuYueng/BlackMyth.git
 
 ---
 
+### 视频展示（Video Demo）
+
+[![Watch the video](./assets/cover.png)](./assets/demo_video.mp4?raw=true)
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](https://www.google.com/search?q=LICENSE) file for details.
