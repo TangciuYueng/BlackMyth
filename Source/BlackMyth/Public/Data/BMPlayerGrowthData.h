@@ -10,7 +10,6 @@ struct FBMPlayerGrowthData : public FTableRowBase
     GENERATED_BODY()
 
 public:
-    // Level as INT for easy calculations
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Growth")
     int32 Level = 1;
 
@@ -31,10 +30,4 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Growth")
     float ExpToNext = 100.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Reward")
-    int32 SkillPoints = 0;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Reward")
-    int32 AttributePoints = 0;
 };

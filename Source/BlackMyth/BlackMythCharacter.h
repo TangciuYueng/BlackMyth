@@ -12,6 +12,10 @@ class UCameraComponent;
 class UInputAction;
 struct FInputActionValue;
 
+/*
+ * @brief Define the log category for the BlackMythCharacter class
+ * @param LogBlackMythCharacter The log category name
+ */
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
 /**

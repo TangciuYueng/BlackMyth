@@ -1,34 +1,84 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Character/Components/BMStateMachineComponent.h"
+#include "Character/Components/BMCharacterState.h"
+#include "Core/BMTypes.h"
 
-// Sets default values for this component's properties
+/*
+ * @brief Constructor of the UBMStateMachineComponent class
+ */
 UBMStateMachineComponent::UBMStateMachineComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
+    PrimaryComponentTick.bCanEverTick = false; // �� ABMCharacterBase Tick ͳһ����
 }
 
-
-// Called when the game starts
-void UBMStateMachineComponent::BeginPlay()
+/*
+ * @brief Register state, it registers the state
+ * @param Name The name of the state
+ * @param State The state
+ */
+void UBMStateMachineComponent::RegisterState(FName Name, UBMCharacterState* State)
 {
-	Super::BeginPlay();
-
-	// ...
-	
+    if (Name.IsNone() || !State) return;
+    States.Add(Name, State);
 }
 
-
-// Called every frame
-void UBMStateMachineComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+/*
+ * @brief Change state, it changes the state
+ * @param NewState The new state
+ */
+void UBMStateMachineComponent::ChangeState(UBMCharacterState* NewState)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    if (NewState == Current) return;
 
-	// ...
+    if (Current)
+    {
+        Current->OnExit(0.f);
+    }
+    Current = NewState;
+
+    // ��������
+    CurrentStateName = NAME_None;
+    for (const auto& It : States)
+    {
+        if (It.Value == Current)
+        {
+            CurrentStateName = It.Key;
+            break;
+        }
+    }
+
+    if (Current)
+    {
+        Current->OnEnter(0.f);
+    }
 }
 
+/*
+ * @brief Change state by name, it changes the state by name
+ * @param Name The name of the state
+ * @return True if the state is changed, false otherwise
+ */
+bool UBMStateMachineComponent::ChangeStateByName(FName Name)
+{
+    TObjectPtr<UBMCharacterState>* Found = States.Find(Name);
+    if (!Found || !(*Found)) return false;
+
+    if (Current && !Current->CanTransitionTo(Name))
+    {
+        return false;
+    }
+
+    ChangeState(*Found);
+    return true;
+}
+
+/*
+ * @brief Tick state, it ticks the state
+ * @param DeltaSeconds The delta seconds
+ */
+void UBMStateMachineComponent::TickState(float DeltaSeconds)
+{
+    if (Current)
+    {
+        Current->OnUpdate(DeltaSeconds);
+    }
+}

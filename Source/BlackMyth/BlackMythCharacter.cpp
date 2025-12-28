@@ -12,6 +12,10 @@
 #include "InputActionValue.h"
 #include "BlackMyth.h"
 
+/*
+ * @brief Constructor for the BlackMythCharacter class
+ * @return A new instance of the BlackMythCharacter class
+ */
 ABlackMythCharacter::ABlackMythCharacter()
 {
 	// Set size for collision capsule
@@ -50,6 +54,10 @@ ABlackMythCharacter::ABlackMythCharacter()
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
 
+/*
+ * @brief Setup the player input component
+ * @param PlayerInputComponent The player input component to setup
+ */
 void ABlackMythCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	// Set up action bindings
@@ -72,6 +80,10 @@ void ABlackMythCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	}
 }
 
+/*
+ * @brief Move the character
+ * @param Value The input action value
+ */
 void ABlackMythCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
@@ -81,6 +93,10 @@ void ABlackMythCharacter::Move(const FInputActionValue& Value)
 	DoMove(MovementVector.X, MovementVector.Y);
 }
 
+/*
+ * @brief Look the character
+ * @param Value The input action value
+ */
 void ABlackMythCharacter::Look(const FInputActionValue& Value)
 {
 	// input is a Vector2D
@@ -90,6 +106,11 @@ void ABlackMythCharacter::Look(const FInputActionValue& Value)
 	DoLook(LookAxisVector.X, LookAxisVector.Y);
 }
 
+/*
+ * @brief Do the move
+ * @param Right The right input
+ * @param Forward The forward input
+ */
 void ABlackMythCharacter::DoMove(float Right, float Forward)
 {
 	if (GetController() != nullptr)
@@ -110,6 +131,11 @@ void ABlackMythCharacter::DoMove(float Right, float Forward)
 	}
 }
 
+/*
+ * @brief Do the look
+ * @param Yaw The yaw input
+ * @param Pitch The pitch input
+ */
 void ABlackMythCharacter::DoLook(float Yaw, float Pitch)
 {
 	if (GetController() != nullptr)
@@ -120,12 +146,18 @@ void ABlackMythCharacter::DoLook(float Yaw, float Pitch)
 	}
 }
 
+/*
+ * @brief Do the jump start
+ */
 void ABlackMythCharacter::DoJumpStart()
 {
 	// signal the character to jump
 	Jump();
 }
 
+/*
+ * @brief Do the jump end
+ */
 void ABlackMythCharacter::DoJumpEnd()
 {
 	// signal the character to stop jumping

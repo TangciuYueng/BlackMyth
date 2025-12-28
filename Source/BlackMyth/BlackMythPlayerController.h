@@ -46,6 +46,18 @@ protected:
 	/** Input mapping context setup */
 	virtual void SetupInputComponent() override;
 
+	/** These are the hotbar slots for the player controller**/
+	void Hotbar1();
+	void Hotbar2();
+	void Hotbar3();
+	void Hotbar4();
+	void Hotbar5();
+	void Hotbar6();
+	void Hotbar7();
+	void Hotbar8();
+	void Hotbar9();
+	void TriggerHotbar(int32 SlotIndex);
+
 	/** Returns true if the player should use UMG touch controls */
 	bool ShouldUseTouchControls() const;
 
